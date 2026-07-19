@@ -1,0 +1,38 @@
+{
+  "name": "fairy-blob",
+  "version": "0.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prestart": "node scripts/generate-build-info.cjs development local",
+    "start": "webpack serve",
+    "prebuild": "node scripts/generate-build-info.cjs production release",
+    "build": "webpack --mode production && node scripts/write-build-artifact.cjs",
+    "build:itch": "node scripts/generate-build-info.cjs production itch && webpack --mode production && node scripts/write-build-artifact.cjs",
+    "build:poki": "node scripts/generate-build-info.cjs production poki && webpack --mode production && node scripts/write-build-artifact.cjs",
+    "build:crazygames": "node scripts/generate-build-info.cjs production crazygames && webpack --mode production && node scripts/write-build-artifact.cjs",
+    "version:patch": "npm version patch --no-git-tag-version",
+    "version:minor": "npm version minor --no-git-tag-version",
+    "version:major": "npm version major --no-git-tag-version"
+  },
+  "keywords": [],
+  "author": "Aliaksandr Bandarenka (https://github.com/alexanderbond081)",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "copy-webpack-plugin": "^13.0.1",
+    "html-webpack-plugin": "^5.6.7",
+    "ts-loader": "^9.6.2",
+    "typescript": "^6.0.3",
+    "webpack": "^5.107.2",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.5"
+  },
+  "dependencies": {
+    "@pixi/sound": "^6.0.1",
+    "gsap": "^3.15.0",
+    "pixi-filters": "^6.1.5",
+    "pixi.js": "^8.19.0",
+    "zod": "^4.4.3"
+  },
+  "description": "Fairy Blob — casual HTML5 leaf-jumper (Pixi.js)"
+}

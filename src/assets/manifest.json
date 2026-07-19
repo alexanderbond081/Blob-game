@@ -1,0 +1,45 @@
+{
+	"bundles": [
+		{
+			"name": "preload",
+			"assets": [
+				{
+					"alias": "logo",
+					"src": "assets/preload/logo.png",
+					"data": {
+						"resolution": 1,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				}
+			]
+		},
+		{
+			"name": "common",
+			"assets": [
+				{
+					"alias": "blob",
+					"src": "assets/images/blob-right-left-200x200.png",
+					"data": {
+						"resolution": 1,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "firefly",
+					"src": "assets/images/firefly.png"
+				}
+			]
+		},
+		{
+			"name": "main-scene",
+			"assets": [
+				{
+					"alias": "background",
+					"src": "assets/main-scene/scene-0-background.webp"
+				}
+			]
+		}
+	]
+}

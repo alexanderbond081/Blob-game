@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title><%= htmlWebpackPlugin.options.title %></title>
+	<% for (const script of htmlWebpackPlugin.options.platformSdkScripts || []) { %>
+	<script src="<%= script.src %>"></script>
+	<% } %>
+	<style>
+		html, body {
+			margin: 0;
+			padding: 0;
+			width: 100%;
+			height: 100%;
+			overflow: hidden;
+			background: #222222;
+			touch-action: none;
+		}
+
+		canvas {
+			display: block;
+			width: 100%;
+			height: 100%;
+		}
+	</style>
+</head>
+<body></body>
+</html>

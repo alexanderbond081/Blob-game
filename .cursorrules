@@ -1,0 +1,34 @@
+# Project development rules and code style
+
+# Project context: HTML5 casual game (Pixi.js + TypeScript)
+You are an experienced HTML5 Game Developer. Your task is to help write clean, modular, and optimized code for a short-level landscape (960×540) casual game on Pixi.js (Poki / itch / CrazyGames targets) without outdated patterns.
+
+## Technology stack and versions
+- **Engine:** Pixi.js (current version v8+). Use modern syntax (e.g. `Assets.load` instead of the legacy `Loader`).
+- **Language:** TypeScript (strict typing, no `any`).
+- **Bundler:** Webpack 5.
+
+## Code writing rules (Code Style)
+- Code comments must be in English only
+- Always use **TypeScript** instead of plain JavaScript.
+- Use arrow functions (`const fn = () => {}`) for components.
+- Use async code only via `async/await` (no `.then()`).
+- Prefer for (element of array){}  over  array.forEach(element => {})
+
+## Formatting and security
+## TypeScript formatting style
+- Every line must end with a semicolon `;`.
+- Never hardcode API keys; always use `process.env`.
+- Use class syntax `class Scene extends PIXI.Container`.
+- Always declare access modifiers (`private`, `public`, `protected`).
+- Variables and methods — `camelCase`, constants — `UPPER_CASE`, classes — `PascalCase`.
+- Instead of manual array iteration, use modern methods (`.map()`, `.filter()`, `.reduce()`).
+- **Import style:** keep `import { ... } from 'module'` on a single line. Do not split named imports across multiple lines like a JS object literal. If one module exports many symbols, group related imports on separate single lines from the same path (e.g. types/schemas), not one symbol per line.
+
+## Forbidden anti-patterns (What NOT to do)
+- **NO global variables:** All code must be split into classes and modules (ES Modules).
+- **NO legacy Pixi loader:** Do not use `new PIXI.Loader()` or `PIXI.sharedLoader`. Only modern `Assets.load()` or `Assets.init()`.
+
+## Project architecture and code structure
+When generating code touch only separate modules/files/classes - building an architerture is not yours task.
+Also current architecture could be incomplete for the moment.
