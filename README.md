@@ -14,7 +14,14 @@ Built with **Pixi.js v8** + **TypeScript** + **Webpack 5**.
 
 - Design size: **960×540** (16:9)
 - The stage uses **contain** scaling so it fills the host window / portal iframe
+- Content is **clipped** to the 960×540 design rect (nothing draws into the letterbox)
 - Portrait / rotate-device UX is deferred (landscape-first for now)
+
+### Art (2×)
+
+- Author textures at **2×** logical size; mark them in `manifest.json` with `"data": { "resolution": 2 }` so Pixi reports logical `width`/`height`
+- **Background** source: **2200×1200** → logical **1100×600**, centered on 960×540 (~70×30 px bleed); parallax clamped to bleed (no tiling)
+- Do not also `sprite.scale.set(0.5)` on assets that already use `resolution: 2`
 
 ## Scripts
 

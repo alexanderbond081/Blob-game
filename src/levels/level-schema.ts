@@ -12,6 +12,7 @@ const pointSchema = z.object({
 
 const backgroundLayerSchema = z.object({
 	texture: z.string(),
+	/** Parallax factor for both X and Y camera axes (0 = fixed to viewport, 1 = world-locked). */
 	parallax: z.number().min(0).max(1),
 });
 

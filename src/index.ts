@@ -22,6 +22,8 @@ PixiPlugin.registerPIXI(PIXI);
 const app = new Application();
 const gameHUD = new GameHUD();
 
+const viewRoot = new Container();
+const viewMask = new Graphics();
 const gameLayer = new Container();
 const hudLayer = new Container();
 const uiOverlay = new Container();
@@ -61,6 +63,8 @@ const applyStageScale = (): void => {
 	app.stage.scale.set(scale);
 	app.stage.x = (clientWidth - gameWidth * scale) * 0.5;
 	app.stage.y = (clientHeight - gameHeight * scale) * 0.5;
+
+	viewMask.clear().rect(0, 0, gameWidth, gameHeight).fill(0xffffff);
 };
 
 const applyResponsiveLayout = (): void => {
@@ -122,9 +126,13 @@ async function initGame(): Promise<void> {
 	document.body.appendChild(app.canvas);
 	applyStageScale();
 
-	app.stage.addChild(gameLayer);
-	app.stage.addChild(hudLayer);
-	app.stage.addChild(uiOverlay);
+	viewMask.rect(0, 0, gameWidth, gameHeight).fill(0xffffff);
+	viewRoot.addChild(viewMask);
+	viewRoot.mask = viewMask;
+	viewRoot.addChild(gameLayer);
+	viewRoot.addChild(hudLayer);
+	viewRoot.addChild(uiOverlay);
+	app.stage.addChild(viewRoot);
 	initFadeEffect();
 
 	await Assets.init({ manifest: 'assets/manifest.json' });

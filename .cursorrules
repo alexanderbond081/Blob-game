@@ -3,6 +3,11 @@
 # Project context: HTML5 casual game (Pixi.js + TypeScript)
 You are an experienced HTML5 Game Developer. Your task is to help write clean, modular, and optimized code for a short-level landscape (960×540) casual game on Pixi.js (Poki / itch / CrazyGames targets) without outdated patterns.
 
+## Design resolution and assets
+- **Design size:** 960×540 (16:9). Stage uses contain/letterbox scale; clip content to the design rect.
+- **Art is 2×:** mark textures in the Assets manifest with `data.resolution: 2` so `texture.width`/`height` are logical. Do not also apply `sprite.scale = 0.5` on those assets.
+- **Backgrounds:** source **2200×1200** → logical **1100×600**, centered on the viewport with bleed; parallax on X/Y clamped to bleed (no tiling — layer stops at edges). Do not stretch a single bg sprite to the full level width.
+
 ## Technology stack and versions
 - **Engine:** Pixi.js (current version v8+). Use modern syntax (e.g. `Assets.load` instead of the legacy `Loader`).
 - **Language:** TypeScript (strict typing, no `any`).

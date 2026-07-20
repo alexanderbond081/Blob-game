@@ -60,7 +60,7 @@ Modes share the same world/tech; Casual → Arcade are cheap. Puzzle / Survival 
 | Soft glow + slight dimming | Real lighting / shadows engine |
 | Simple obstacles as blockers (optional, few levels) | Energy drain, damage systems |
 | Static + light parallax backgrounds | Complex weather / day cycle |
-| Touch + keyboard; **960×540** design, contain-scale to host window | Portrait / rotate-device UX (deferred; many Poki titles ship landscape-first) |
+| Touch + keyboard; **960×540** design, contain-scale + clip; **2×** art (`resolution: 2`); bg **2200×1200** → logical **1100×600** with bleed; parallax clamp (no tile) | Portrait / rotate-device UX (deferred; many Poki titles ship landscape-first) |
 | Local progress save | Cloud saves / accounts |
 | Basic SFX + 1 music track | Full adaptive soundtrack pack |
 

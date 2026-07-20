@@ -61,6 +61,11 @@ export class GameCamera {
 		return Math.round(this.x * scale) / scale;
 	}
 
+	public getRenderY(renderScale = 1): number {
+		const scale = renderScale > 0 ? renderScale : 1;
+		return Math.round(this.y * scale) / scale;
+	}
+
 	private clamp(value: number, min: number, max: number): number {
 		return Math.max(min, Math.min(max, value));
 	}

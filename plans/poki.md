@@ -114,6 +114,31 @@ stage.y = (clientHeight - gameHeight * scale) * 0.5;
 - Scale with **contain** (`Math.min`) so the stage fills whatever window/iframe the portal provides.
 - Inside a 16:9 Poki iframe, contain scale fills the canvas with **no bars**.
 - Prefer **contain** over **cover** (`Math.max` + crop) unless intentional.
+- **Clip** all game content to the 960×540 design rect (mask on the view root) so overflow outside the letterboxed stage is never visible — easier to tell scene bugs from “drawing past the frame”.
+
+### Art / texture resolution (2× for Retina)
+
+Gameplay and layout use **logical** design pixels (960×540). Source art is authored at **2×** so it stays sharp on high-DPI phones / Full HD iframes.
+
+| Asset | Source file (2×) | Logical size (1×) | How |
+|-------|------------------|-------------------|-----|
+| Full-bleed / parallax **background** | **2200×1200** | **1100×600** | Manifest `data.resolution: 2` |
+| Other sprites / UI (typical) | 2× the on-screen size | on-screen size | Same: `resolution: 2`, or spritesheet `meta.scale` |
+
+- In Pixi, **`resolution: 2`** on the asset means `texture.width` / `height` are already logical (half of the file pixels). Do **not** also apply `sprite.scale = 0.5` on those assets — that would be 0.25×.
+- Equivalent idea to “scale 0.5”, but the correct Pixi hook for textures is **`resolution`**, not a hardcoded sprite scale in every consumer.
+
+### Background placement (bleed + parallax)
+
+Background is **not** stretched to the full level length and **does not tile**. Place it on the **viewport**:
+
+- Logical **1100×600** centered on **960×540** → about **70px** bleed left/right and **30px** top/bottom.
+- With a perfect 16:9 frame, bleed sits outside the clip and is hidden.
+- If the host iframe aspect shifts slightly, those margins can show instead of empty bars (when resize strategy allows).
+- Parallax uses the **same factor on X and Y**. Shift is **clamped to the bleed**: the layer moves with the camera, then **stops at the edges** so the texture always covers the viewport (no cropped sides / empty gaps).
+- **Far** layer: nearly fixed; small parallax within bleed.
+- **Mid** layer (clouds, trees, props): can drift (e.g. downward as the player climbs); still no tiling — travel limited by bleed; art/layout beyond that is the designer’s job.
+- Travel budget ≈ `bleed / parallax` in camera pixels. Example: 70px horizontal bleed at `parallax: 0.1` → ~700px of camera scroll before the bg freezes. Longer levels simply leave the far/mid layers parked at the clamp.
 
 ### Mobile / orientation (deferred)
 
@@ -220,7 +245,7 @@ Pixi = draw yourself + pick physics package. Phaser/Defold = gameplay kit includ
 | Layer | Suggestion |
 |-------|------------|
 | Render / game | Pixi.js + TS **or** Defold / Phaser if wanting editor + physics bundled |
-| Design resolution | **16:9** + contain scale (same pattern as slot project) |
+| Design resolution | **960×540** (16:9) + contain scale + clip to design rect; **2×** art via `resolution: 2` (bg **2200×1200** → logical **1100×600** with bleed; parallax clamp, no tile) |
 | Physics | Matter (start) → Rapier if needed |
 | Monetization | Thin adapter: `PokiSDK` / `CrazyGames.SDK` behind one interface |
 | Bundle size | Design for **Poki’s ~8 MB** first — then CrazyGames is easy |

@@ -18,6 +18,9 @@ export class PlatformLevelScene extends Scene {
 	private parallaxMid!: ParallaxLayer;
 	private camera!: GameCamera;
 	private levelRoot!: LevelRoot;
+	private spawnX = 0;
+	private spawnY = 0;
+	private fallLimitY = 0;
 
 	public constructor(levelId: string) {
 		super();
@@ -26,6 +29,10 @@ export class PlatformLevelScene extends Scene {
 
 	public async init(): Promise<void> {
 		const levelData = loadLevelData(this.levelId);
+		this.spawnX = levelData.spawn.x;
+		this.spawnY = levelData.spawn.y;
+		// Kill plane slightly below the level bottom so edge platforms still work.
+		this.fallLimitY = levelData.size.height + 80;
 
 		this.camera = new GameCamera(
 			this.designWidth,
@@ -37,14 +44,14 @@ export class PlatformLevelScene extends Scene {
 		this.parallaxFar = new ParallaxLayer({
 			textureAlias: levelData.backgrounds.far.texture,
 			parallaxFactor: levelData.backgrounds.far.parallax,
-			levelWidth: levelData.size.width,
-			levelHeight: levelData.size.height,
+			viewportWidth: this.designWidth,
+			viewportHeight: this.designHeight,
 		});
 		this.parallaxMid = new ParallaxLayer({
 			textureAlias: levelData.backgrounds.mid.texture,
 			parallaxFactor: levelData.backgrounds.mid.parallax,
-			levelWidth: levelData.size.width,
-			levelHeight: levelData.size.height,
+			viewportWidth: this.designWidth,
+			viewportHeight: this.designHeight,
 		});
 
 		this.addChild(this.parallaxFar);
@@ -64,14 +71,16 @@ export class PlatformLevelScene extends Scene {
 
 	public update(deltaTime: number): void {
 		this.physicsWorld.step(deltaTime);
-		this.levelRoot.player.update();
+		this.levelRoot.player.update(deltaTime);
+		this.checkFallRespawn();
 		this.camera.update(this.levelRoot.player.position.x, this.levelRoot.player.position.y, deltaTime);
 
 		const renderScale = this.worldTransform.a || 1;
 		const cameraX = this.camera.getRenderX(renderScale);
+		const cameraY = this.camera.getRenderY(renderScale);
 		this.camera.applyToContainer(this.worldRoot, renderScale);
-		this.parallaxFar.update(cameraX);
-		this.parallaxMid.update(cameraX);
+		this.parallaxFar.update(cameraX, cameraY);
+		this.parallaxMid.update(cameraX, cameraY);
 	}
 
 	public override destroy(options?: Parameters<Container['destroy']>[0]): void {
@@ -84,6 +93,15 @@ export class PlatformLevelScene extends Scene {
 
 	protected onResize(): void {
 		// World uses fixed design coordinates; letterbox handled in index.ts.
+	}
+
+	private checkFallRespawn(): void {
+		if (this.levelRoot.player.position.y <= this.fallLimitY) {
+			return;
+		}
+
+		this.levelRoot.player.respawnAt(this.spawnX, this.spawnY);
+		console.info('[player] fell below level — respawned at spawn (death stub)');
 	}
 
 	private handleCollectibleCollision(collision: PhysicsCollisionInfo): void {

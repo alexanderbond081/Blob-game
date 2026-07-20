@@ -4,19 +4,29 @@ import { AnimatedSprite, Assets, Spritesheet, Texture } from 'pixi.js';
 import { getPlatformBody, isWalkableContact, PhysicsCollisionInfo } from '../physics/ground-contact';
 import { PhysicsBody } from '../physics/physics-body';
 import { PhysicsWorld } from '../physics/physics-world';
+import { PlayerJelly } from './player-jelly';
 import { PlayerState, resolvePlayerState } from './player-state';
 
-const PLAYER_RADIUS = 36;
+const PLAYER_RADIUS = 30;
 const MOVE_SPEED_X = 6;
-const JUMP_VELOCITY = -9.5;
+const JUMP_VELOCITY = -15;
+/** Crouch wind-up frames before the jump impulse is applied */
+const JUMP_CROUCH_FRAMES = 5;
+/** Remember jump press in air so a near-landing tap still jumps */
+const JUMP_BUFFER_FRAMES = 5;
 const RUN_ANIMATION_SPEED = 0.15;
 
 export class Player extends PhysicsBody {
 	private readonly keysDown = new Set<string>();
 	private readonly groundContacts = new Set<Body>();
+	private readonly jelly = new PlayerJelly();
 	private state: PlayerState = 'idle';
 	private facingRight = true;
 	private airVelocityX = 0;
+	private jumpHeld = false;
+	private crouchFramesLeft = 0;
+	private jumpBufferFrames = 0;
+	private baseScale = 1;
 	private spritesheet: Spritesheet | null = null;
 	private currentVisual: string | null = null;
 	private boundEngine: Engine | null = null;
@@ -71,12 +81,13 @@ export class Player extends PhysicsBody {
 		});
 	}
 
-	public update(): void {
+	public update(deltaTime: number): void {
 		Body.setAngularVelocity(this.body, 0);
 		Body.setAngle(this.body, 0);
 		this.updateState();
 		this.updateVisual();
 		this.syncFromBody();
+		this.applyJelly(deltaTime);
 	}
 
 	public get position(): { x: number; y: number } {
@@ -85,6 +96,19 @@ export class Player extends PhysicsBody {
 
 	public get playerState(): PlayerState {
 		return this.state;
+	}
+
+	/** Stub for death / fall-off: snap back to a point and clear motion. */
+	public respawnAt(x: number, y: number): void {
+		Body.setPosition(this.body, { x, y });
+		Body.setVelocity(this.body, { x: 0, y: 0 });
+		Body.setAngularVelocity(this.body, 0);
+		Body.setAngle(this.body, 0);
+		this.groundContacts.clear();
+		this.airVelocityX = 0;
+		this.crouchFramesLeft = 0;
+		this.jumpBufferFrames = 0;
+		this.syncFromBody();
 	}
 
 	public override destroy(options?: Parameters<PhysicsBody['destroy']>[0]): void {
@@ -107,16 +131,10 @@ export class Player extends PhysicsBody {
 	private applyInput(): void {
 		const moveLeft = this.keysDown.has('ArrowLeft') || this.keysDown.has('KeyA');
 		const moveRight = this.keysDown.has('ArrowRight') || this.keysDown.has('KeyD');
-		const jumpPressed = this.keysDown.has('Space') || this.keysDown.has('ArrowUp') || this.keysDown.has('KeyW');
+		const jumpDown = this.keysDown.has('Space') || this.keysDown.has('ArrowUp') || this.keysDown.has('KeyW');
+		const jumpPressed = jumpDown && !this.jumpHeld;
+		this.jumpHeld = jumpDown;
 		const onGround = this.isOnGround();
-
-		if (!onGround) {
-			Body.setVelocity(this.body, {
-				x: this.airVelocityX,
-				y: this.body.velocity.y,
-			});
-			return;
-		}
 
 		let moveDirection = 0;
 		if (moveLeft) {
@@ -134,18 +152,57 @@ export class Player extends PhysicsBody {
 		this.airVelocityX = speedX;
 
 		if (jumpPressed) {
-			Body.setVelocity(this.body, {
-				x: speedX,
-				y: JUMP_VELOCITY,
-			});
-			this.groundContacts.clear();
-			return;
+			if (onGround && this.crouchFramesLeft <= 0) {
+				this.beginJumpCrouch();
+			} else if (!onGround) {
+				this.jumpBufferFrames = JUMP_BUFFER_FRAMES;
+			}
+		}
+
+		if (this.jumpBufferFrames > 0) {
+			this.jumpBufferFrames -= 1;
+
+			if (onGround && this.crouchFramesLeft <= 0) {
+				this.jumpBufferFrames = 0;
+				this.beginJumpCrouch();
+			}
+		}
+
+		if (this.crouchFramesLeft > 0) {
+			this.crouchFramesLeft -= 1;
+
+			// Left the platform during wind-up — commit the jump immediately
+			// instead of canceling (avoids walking off an edge during crouch).
+			if (!onGround) {
+				this.launchJump(speedX);
+				return;
+			}
+
+			if (this.crouchFramesLeft <= 0) {
+				this.launchJump(speedX);
+				return;
+			}
 		}
 
 		Body.setVelocity(this.body, {
 			x: speedX,
 			y: this.body.velocity.y,
 		});
+	}
+
+	private beginJumpCrouch(): void {
+		this.crouchFramesLeft = JUMP_CROUCH_FRAMES;
+		this.jelly.anticipateJump();
+	}
+
+	private launchJump(speedX: number): void {
+		this.crouchFramesLeft = 0;
+		this.jumpBufferFrames = 0;
+		Body.setVelocity(this.body, {
+			x: speedX,
+			y: JUMP_VELOCITY,
+		});
+		this.groundContacts.clear();
 	}
 
 	private updateState(): void {
@@ -170,6 +227,23 @@ export class Player extends PhysicsBody {
 		}
 
 		this.setStaticFrame(staticFrame);
+	}
+
+	private applyJelly(deltaTime: number): void {
+		const pose = this.jelly.update({
+			state: this.state,
+			velocityX: this.body.velocity.x,
+			velocityY: this.body.velocity.y,
+			onGround: this.isOnGround(),
+			crouching: this.crouchFramesLeft > 0,
+			moveSpeedX: MOVE_SPEED_X,
+			halfHeight: PLAYER_RADIUS,
+			deltaTime,
+		});
+
+		this.sprite.scale.set(this.baseScale * pose.scaleX, this.baseScale * pose.scaleY);
+		this.sprite.skew.x = pose.skewX;
+		this.display.position.y += pose.offsetY;
 	}
 
 	private setStaticFrame(frameKey: string): void {
@@ -242,8 +316,8 @@ export class Player extends PhysicsBody {
 		this.sprite.textures = [texture];
 		this.sprite.gotoAndStop(0);
 
-		const scale = displaySize / Math.max(texture.width, texture.height);
-		this.sprite.scale.set(scale);
+		this.baseScale = displaySize / Math.max(texture.width, texture.height);
+		this.sprite.scale.set(this.baseScale);
 		this.currentVisual = frameKey;
 	}
 }

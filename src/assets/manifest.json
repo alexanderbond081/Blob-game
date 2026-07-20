@@ -37,11 +37,19 @@
 			"assets": [
 				{
 					"alias": "background",
-					"src": "assets/main-scene/scene-0-background.webp"
+					"src": "assets/main-scene/scene-0-background.webp",
+					"data": {
+						"resolution": 2,
+						"scaleMode": "linear"
+					}
 				},
 				{
 					"alias": "background-mid",
-					"src": "assets/main-scene/scene-0-background.webp"
+					"src": "assets/main-scene/scene-0-background.webp",
+					"data": {
+						"resolution": 2,
+						"scaleMode": "linear"
+					}
 				}
 			]
 		}
