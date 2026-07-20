@@ -1,6 +1,7 @@
 import { Bodies, Body, Engine, Events } from 'matter-js';
 import { AnimatedSprite, Assets, Spritesheet, Texture } from 'pixi.js';
 
+import { createEmptyPlayerControls, PlayerControls } from '../input/player-controls';
 import { getPlatformBody, isWalkableContact, PhysicsCollisionInfo } from '../physics/ground-contact';
 import { PhysicsBody } from '../physics/physics-body';
 import { PhysicsWorld } from '../physics/physics-world';
@@ -20,6 +21,7 @@ export class Player extends PhysicsBody {
 	private readonly keysDown = new Set<string>();
 	private readonly groundContacts = new Set<Body>();
 	private readonly jelly = new PlayerJelly();
+	private touchControls: PlayerControls = createEmptyPlayerControls();
 	private state: PlayerState = 'idle';
 	private facingRight = true;
 	private airVelocityX = 0;
@@ -30,6 +32,11 @@ export class Player extends PhysicsBody {
 	private spritesheet: Spritesheet | null = null;
 	private currentVisual: string | null = null;
 	private boundEngine: Engine | null = null;
+	private boundWorld: PhysicsWorld | null = null;
+	private renderPrevX = 0;
+	private renderPrevY = 0;
+	private renderX = 0;
+	private renderY = 0;
 
 	private readonly onKeyDown = (event: KeyboardEvent): void => {
 		this.keysDown.add(event.code);
@@ -41,6 +48,13 @@ export class Player extends PhysicsBody {
 
 	private readonly onBeforeUpdate = (): void => {
 		this.applyInput();
+	};
+
+	private readonly onAfterUpdate = (): void => {
+		this.renderPrevX = this.renderX;
+		this.renderPrevY = this.renderY;
+		this.renderX = this.body.position.x;
+		this.renderY = this.body.position.y;
 	};
 
 	public constructor(x: number, y: number) {
@@ -59,14 +73,26 @@ export class Player extends PhysicsBody {
 		display.eventMode = 'none';
 		super(body, display);
 
+		this.renderX = x;
+		this.renderY = y;
+		this.renderPrevX = x;
+		this.renderPrevY = y;
+
 		window.addEventListener('keydown', this.onKeyDown);
 		window.addEventListener('keyup', this.onKeyUp);
 		void this.loadSpritesheet();
 	}
 
+	/** Merge invisible touch pad / future on-screen buttons with keyboard. */
+	public setTouchControls(controls: PlayerControls): void {
+		this.touchControls = controls;
+	}
+
 	public bindPhysics(world: PhysicsWorld): void {
+		this.boundWorld = world;
 		this.boundEngine = world.engine;
 		Events.on(world.engine, 'beforeUpdate', this.onBeforeUpdate);
+		Events.on(world.engine, 'afterUpdate', this.onAfterUpdate);
 
 		world.onCollisionStart((collision) => {
 			this.handleGroundCollision(collision, true);
@@ -86,12 +112,34 @@ export class Player extends PhysicsBody {
 		Body.setAngle(this.body, 0);
 		this.updateState();
 		this.updateVisual();
-		this.syncFromBody();
+		this.syncRenderPosition();
 		this.applyJelly(deltaTime);
 	}
 
 	public get position(): { x: number; y: number } {
 		return { x: this.body.position.x, y: this.body.position.y };
+	}
+
+	/** Interpolated pose used for camera follow and drawing. */
+	public getRenderPosition(): { x: number; y: number } {
+		const alpha = this.boundWorld?.getInterpolationAlpha() ?? 1;
+		return {
+			x: this.renderPrevX + (this.renderX - this.renderPrevX) * alpha,
+			y: this.renderPrevY + (this.renderY - this.renderPrevY) * alpha,
+		};
+	}
+
+	/**
+	 * Snap sprite to the same screen-pixel grid as the camera scroll.
+	 * Avoids 1px left/right shimmer when camera rounds but the player does not.
+	 */
+	public alignDisplayToCameraPixels(cameraX: number, cameraY: number, renderScale: number): void {
+		const scale = renderScale > 0 ? renderScale : 1;
+		const worldX = this.display.position.x;
+		const worldY = this.display.position.y;
+		const screenX = Math.round((worldX - cameraX) * scale);
+		const screenY = Math.round((worldY - cameraY) * scale);
+		this.display.position.set(screenX / scale + cameraX, screenY / scale + cameraY);
 	}
 
 	public get playerState(): PlayerState {
@@ -108,7 +156,11 @@ export class Player extends PhysicsBody {
 		this.airVelocityX = 0;
 		this.crouchFramesLeft = 0;
 		this.jumpBufferFrames = 0;
-		this.syncFromBody();
+		this.renderX = x;
+		this.renderY = y;
+		this.renderPrevX = x;
+		this.renderPrevY = y;
+		this.syncRenderPosition();
 	}
 
 	public override destroy(options?: Parameters<PhysicsBody['destroy']>[0]): void {
@@ -117,8 +169,10 @@ export class Player extends PhysicsBody {
 
 		if (this.boundEngine) {
 			Events.off(this.boundEngine, 'beforeUpdate', this.onBeforeUpdate);
+			Events.off(this.boundEngine, 'afterUpdate', this.onAfterUpdate);
 			this.boundEngine = null;
 		}
+		this.boundWorld = null;
 
 		this.groundContacts.clear();
 		super.destroy(options);
@@ -128,10 +182,26 @@ export class Player extends PhysicsBody {
 		return this.display as AnimatedSprite;
 	}
 
+	private syncRenderPosition(): void {
+		const pose = this.getRenderPosition();
+		this.display.position.set(pose.x, pose.y);
+		this.display.rotation = 0;
+	}
+
 	private applyInput(): void {
-		const moveLeft = this.keysDown.has('ArrowLeft') || this.keysDown.has('KeyA');
-		const moveRight = this.keysDown.has('ArrowRight') || this.keysDown.has('KeyD');
-		const jumpDown = this.keysDown.has('Space') || this.keysDown.has('ArrowUp') || this.keysDown.has('KeyW');
+		const moveLeft =
+			this.keysDown.has('ArrowLeft')
+			|| this.keysDown.has('KeyA')
+			|| this.touchControls.moveLeft;
+		const moveRight =
+			this.keysDown.has('ArrowRight')
+			|| this.keysDown.has('KeyD')
+			|| this.touchControls.moveRight;
+		const jumpDown =
+			this.keysDown.has('Space')
+			|| this.keysDown.has('ArrowUp')
+			|| this.keysDown.has('KeyW')
+			|| this.touchControls.jump;
 		const jumpPressed = jumpDown && !this.jumpHeld;
 		this.jumpHeld = jumpDown;
 		const onGround = this.isOnGround();

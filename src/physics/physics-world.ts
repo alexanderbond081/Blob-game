@@ -7,7 +7,7 @@ export type CollisionCallback = (collision: PhysicsCollisionInfo) => void;
 const TARGET_FPS = 60;
 const FIXED_DELTA_MS = 1000 / TARGET_FPS;
 const MAX_SUB_STEPS = 5;
-const GRAVITY_SCALE = 0.0016;
+const GRAVITY_SCALE = 0.0018;
 
 export class PhysicsWorld {
 	public readonly engine: Engine;
@@ -72,6 +72,14 @@ export class PhysicsWorld {
 			this.accumulatorMs -= FIXED_DELTA_MS;
 			steps += 1;
 		}
+	}
+
+	/**
+	 * Blend factor toward the next physics step (0..1).
+	 * Use for rendering: lerp(previousBodyState, currentBodyState, alpha).
+	 */
+	public getInterpolationAlpha(): number {
+		return Math.min(1, Math.max(0, this.accumulatorMs / FIXED_DELTA_MS));
 	}
 
 	public destroy(): void {

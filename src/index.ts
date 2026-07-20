@@ -108,6 +108,20 @@ const bindViewportListeners = (): void => {
 	document.addEventListener('fullscreenchange', onViewportChange);
 };
 
+/** Block long-press text selection / callout / vibration on mobile browsers. */
+const suppressBrowserTouchChrome = (canvas: HTMLCanvasElement): void => {
+	const prevent = (event: Event): void => {
+		event.preventDefault();
+	};
+
+	document.addEventListener('contextmenu', prevent);
+	canvas.addEventListener('contextmenu', prevent);
+	canvas.addEventListener('selectstart', prevent);
+	// passive: false is required for preventDefault to cancel iOS long-press.
+	canvas.addEventListener('touchstart', prevent, { passive: false });
+	canvas.addEventListener('touchmove', prevent, { passive: false });
+};
+
 async function initGame(): Promise<void> {
 	logBuildInfo();
 	await initPlatform();
@@ -124,6 +138,7 @@ async function initGame(): Promise<void> {
 	});
 	bindGameDelayTicker(app.ticker);
 	document.body.appendChild(app.canvas);
+	suppressBrowserTouchChrome(app.canvas);
 	applyStageScale();
 
 	viewMask.rect(0, 0, gameWidth, gameHeight).fill(0xffffff);

@@ -42,7 +42,7 @@ export class MainGameScene extends Scene {
 	}
 
 	private adjustBackground(): void {
-		this.bgSprite.scale.set(0.5);
+		this.bgSprite.scale.set(1);
 		this.bgSprite.x = (Scene.viewportWidth - this.bgSprite.width) * 0.5;
 		this.bgSprite.y = (Scene.viewportHeight - this.bgSprite.height) * 0.5;
 	}

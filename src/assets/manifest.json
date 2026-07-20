@@ -7,7 +7,7 @@
 					"alias": "logo",
 					"src": "assets/preload/logo.png",
 					"data": {
-						"resolution": 1,
+						"resolution": 2,
 						"autoGenerateMipmaps": true,
 						"scaleMode": "linear"
 					}
@@ -21,14 +21,18 @@
 					"alias": "blob",
 					"src": "assets/images/blob.json",
 					"data": {
-						"resolution": 1,
+						"resolution": 2,
 						"autoGenerateMipmaps": true,
 						"scaleMode": "linear"
 					}
 				},
 				{
 					"alias": "firefly",
-					"src": "assets/images/firefly.png"
+					"src": "assets/images/firefly.webp",
+					"data": {
+						"resolution": 2,
+						"scaleMode": "linear"
+					}
 				}
 			]
 		},
@@ -37,17 +41,17 @@
 			"assets": [
 				{
 					"alias": "background",
-					"src": "assets/main-scene/scene-0-background.webp",
+					"src": "assets/main-scene/background.webp",
 					"data": {
-						"resolution": 2,
+						"resolution": 1,
 						"scaleMode": "linear"
 					}
 				},
 				{
 					"alias": "background-mid",
-					"src": "assets/main-scene/scene-0-background.webp",
+					"src": "assets/main-scene/background-mid.webp",
 					"data": {
-						"resolution": 2,
+						"resolution": 1,
 						"scaleMode": "linear"
 					}
 				}

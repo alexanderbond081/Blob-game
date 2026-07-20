@@ -1,6 +1,7 @@
 import { Container } from 'pixi.js';
 
 import { isCollectibleBody, isPlayerBody } from '../entities/collectible';
+import { NineSliceTouchPad } from '../input/nine-slice-touch-pad';
 import { loadLevelData } from '../levels/level-loader';
 import { SoundManager } from '../managers/sound-manager';
 import { PhysicsCollisionInfo } from '../physics/ground-contact';
@@ -14,6 +15,7 @@ export class PlatformLevelScene extends Scene {
 	private readonly levelId: string;
 	private readonly physicsWorld = new PhysicsWorld();
 	private readonly worldRoot = new Container();
+	private touchPad!: NineSliceTouchPad;
 	private parallaxFar!: ParallaxLayer;
 	private parallaxMid!: ParallaxLayer;
 	private camera!: GameCamera;
@@ -61,6 +63,15 @@ export class PlatformLevelScene extends Scene {
 		this.levelRoot = new LevelRoot(levelData, this.physicsWorld);
 		this.worldRoot.addChild(this.levelRoot);
 
+		this.touchPad = new NineSliceTouchPad({
+			width: this.designWidth,
+			height: this.designHeight,
+			edgeInset: 30,
+			columnWeights: [1, 1.35, 1],
+			rowWeights: [1, 2, 2],
+		});
+		this.addChild(this.touchPad);
+
 		this.physicsWorld.onCollisionStart((collision) => {
 			this.handleCollectibleCollision(collision);
 		});
@@ -70,15 +81,22 @@ export class PlatformLevelScene extends Scene {
 	}
 
 	public update(deltaTime: number): void {
+		this.levelRoot.player.setTouchControls(this.touchPad.getControls());
 		this.physicsWorld.step(deltaTime);
 		this.levelRoot.player.update(deltaTime);
+		for (const collectible of this.levelRoot.collectibles) {
+			collectible.update(deltaTime);
+		}
 		this.checkFallRespawn();
-		this.camera.update(this.levelRoot.player.position.x, this.levelRoot.player.position.y, deltaTime);
+
+		const renderPos = this.levelRoot.player.getRenderPosition();
+		this.camera.update(renderPos.x, renderPos.y, deltaTime);
 
 		const renderScale = this.worldTransform.a || 1;
 		const cameraX = this.camera.getRenderX(renderScale);
 		const cameraY = this.camera.getRenderY(renderScale);
 		this.camera.applyToContainer(this.worldRoot, renderScale);
+		this.levelRoot.player.alignDisplayToCameraPixels(cameraX, cameraY, renderScale);
 		this.parallaxFar.update(cameraX, cameraY);
 		this.parallaxMid.update(cameraX, cameraY);
 	}
@@ -88,6 +106,7 @@ export class PlatformLevelScene extends Scene {
 			this.levelRoot.destroyLevel(this.physicsWorld);
 		}
 		this.physicsWorld.destroy();
+		this.touchPad?.destroy({ children: true });
 		super.destroy(options);
 	}
 
