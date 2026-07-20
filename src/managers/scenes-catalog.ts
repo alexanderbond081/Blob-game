@@ -1,5 +1,5 @@
 import { Scene } from '../scenes/scene';
-import { MainGameScene } from '../scenes/main-game-scene';
+import { PlatformLevelScene } from '../scenes/platform-level-scene';
 
 export type GameSceneCreateArgs = Record<string, unknown>;
 
@@ -10,8 +10,8 @@ export interface GameSceneCatalogEntry {
 	createScene: (args?: GameSceneCreateArgs) => Scene;
 }
 
-const createForestScene = (args?: GameSceneCreateArgs): Scene => {
-	return new MainGameScene();
+const createForestScene = (_args?: GameSceneCreateArgs): Scene => {
+	return new PlatformLevelScene('forest-01');
 };
 
 export const gameSceneCatalog: GameSceneCatalogEntry[] = [

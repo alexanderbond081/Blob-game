@@ -1,0 +1,14 @@
+{
+	"frames": {
+	  "blob-right": { "frame": { "x": 0, "y": 0, "w": 170, "h": 170 } },
+	  "blob-left": { "frame": { "x": 171, "y": 0, "w": 170, "h": 170 } }
+	},
+	"animations": {
+		"right": ["blob-right"],
+		"left": ["blob-left"]
+	},
+	"meta": {
+	  "image": "blob-right-left-170x170.png",
+	  "scale": "0.5"
+	}
+  }

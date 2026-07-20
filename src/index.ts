@@ -6,7 +6,6 @@ import { PixiPlugin } from 'gsap/PixiPlugin';
 
 import { Scene } from './scenes/scene';
 import { LoadingScene } from './scenes/loading-scene';
-import { MainGameScene } from './scenes/main-game-scene';
 import { GameSceneCatalogEntry, gameSceneCatalog } from './managers/scenes-catalog';
 import { logBuildInfo } from './version';
 import { initPlatform, platformGameplayStart, platformLoadingFinished } from './platform/platform';
@@ -176,8 +175,9 @@ async function loadGameScene(sceneId: string): Promise<void> {
 	}
 
 	gameSceneAssets = entry.assetBundle;
+	await Assets.loadBundle(entry.assetBundle);
 
-	await initHUD();
+	//await initHUD(); // !! temporary disabled
 
 	const gameScene = createGameScene(entry);
 
@@ -268,11 +268,7 @@ function onKeyDown(event: KeyboardEvent): void {
 
 	if (isPaused || gameHUD.isModalOpen()) return;
 
-	if (event.code === 'Space' || event.code === 'Enter') {
-		event.preventDefault();
-		if (event.repeat) return;
-		// ... some action
-	}
+	// Gameplay input is handled by active scene entities (e.g. Player).
 }
 
 initGame().catch((err) => console.error("Game crash:", err));

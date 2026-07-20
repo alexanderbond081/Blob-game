@@ -1,0 +1,22 @@
+{
+	"id": "forest-01",
+	"size": { "width": 2400, "height": 540 },
+	"spawn": { "x": 120, "y": 380 },
+	"backgrounds": {
+		"far": { "texture": "background", "parallax": 0.2 },
+		"mid": { "texture": "background-mid", "parallax": 0.5 }
+	},
+	"platforms": [
+		{ "x": 0, "y": 540, "width": 2400, "height": 60, "label": "low-ground" },
+		{ "x": 0, "y": 480, "width": 700, "height": 60, "label": "high-ground1" },
+		{ "x": 1580, "y": 480, "width": 820, "height": 60, "label": "high-ground2"},
+		{ "x": 780, "y": 420, "width": 220, "height": 35, "label": "leaf" },
+		{ "x": 1080, "y": 360, "width": 180, "height": 35, "label": "leaf" },
+		{ "x": 1320, "y": 420, "width": 200, "height": 35, "label": "leaf" }
+	],
+	"collectibles": [
+		{ "id": "fly-1", "x": 880, "y": 380, "type": "firefly" },
+		{ "id": "fly-2", "x": 1160, "y": 320, "type": "firefly" },
+		{ "id": "fly-3", "x": 1700, "y": 440, "type": "firefly" }
+	]
+}
