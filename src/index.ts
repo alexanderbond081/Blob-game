@@ -37,7 +37,7 @@ let gameHeight = 540;
 let currentScene: Scene | null = null;
 let gameSceneAssets: string = '';
 
-/** Global scene pause (ticker + input) during bootstrap/load — not part of spin FSM. */
+/** Global scene pause (ticker + input) during bootstrap/load. */
 let isPaused = true;
 
 const getClientSize = (): { width: number; height: number } => {
@@ -88,6 +88,7 @@ const toggleFullscreen = async (): Promise<void> => {
 	} catch (error) {
 		console.warn('toggleFullscreen: not available', error);
 	} finally {
+		gameHUD.syncFullscreenButton(isFullscreen());
 		applyStageScale();
 	}
 };
@@ -105,7 +106,10 @@ const bindViewportListeners = (): void => {
 	});
 	window.visualViewport?.addEventListener('resize', onViewportChange);
 	window.visualViewport?.addEventListener('scroll', onViewportChange);
-	document.addEventListener('fullscreenchange', onViewportChange);
+	document.addEventListener('fullscreenchange', () => {
+		gameHUD.syncFullscreenButton(isFullscreen());
+		onViewportChange();
+	});
 };
 
 /** Block long-press text selection / callout / vibration on mobile browsers. */
@@ -200,7 +204,7 @@ async function loadGameScene(sceneId: string): Promise<void> {
 	gameSceneAssets = entry.assetBundle;
 	await Assets.loadBundle(entry.assetBundle);
 
-	//await initHUD(); // !! temporary disabled
+	await initHUD();
 
 	const gameScene = createGameScene(entry);
 

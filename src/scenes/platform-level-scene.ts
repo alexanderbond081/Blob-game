@@ -94,7 +94,7 @@ export class PlatformLevelScene extends Scene {
 		});
 
 		SoundManager.playMusic('bg-music');
-		SoundManager.playAmbience('ambience');
+		//SoundManager.playAmbience('ambience');
 	}
 
 	public update(deltaTime: number): void {

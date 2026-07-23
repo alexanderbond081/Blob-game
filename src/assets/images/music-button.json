@@ -1,0 +1,14 @@
+{
+	"frames": {
+	  "music-on": { "frame": { "x": 0, "y": 0, "w": 150, "h": 150 } },
+	  "music-off": { "frame": { "x": 150, "y": 0, "w": 150, "h": 150 } }
+	},
+	"animations": {
+		"on": ["music-on"],
+		"off": ["music-off"]
+	},
+	"meta": {
+	  "image": "music-button.png",
+	  "scale": "1"
+	}
+  }

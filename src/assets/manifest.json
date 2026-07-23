@@ -22,6 +22,37 @@
 					"src": "assets/sounds/must-be-magic-not-sad.ogg"
 				},
 				{
+					"alias": "sound-button",
+					"src": "assets/images/sound-button.json",
+					"data": {
+						"resolution": 3,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "music-button",
+					"src": "assets/images/music-button.json",
+					"data": {
+						"resolution": 3,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "fullscreen-button",
+					"src": "assets/images/fullscreen-button.json",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "hit-a-button",
+					"src": "assets/sounds/hit-a-button.ogg"
+				},
+				{
 					"alias": "blob",
 					"src": "assets/images/blob.json",
 					"data": {

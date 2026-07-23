@@ -1,0 +1,14 @@
+{
+	"frames": {
+	  "sound-on": { "frame": { "x": 0, "y": 0, "w": 150, "h": 150 } },
+	  "sound-off": { "frame": { "x": 150, "y": 0, "w": 150, "h": 150 } }
+	},
+	"animations": {
+		"on": ["sound-on"],
+		"off": ["sound-off"]
+	},
+	"meta": {
+	  "image": "sound-button.png",
+	  "scale": "1"
+	}
+  }
