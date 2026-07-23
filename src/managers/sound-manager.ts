@@ -21,7 +21,7 @@ function _createGain(volume: number = 1): GainNode {
 }
 
 export class SoundManager {
-	private static _musicVolume: number = 0.8;
+	private static _musicVolume: number = 0.6;
 	private static _ambienceVolume: number = 0.8;
 	private static _sfxVolume: number = 0.8;
 

@@ -1,5 +1,5 @@
 import { Bodies, Body } from 'matter-js';
-import { Assets, Sprite, Texture } from 'pixi.js';
+import { Assets, Container, Sprite, Texture } from 'pixi.js';
 
 import { PhysicsBody } from '../physics/physics-body';
 import { PhysicsWorld } from '../physics/physics-world';
@@ -9,6 +9,8 @@ const COLLECTIBLE_RADIUS = 40;
 const BOB_PERIOD_SEC = 2;
 const BOB_AMPLITUDE = 8;
 const FRAME_HZ = 60;
+/** Seconds before a collected firefly reappears. */
+const RESPAWN_DELAY_SEC = 20;
 
 export type CollectibleCollectedHandler = (collectible: Collectible) => void;
 
@@ -21,6 +23,9 @@ export class Collectible extends PhysicsBody {
 	private readonly baseY: number;
 	private readonly bobPhase: number;
 	private bobTime = 0;
+	private respawnSecondsLeft = 0;
+	private world: PhysicsWorld | null = null;
+	private parentLayer: Container | null = null;
 
 	public constructor(data: LevelCollectible) {
 		const body = Bodies.circle(data.x, data.y, COLLECTIBLE_RADIUS, {
@@ -42,12 +47,25 @@ export class Collectible extends PhysicsBody {
 		void this.loadTexture(data.type);
 	}
 
+	public override addToWorld(world: PhysicsWorld, parent: Container): void {
+		this.world = world;
+		this.parentLayer = parent;
+		super.addToWorld(world, parent);
+		this.syncFromBody();
+	}
+
 	public update(deltaTime: number): void {
+		const dtSec = Math.max(deltaTime, 0) / FRAME_HZ;
+
 		if (this.collected) {
+			this.respawnSecondsLeft -= dtSec;
+			if (this.respawnSecondsLeft <= 0) {
+				this.respawn();
+			}
 			return;
 		}
 
-		this.bobTime += Math.max(deltaTime, 0) / FRAME_HZ;
+		this.bobTime += dtSec;
 		const offsetY = Math.sin((this.bobTime * Math.PI * 2) / BOB_PERIOD_SEC + this.bobPhase) * BOB_AMPLITUDE;
 		this.display.position.set(this.baseX, this.baseY + offsetY);
 	}
@@ -58,8 +76,22 @@ export class Collectible extends PhysicsBody {
 		}
 
 		this.collected = true;
+		this.respawnSecondsLeft = RESPAWN_DELAY_SEC;
+		this.world = world;
 		this.removeFromWorld(world);
-		this.destroy();
+		this.display.visible = false;
+	}
+
+	private respawn(): void {
+		if (!this.world || !this.parentLayer) {
+			return;
+		}
+
+		this.collected = false;
+		this.respawnSecondsLeft = 0;
+		this.display.visible = true;
+		this.addToWorld(this.world, this.parentLayer);
+		this.display.position.set(this.baseX, this.baseY);
 	}
 
 	private async loadTexture(type: string): Promise<void> {

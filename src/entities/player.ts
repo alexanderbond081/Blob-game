@@ -7,9 +7,11 @@ import { PhysicsBody } from '../physics/physics-body';
 import { PhysicsWorld } from '../physics/physics-world';
 import { PlayerJelly } from './player-jelly';
 import { PlayerState, resolvePlayerState } from './player-state';
+import { SoundManager } from '../managers/sound-manager';
 
 const PLAYER_RADIUS = 30;
 const MOVE_SPEED_X = 6;
+const LANDING_VELOCITY_THRESHOLD = 2;
 const JUMP_VELOCITY = -15;
 /** Crouch wind-up frames before the jump impulse is applied */
 const JUMP_CROUCH_FRAMES = 5;
@@ -25,6 +27,9 @@ export class Player extends PhysicsBody {
 	private state: PlayerState = 'idle';
 	private facingRight = true;
 	private airVelocityX = 0;
+	private wasOnGround = false;
+	/** Vertical velocity before the physics step resolves collisions (useful for landing SFX / fall damage). */
+	private preStepVelocityY = 0;
 	private jumpHeld = false;
 	private crouchFramesLeft = 0;
 	private jumpBufferFrames = 0;
@@ -47,6 +52,8 @@ export class Player extends PhysicsBody {
 	};
 
 	private readonly onBeforeUpdate = (): void => {
+		// Capture velocity before Matter resolves contacts — after the step, landing velocity is ~0.
+		this.preStepVelocityY = this.body.velocity.y;
 		this.applyInput();
 	};
 
@@ -154,6 +161,8 @@ export class Player extends PhysicsBody {
 		Body.setAngle(this.body, 0);
 		this.groundContacts.clear();
 		this.airVelocityX = 0;
+		this.wasOnGround = true;
+		this.preStepVelocityY = 0;
 		this.crouchFramesLeft = 0;
 		this.jumpBufferFrames = 0;
 		this.renderX = x;
@@ -273,13 +282,21 @@ export class Player extends PhysicsBody {
 			y: JUMP_VELOCITY,
 		});
 		this.groundContacts.clear();
+		SoundManager.playSound('blob-jump', 1, { speed: Math.random() * 0.4 + 0.8 });
 	}
 
 	private updateState(): void {
+		const onGround = this.isOnGround();
+
+		if (onGround && !this.wasOnGround && this.preStepVelocityY > LANDING_VELOCITY_THRESHOLD) {
+			void SoundManager.playSound('blob-land', 1, { speed: Math.random() * 0.4 + 0.9 });
+		}
+
+		this.wasOnGround = onGround;
 		this.state = resolvePlayerState({
 			velocityX: this.body.velocity.x,
 			velocityY: this.body.velocity.y,
-			onGround: this.isOnGround(),
+			onGround,
 		});
 	}
 

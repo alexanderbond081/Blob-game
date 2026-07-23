@@ -18,6 +18,10 @@
 			"name": "common",
 			"assets": [
 				{
+					"alias": "bg-music",
+					"src": "assets/sounds/must-bet-magic-not-sad.ogg"
+				},
+				{
 					"alias": "blob",
 					"src": "assets/images/blob.json",
 					"data": {
@@ -27,12 +31,32 @@
 					}
 				},
 				{
+					"alias": "blob-jump",
+					"src": "assets/sounds/jump1c.ogg"
+				},
+				{
+					"alias": "blob-land",
+					"src": "assets/sounds/bounce2.ogg"
+				},
+				{
 					"alias": "firefly",
 					"src": "assets/images/firefly.webp",
 					"data": {
 						"resolution": 2,
 						"scaleMode": "linear"
 					}
+				},
+				{
+					"alias": "firefly-collect1",
+					"src": "assets/sounds/chime-A4.ogg"
+				},
+				{
+					"alias": "firefly-collect2",
+					"src": "assets/sounds/chime-A5.ogg"
+				},
+				{
+					"alias": "firefly-collect3",
+					"src": "assets/sounds/chime-A6.ogg"
 				}
 			]
 		},

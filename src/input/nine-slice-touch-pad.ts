@@ -187,6 +187,9 @@ export class NineSliceTouchPad extends Container {
 					next.moveRight = true;
 					next.jump = true;
 					break;
+				case 'mid-center':
+					next.jump = true;
+					break;
 				default:
 					break;
 			}

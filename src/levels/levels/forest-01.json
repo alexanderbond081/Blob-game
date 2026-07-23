@@ -14,7 +14,7 @@
 		{ "x": 850, "y": 200, "width": 100, "height": 35, "label": "leaf" },
 		{ "x": 550, "y": 100, "width": 100, "height": 35, "label": "leaf" },
 		{ "x": 850, "y": 0, "width": 100, "height": 35, "label": "leaf" },
-		{ "x": 700, "y": 520, "width": 80, "height": 35, "label": "leaf" },
+		{ "x": 700, "y": 720, "width": 80, "height": 35, "label": "leaf" },
 		{ "x": 780, "y": 420, "width": 220, "height": 35, "label": "leaf" },
 		{ "x": 1080, "y": 360, "width": 180, "height": 35, "label": "leaf" },
 		{ "x": 1300, "y": 420, "width": 200, "height": 35, "label": "leaf" }
@@ -22,6 +22,10 @@
 	"collectibles": [
 		{ "id": "fly-1", "x": 880, "y": 380, "type": "firefly" },
 		{ "id": "fly-2", "x": 1160, "y": 320, "type": "firefly" },
-		{ "id": "fly-3", "x": 1700, "y": 440, "type": "firefly" }
+		{ "id": "fly-3", "x": 1700, "y": 440, "type": "firefly" },
+		{ "id": "fly-4", "x": 600, "y": 50, "type": "firefly" },
+		{ "id": "fly-5", "x": 900, "y": 150, "type": "firefly" },
+		{ "id": "fly-6", "x": 1150, "y": 0, "type": "firefly" },
+		{ "id": "fly-7", "x": 1050, "y": 750, "type": "firefly" }
 	]
 }

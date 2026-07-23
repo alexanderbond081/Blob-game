@@ -11,6 +11,22 @@ import { LevelRoot } from '../world/level-root';
 import { ParallaxLayer } from '../world/parallax-layer';
 import { Scene } from './scene';
 
+const COLLECT_SOUNDS = [
+	'firefly-collect1',
+	'firefly-collect2',
+	'firefly-collect3'
+] as const;
+
+const TONE_FACTORS = [
+	Math.pow(2, 2 / 12) / 2,
+	Math.pow(2, 4 / 12) / 2,
+	Math.pow(2, 5 / 12) / 2,
+	Math.pow(2, 7 / 12) / 2,
+	Math.pow(2, 9 / 12) / 2,
+	Math.pow(2, 10 / 12) / 2,
+	Math.pow(2, 12 / 12) / 2,
+] as const;
+
 export class PlatformLevelScene extends Scene {
 	private readonly levelId: string;
 	private readonly physicsWorld = new PhysicsWorld();
@@ -23,6 +39,7 @@ export class PlatformLevelScene extends Scene {
 	private spawnX = 0;
 	private spawnY = 0;
 	private fallLimitY = 0;
+	private collected = 0;
 
 	public constructor(levelId: string) {
 		super();
@@ -66,9 +83,9 @@ export class PlatformLevelScene extends Scene {
 		this.touchPad = new NineSliceTouchPad({
 			width: this.designWidth,
 			height: this.designHeight,
-			edgeInset: 30,
+			edgeInset: 10,
 			columnWeights: [1, 1.35, 1],
-			rowWeights: [1, 2, 2],
+			rowWeights: [0.2, 2, 1],
 		});
 		this.addChild(this.touchPad);
 
@@ -139,6 +156,10 @@ export class PlatformLevelScene extends Scene {
 		}
 
 		collectible.collect(this.physicsWorld);
+		const snd_indx = Math.floor((this.collected % 21) / 7);
+		const tone_indx = this.collected % 7;
+		SoundManager.playSound(COLLECT_SOUNDS[snd_indx], 2, { speed: TONE_FACTORS[tone_indx] }); //Math.floor(Math.random() * 10)
+		this.collected++;
 		console.info(`[collectible] picked up ${collectible.collectibleId}`);
 	}
 }

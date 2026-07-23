@@ -48,8 +48,8 @@ export class LevelRoot extends Container {
 		for (const collectible of this.collectibles) {
 			if (!collectible.collected) {
 				collectible.removeFromWorld(physicsWorld);
-				collectible.destroy();
 			}
+			collectible.destroy();
 		}
 		this.collectibles.length = 0;
 
