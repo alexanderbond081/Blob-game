@@ -17,11 +17,13 @@ Open `http://localhost:3000`.
 
 ### Controls
 
-| Action | Keyboard | Touch (invisible 9-slice pad) |
-|--------|----------|-------------------------------|
-| Move | `A` / `D` or ← → | Bottom-left / bottom-right |
+| Action | Keyboard | Touch / UI |
+|--------|----------|------------|
+| Move | `A` / `D` or ← → | Bottom-left / bottom-right of invisible 9-slice pad |
 | Jump | `Space` / `W` / ↑ | Mid-left / mid-right (also moves) |
-| Fullscreen | `F` | — |
+| Fullscreen | `F` | Top-left HUD button |
+| Mute SFX | — | Top-right sound button (`toggleSFX`) |
+| Mute music | — | Top-right music button (`toggleMusic`) |
 
 ## What’s in this build
 
@@ -30,6 +32,7 @@ Open `http://localhost:3000`.
 - Blob player: run / jump / crouch wind-up, jelly squash, spritesheet facing
 - Fireflies: bob animation, pickup SFX, respawn after a few seconds
 - Fall below level → respawn at spawn
+- Top icon HUD: fullscreen, separate music / SFX mute (spritesheet buttons)
 - Platform SDK hooks for Poki / CrazyGames builds (ads not wired yet)
 
 ## Goals
@@ -69,12 +72,13 @@ Production builds write `dist/BUILD.txt` (version, channel, git meta). Upload th
 | `src/world/` | Camera, parallax, level root |
 | `src/levels/` | Zod schema + JSON levels (`forest-01`) |
 | `src/input/` | Shared controls + 9-slice touch pad |
+| `src/hud/` | Top icon HUD (fullscreen, music, SFX) |
 | `src/platform/` | Poki / CrazyGames / no-op adapters |
 | `plans/` | Design / portal research notes |
 
 ## Known gaps (not blockers for a first push)
 
-- One demo level; no win/lose loop or progression HUD yet (old HUD leftover, mostly unused)
+- One demo level; no win/lose loop or score / progression UI yet
 - No ambience track in the manifest yet
 - Bundle is heavier than an ideal Poki first download (`bundle.js` ~1.4 MB + music) — optimize before portal submit
 - Ads / rewarded breaks not implemented
