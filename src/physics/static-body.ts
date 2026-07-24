@@ -1,7 +1,7 @@
-import { Bodies, Body } from 'matter-js';
+import { Bodies } from 'matter-js';
 import { Container, Graphics } from 'pixi.js';
 
-import { PLATFORM_BODY_LABEL } from './ground-contact';
+import { PLATFORM_BODY_LABEL, STICKY_WALL_SURFACE_LABEL, setPlatformSurfaceLabel } from './ground-contact';
 import { PhysicsBody } from './physics-body';
 
 export type StaticBodyOptions = {
@@ -15,6 +15,7 @@ export type StaticBodyOptions = {
 
 export class StaticBody extends PhysicsBody {
 	public constructor(options: StaticBodyOptions) {
+		const surfaceLabel = options.label ?? PLATFORM_BODY_LABEL;
 		const body = Bodies.rectangle(
 			options.x + options.width * 0.5,
 			options.y + options.height * 0.5,
@@ -27,18 +28,21 @@ export class StaticBody extends PhysicsBody {
 				restitution: 0,
 			},
 		);
+		setPlatformSurfaceLabel(body, surfaceLabel);
 
-		const display = StaticBody.createDisplay(options);
+		const display = StaticBody.createDisplay(options, surfaceLabel);
 		super(body, display);
 	}
 
-	private static createDisplay(options: StaticBodyOptions): Container {
+	private static createDisplay(options: StaticBodyOptions, surfaceLabel: string): Container {
 		const container = new Container();
 		const graphics = new Graphics();
-		const color = options.color ?? 0x3d6b4f;
+		const isSticky = surfaceLabel === STICKY_WALL_SURFACE_LABEL;
+		const color = options.color ?? (isSticky ? 0x5b4a8a : 0x3d6b4f);
+		const topColor = isSticky ? 0xb39ddb : 0x6fcf97;
 
 		graphics.rect(0, 0, options.width, options.height).fill({ color, alpha: 0.95 });
-		graphics.rect(0, 0, options.width, 4).fill({ color: 0x6fcf97, alpha: 0.8 });
+		graphics.rect(0, 0, options.width, 4).fill({ color: topColor, alpha: 0.8 });
 		container.addChild(graphics);
 		container.pivot.set(options.width * 0.5, options.height * 0.5);
 

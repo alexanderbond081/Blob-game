@@ -1,3 +1,4 @@
+import { WallSide } from '../physics/ground-contact';
 import { PlayerState } from './player-state';
 
 export type JellyMotionInput = {
@@ -6,6 +7,10 @@ export type JellyMotionInput = {
 	velocityY: number;
 	onGround: boolean;
 	crouching: boolean;
+	clinging: boolean;
+	wallSide: WallSide | null;
+	wallCrouching: boolean;
+	wallPeeling: boolean;
 	moveSpeedX: number;
 	halfHeight: number;
 	deltaTime: number;
@@ -15,19 +20,34 @@ export type JellyPose = {
 	scaleX: number;
 	scaleY: number;
 	skewX: number;
+	skewY: number;
+	offsetX: number;
 	offsetY: number;
 };
 
-/** Horizontal butt-drag while moving. */
+/** Horizontal butt-drag while moving on the ground. */
 const MAX_SKEW = 0.2;
 const SKEW_LERP = 0.2;
 
 /** Soft resting squash on ground (1 = circle). */
 const IDLE_SQUASH = 0.06;
 const RUN_SQUASH = 0.15;
-const CROUCH_SQUASH = 0.4; //0.22
+const CROUCH_SQUASH = 0.4;
 
-/** Idle breath: slow squash/stretch, period = 1 / BREATH_HZ seconds. */
+/**
+ * Sticky-wall hang: stuck side plants like ground butt-drag; free mass sags down.
+ * skew.y shifts Y by X so the free side hangs while the wall edge stays put (via offset).
+ */
+const WALL_HANG_SKEW = 0.1;
+const WALL_IDLE_SQUASH = 0.05;
+const WALL_CROUCH_SQUASH = 0.4;
+const WALL_CROUCH_HANG = 0.06;
+/** Stretch away from the wall while peeling off (positive wallJelly). */
+const WALL_PEEL_STRETCH = 0.32;
+const WALL_PEEL_HANG = 0.04;
+const WALL_PEEL_IMPULSE = 1.1;
+
+/** Idle / cling breath: slow squash/stretch, period = 1 / BREATH_HZ seconds. */
 const BREATH_HZ = 0.85;
 const BREATH_AMOUNT = 0.0545;
 
@@ -55,6 +75,13 @@ const ANTICIPATION_IMPULSE = 1;
 const VELOCITY_DRIVE = 0.035;
 const MAX_JELLY = 0.38;
 
+/** Horizontal wall spring (negative = squashed into the wall). */
+const WALL_SPRING_STIFFNESS = 280;
+const WALL_SPRING_DAMPING = 6.5;
+const WALL_CLING_IMPULSE = 1.4;
+const WALL_ANTICIPATION_IMPULSE = 1;
+const MAX_WALL_JELLY = 0.38;
+
 const FRAME_HZ = 60;
 
 /**
@@ -64,13 +91,34 @@ const FRAME_HZ = 60;
 export class PlayerJelly {
 	private time = 0;
 	private skewX = 0;
+	private hangSkew = 0;
+	private hangSkewVelocity = 0;
 	private jelly = 0;
 	private jellyVelocity = 0;
+	private wallJelly = 0;
+	private wallJellyVelocity = 0;
 	private wasOnGround = true;
+	private wasClinging = false;
 
 	/** Wind-up squash right before the jump launches. */
 	public anticipateJump(): void {
 		this.jellyVelocity -= ANTICIPATION_IMPULSE;
+	}
+
+	/** Wind-up squash into the wall before a wall jump. */
+	public anticipateWallJump(): void {
+		this.wallJellyVelocity -= WALL_ANTICIPATION_IMPULSE;
+	}
+
+	/** Stretch kick when starting to peel off the wall. */
+	public beginClingPeel(): void {
+		this.wallJellyVelocity += WALL_PEEL_IMPULSE;
+	}
+
+	/** Decaying wobble when first sticking to a wall (squash + hang). */
+	public onClingStart(): void {
+		this.wallJellyVelocity -= WALL_CLING_IMPULSE;
+		this.hangSkewVelocity += WALL_CLING_IMPULSE * 0.55;
 	}
 
 	public update(input: JellyMotionInput): JellyPose {
@@ -78,7 +126,7 @@ export class PlayerJelly {
 		const dtSec = dt / FRAME_HZ;
 		this.time += dt;
 
-		if (!input.onGround && this.wasOnGround) {
+		if (!input.onGround && this.wasOnGround && !input.clinging) {
 			// Leave ground: kick into a tall stretch so the spring can ring in air.
 			this.jellyVelocity += JUMP_IMPULSE;
 		}
@@ -90,6 +138,75 @@ export class PlayerJelly {
 
 		this.wasOnGround = input.onGround;
 
+		if (input.clinging && !this.wasClinging) {
+			this.onClingStart();
+		}
+
+		if (!input.clinging && this.wasClinging) {
+			this.wallJellyVelocity = 0;
+			this.wallJelly = 0;
+			this.hangSkewVelocity = 0;
+			this.hangSkew = 0;
+		}
+
+		this.wasClinging = input.clinging;
+
+		if (input.clinging) {
+			return this.updateClingPose(input, dt, dtSec);
+		}
+
+		return this.updateFreePose(input, dt, dtSec);
+	}
+
+	private updateClingPose(input: JellyMotionInput, dt: number, dtSec: number): JellyPose {
+		const restWallJelly = input.wallPeeling
+			? WALL_PEEL_STRETCH
+			: -(input.wallCrouching ? WALL_CROUCH_SQUASH : WALL_IDLE_SQUASH);
+		const wallSpringForce =
+			(restWallJelly - this.wallJelly) * WALL_SPRING_STIFFNESS
+			- this.wallJellyVelocity * WALL_SPRING_DAMPING;
+		this.wallJellyVelocity += wallSpringForce * dtSec;
+		this.wallJelly += this.wallJellyVelocity * dtSec;
+		this.wallJelly = Math.max(-MAX_WALL_JELLY, Math.min(MAX_WALL_JELLY, this.wallJelly));
+
+		// Hang direction: free side (away from wall) sags down — mirror of ground butt-drag.
+		const wallSign = input.wallSide === 'right' ? 1 : -1;
+		const hangAmount = input.wallPeeling
+			? WALL_PEEL_HANG
+			: (input.wallCrouching ? WALL_CROUCH_HANG : WALL_HANG_SKEW);
+		const restHang = -wallSign * hangAmount;
+		const hangSpringForce =
+			(restHang - this.hangSkew) * WALL_SPRING_STIFFNESS
+			- this.hangSkewVelocity * WALL_SPRING_DAMPING;
+		this.hangSkewVelocity += hangSpringForce * dtSec;
+		this.hangSkew += this.hangSkewVelocity * dtSec;
+		this.hangSkew = Math.max(-MAX_WALL_JELLY, Math.min(MAX_WALL_JELLY, this.hangSkew));
+
+		// Free mass breathes like idle once the cling wobble settles.
+		const breath = !input.wallCrouching && !input.wallPeeling
+			? Math.sin(this.time * (BREATH_HZ / FRAME_HZ) * Math.PI * 2) * BREATH_AMOUNT
+			: 0;
+
+		const scaleX = 1 + this.wallJelly;
+		const scaleY = 1 - this.wallJelly * 0.85 + breath;
+		// Plant stuck side on the wall (same idea as feet plant on ground via offsetY).
+		const plantOffsetX = wallSign * input.halfHeight * (1 - scaleX);
+		// Cancel vertical drift of the wall edge caused by skew.y so that edge stays stuck.
+		const plantOffsetY = -wallSign * input.halfHeight * this.hangSkew;
+
+		this.skewX += (0 - this.skewX) * (1 - Math.pow(1 - SKEW_LERP, dt));
+
+		return {
+			scaleX,
+			scaleY,
+			skewX: this.skewX,
+			skewY: this.hangSkew,
+			offsetX: plantOffsetX,
+			offsetY: plantOffsetY,
+		};
+	}
+
+	private updateFreePose(input: JellyMotionInput, dt: number, dtSec: number): JellyPose {
 		const restJelly = input.onGround
 			? -(input.crouching ? CROUCH_SQUASH : input.state === 'run' ? RUN_SQUASH : IDLE_SQUASH)
 			: 0;
@@ -120,10 +237,14 @@ export class PlayerJelly {
 			: 0;
 		const plantOffset = input.halfHeight * (1 - scaleY);
 
+		this.hangSkew += (0 - this.hangSkew) * (1 - Math.pow(1 - SKEW_LERP, dt));
+
 		return {
 			scaleX,
 			scaleY,
 			skewX: this.skewX,
+			skewY: this.hangSkew,
+			offsetX: 0,
 			offsetY: plantOffset + bob,
 		};
 	}

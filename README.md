@@ -94,6 +94,7 @@ You may view the source for portfolio / learning; reuse of code or assets needs 
 | File | Contents |
 |------|----------|
 | [`plans/poki-2d-platformer-concept.md`](./plans/poki-2d-platformer-concept.md) | Game concept, scope, stack |
+| [`plans/player-mechanics-backlog.md`](./plans/player-mechanics-backlog.md) | Queued player mechanics (not implemented yet) |
 | [`plans/poki.md`](./plans/poki.md) | Poki / CrazyGames technical notes |
 
 ## Author

@@ -1,12 +1,17 @@
-export type PlayerState = 'idle' | 'run' | 'jump' | 'fall';
+export type PlayerState = 'idle' | 'run' | 'jump' | 'fall' | 'cling';
 
 export type PlayerMotion = {
 	velocityX: number;
 	velocityY: number;
 	onGround: boolean;
+	clinging: boolean;
 };
 
 export const resolvePlayerState = (motion: PlayerMotion): PlayerState => {
+	if (motion.clinging) {
+		return 'cling';
+	}
+
 	if (!motion.onGround) {
 		return motion.velocityY < -0.2 ? 'jump' : 'fall';
 	}

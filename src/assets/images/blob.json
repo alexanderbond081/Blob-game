@@ -1,14 +1,18 @@
 {
 	"frames": {
-	  "blob-right": { "frame": { "x": 0, "y": 0, "w": 170, "h": 170 } },
-	  "blob-left": { "frame": { "x": 171, "y": 0, "w": 170, "h": 170 } }
-	},
+		"blob-right": { "frame": { "x": 0, "y": 0, "w": 200, "h": 200 } },
+		"blob-left": { "frame": { "x": 201, "y": 0, "w": 200, "h": 200 } },
+		"blob-hang-right": { "frame": { "x": 0, "y": 201, "w": 200, "h": 200 } },
+		"blob-hang-left": { "frame": { "x": 201, "y": 201, "w": 200, "h": 200 } }
+		},
 	"animations": {
 		"right": ["blob-right"],
-		"left": ["blob-left"]
+		"left": ["blob-left"],
+		"hang-right": ["blob-hang-right"],
+		"hang-left": ["blob-hang-left"]
 	},
 	"meta": {
-	  "image": "blob-right-left-170x170.png",
+	  "image": "blob-right-left-and-hang-200x200.png",
 	  "scale": "1"
 	}
   }

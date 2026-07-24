@@ -212,4 +212,5 @@ Collision shapes and entity spawns come from Tiled **object layers**, not from g
 | File | Contents |
 |------|----------|
 | `poki.md` | Poki / CrazyGames technical notes, SDK, physics library overview |
+| [`player-mechanics-backlog.md`](./player-mechanics-backlog.md) | Queued blob abilities (cling, spikes, crouch, double jump, dash, glide, …) — backlog only |
 | This file | Game concept, scope min/max, timelines, Pixi stack for *this* title |

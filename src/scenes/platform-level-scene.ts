@@ -160,6 +160,6 @@ export class PlatformLevelScene extends Scene {
 		const tone_indx = this.collected % 7;
 		SoundManager.playSound(COLLECT_SOUNDS[snd_indx], 2, { speed: TONE_FACTORS[tone_indx] }); //Math.floor(Math.random() * 10)
 		this.collected++;
-		console.info(`[collectible] picked up ${collectible.collectibleId}`);
+		console.info(`collected ${this.collected} fireflies`);
 	}
 }

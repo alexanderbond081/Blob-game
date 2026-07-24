@@ -2,7 +2,14 @@ import { Bodies, Body, Engine, Events } from 'matter-js';
 import { AnimatedSprite, Assets, Spritesheet, Texture } from 'pixi.js';
 
 import { createEmptyPlayerControls, PlayerControls } from '../input/player-controls';
-import { getPlatformBody, isWalkableContact, PhysicsCollisionInfo } from '../physics/ground-contact';
+import {
+	getPlatformBody,
+	getWallContactSide,
+	isStickyWallBody,
+	isWalkableContact,
+	PhysicsCollisionInfo,
+	WallSide,
+} from '../physics/ground-contact';
 import { PhysicsBody } from '../physics/physics-body';
 import { PhysicsWorld } from '../physics/physics-world';
 import { PlayerJelly } from './player-jelly';
@@ -13,15 +20,33 @@ const PLAYER_RADIUS = 30;
 const MOVE_SPEED_X = 6;
 const LANDING_VELOCITY_THRESHOLD = 2;
 const JUMP_VELOCITY = -15;
+/** Max |vy| allowed to start a sticky cling (half of jump speed; stays independent if jump changes). */
+const STICKY_CLING_MAX_SPEED_Y = Math.abs(JUMP_VELOCITY) * 0.8;
+/** Slow slide while clinging (px per physics frame). */
+const STICKY_SLIDE_SPEED_Y = 0.05;
+/** Small push into the wall so Matter keeps the contact while clinging. */
+const STICKY_HOLD_SPEED_X = 0.8;
+/** Wall jump vertical impulse = 2/3 of a normal jump. */
+const WALL_JUMP_VELOCITY_Y = JUMP_VELOCITY * (4 / 5);
+/** Frames to force horizontal move-speed away from the wall after a wall jump. */
+const WALL_JUMP_HORIZONTAL_FRAMES = 12;
+/** Stretch away from the wall before peel-off when pressing move-away. */
+const CLING_PEEL_FRAMES = 8;
 /** Crouch wind-up frames before the jump impulse is applied */
 const JUMP_CROUCH_FRAMES = 5;
 /** Remember jump press in air so a near-landing tap still jumps */
 const JUMP_BUFFER_FRAMES = 5;
 const RUN_ANIMATION_SPEED = 0.15;
 
+type StickyWallContact = {
+	body: Body;
+	side: WallSide;
+};
+
 export class Player extends PhysicsBody {
 	private readonly keysDown = new Set<string>();
 	private readonly groundContacts = new Set<Body>();
+	private readonly stickyWallContacts = new Map<number, StickyWallContact>();
 	private readonly jelly = new PlayerJelly();
 	private touchControls: PlayerControls = createEmptyPlayerControls();
 	private state: PlayerState = 'idle';
@@ -32,7 +57,13 @@ export class Player extends PhysicsBody {
 	private preStepVelocityY = 0;
 	private jumpHeld = false;
 	private crouchFramesLeft = 0;
+	private wallCrouchFramesLeft = 0;
+	private clingPeelFramesLeft = 0;
 	private jumpBufferFrames = 0;
+	private wallJumpFramesLeft = 0;
+	private wallJumpDirection = 0;
+	private clinging = false;
+	private clingSide: WallSide | null = null;
 	private baseScale = 1;
 	private spritesheet: Spritesheet | null = null;
 	private currentVisual: string | null = null;
@@ -160,11 +191,18 @@ export class Player extends PhysicsBody {
 		Body.setAngularVelocity(this.body, 0);
 		Body.setAngle(this.body, 0);
 		this.groundContacts.clear();
+		this.stickyWallContacts.clear();
 		this.airVelocityX = 0;
 		this.wasOnGround = true;
 		this.preStepVelocityY = 0;
 		this.crouchFramesLeft = 0;
+		this.wallCrouchFramesLeft = 0;
+		this.clingPeelFramesLeft = 0;
 		this.jumpBufferFrames = 0;
+		this.wallJumpFramesLeft = 0;
+		this.wallJumpDirection = 0;
+		this.clinging = false;
+		this.clingSide = null;
 		this.renderX = x;
 		this.renderY = y;
 		this.renderPrevX = x;
@@ -184,6 +222,7 @@ export class Player extends PhysicsBody {
 		this.boundWorld = null;
 
 		this.groundContacts.clear();
+		this.stickyWallContacts.clear();
 		super.destroy(options);
 	}
 
@@ -223,11 +262,16 @@ export class Player extends PhysicsBody {
 			moveDirection += 1;
 		}
 
+		if (this.clinging) {
+			this.applyClingInput(moveDirection, jumpPressed, onGround);
+			return;
+		}
+
 		if (moveDirection !== 0) {
 			this.facingRight = moveDirection > 0;
 		}
 
-		const speedX = moveDirection * MOVE_SPEED_X;
+		const speedX = this.resolveHorizontalSpeed(moveDirection);
 		this.airVelocityX = speedX;
 
 		if (jumpPressed) {
@@ -263,15 +307,171 @@ export class Player extends PhysicsBody {
 			}
 		}
 
+		if (!onGround) {
+			this.tryStartCling(moveDirection);
+		}
+
+		if (this.clinging) {
+			this.applyClingVelocity();
+			return;
+		}
+
 		Body.setVelocity(this.body, {
 			x: speedX,
 			y: this.body.velocity.y,
 		});
 	}
 
+	private applyClingInput(moveDirection: number, jumpPressed: boolean, onGround: boolean): void {
+		if (onGround) {
+			this.endCling();
+			Body.setVelocity(this.body, {
+				x: moveDirection * MOVE_SPEED_X,
+				y: this.body.velocity.y,
+			});
+			return;
+		}
+
+		if (!this.hasActiveClingContact()) {
+			this.endCling();
+			Body.setVelocity(this.body, {
+				x: moveDirection * MOVE_SPEED_X,
+				y: this.body.velocity.y,
+			});
+			return;
+		}
+
+		const awayDirection = this.clingSide === 'left' ? 1 : -1;
+		const movingAway = moveDirection === awayDirection;
+
+		// Jump wins over peel / move-away (fixes same-frame move stealing the jump).
+		if (jumpPressed && this.wallCrouchFramesLeft <= 0) {
+			this.clingPeelFramesLeft = 0;
+			this.beginWallJumpCrouch();
+		}
+
+		if (this.wallCrouchFramesLeft > 0) {
+			this.wallCrouchFramesLeft -= 1;
+
+			if (!this.hasActiveClingContact()) {
+				this.launchWallJump();
+				return;
+			}
+
+			if (this.wallCrouchFramesLeft <= 0) {
+				this.launchWallJump();
+				return;
+			}
+
+			this.applyClingVelocity();
+			return;
+		}
+
+		if (movingAway) {
+			if (this.clingPeelFramesLeft <= 0) {
+				this.clingPeelFramesLeft = CLING_PEEL_FRAMES;
+				this.jelly.beginClingPeel();
+			}
+
+			this.clingPeelFramesLeft -= 1;
+
+			if (this.clingPeelFramesLeft <= 0) {
+				this.endCling();
+				Body.setVelocity(this.body, {
+					x: moveDirection * MOVE_SPEED_X,
+					y: this.body.velocity.y,
+				});
+				return;
+			}
+		} else {
+			this.clingPeelFramesLeft = 0;
+		}
+
+		this.applyClingVelocity();
+	}
+
+	private tryStartCling(moveDirection: number): void {
+		if (this.crouchFramesLeft > 0 || this.wallJumpFramesLeft > 0) {
+			return;
+		}
+
+		if (Math.abs(this.body.velocity.y) >= STICKY_CLING_MAX_SPEED_Y) {
+			return;
+		}
+
+		const contact = this.findClingableContact(moveDirection);
+		if (!contact) {
+			return;
+		}
+
+		this.clinging = true;
+		this.clingSide = contact.side;
+		this.facingRight = contact.side === 'left';
+		this.jumpBufferFrames = 0;
+		this.crouchFramesLeft = 0;
+	}
+
+	private findClingableContact(moveDirection: number): StickyWallContact | null {
+		for (const contact of this.stickyWallContacts.values()) {
+			const towardWall = contact.side === 'left' ? -1 : 1;
+			if (moveDirection === towardWall && this.isStickyWallClingHeightOk(contact.body)) {
+				return contact;
+			}
+		}
+
+		return null;
+	}
+
+	private hasActiveClingContact(): boolean {
+		if (!this.clingSide) {
+			return false;
+		}
+
+		for (const contact of this.stickyWallContacts.values()) {
+			if (contact.side === this.clingSide && this.isStickyWallClingHeightOk(contact.body)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Cling only when the wall top is above the blob center.
+	 * Blocks corner grabs where the hang pose looks attached to empty air.
+	 */
+	private isStickyWallClingHeightOk(wallBody: Body): boolean {
+		return wallBody.bounds.min.y < this.body.position.y;
+	}
+
+	private applyClingVelocity(): void {
+		if (!this.clingSide) {
+			return;
+		}
+
+		const holdX = this.clingSide === 'left' ? -STICKY_HOLD_SPEED_X : STICKY_HOLD_SPEED_X;
+		this.facingRight = this.clingSide === 'left';
+		Body.setVelocity(this.body, {
+			x: holdX,
+			y: STICKY_SLIDE_SPEED_Y,
+		});
+	}
+
+	private endCling(): void {
+		this.clinging = false;
+		this.clingSide = null;
+		this.wallCrouchFramesLeft = 0;
+		this.clingPeelFramesLeft = 0;
+	}
+
 	private beginJumpCrouch(): void {
 		this.crouchFramesLeft = JUMP_CROUCH_FRAMES;
 		this.jelly.anticipateJump();
+	}
+
+	private beginWallJumpCrouch(): void {
+		this.wallCrouchFramesLeft = JUMP_CROUCH_FRAMES;
+		this.jelly.anticipateWallJump();
 	}
 
 	private launchJump(speedX: number): void {
@@ -283,6 +483,30 @@ export class Player extends PhysicsBody {
 		});
 		this.groundContacts.clear();
 		SoundManager.playSound('blob-jump', 1, { speed: Math.random() * 0.4 + 0.8 });
+	}
+
+	private launchWallJump(): void {
+		const awayDirection = this.clingSide === 'left' ? 1 : -1;
+		this.wallCrouchFramesLeft = 0;
+		this.jumpBufferFrames = 0;
+		this.wallJumpDirection = awayDirection;
+		this.wallJumpFramesLeft = WALL_JUMP_HORIZONTAL_FRAMES;
+		this.facingRight = awayDirection > 0;
+		this.endCling();
+		Body.setVelocity(this.body, {
+			x: awayDirection * MOVE_SPEED_X,
+			y: WALL_JUMP_VELOCITY_Y,
+		});
+		SoundManager.playSound('blob-jump', 1, { speed: Math.random() * 0.4 + 0.8 });
+	}
+
+	private resolveHorizontalSpeed(moveDirection: number): number {
+		if (this.wallJumpFramesLeft > 0) {
+			this.wallJumpFramesLeft -= 1;
+			return this.wallJumpDirection * MOVE_SPEED_X;
+		}
+
+		return moveDirection * MOVE_SPEED_X;
 	}
 
 	private updateState(): void {
@@ -297,11 +521,17 @@ export class Player extends PhysicsBody {
 			velocityX: this.body.velocity.x,
 			velocityY: this.body.velocity.y,
 			onGround,
+			clinging: this.clinging,
 		});
 	}
 
 	private updateVisual(): void {
 		if (!this.spritesheet) {
+			return;
+		}
+
+		if (this.state === 'cling') {
+			this.playAnimation(this.facingRight ? 'hang-right' : 'hang-left');
 			return;
 		}
 
@@ -323,6 +553,10 @@ export class Player extends PhysicsBody {
 			velocityY: this.body.velocity.y,
 			onGround: this.isOnGround(),
 			crouching: this.crouchFramesLeft > 0,
+			clinging: this.clinging,
+			wallSide: this.clingSide,
+			wallCrouching: this.wallCrouchFramesLeft > 0,
+			wallPeeling: this.clingPeelFramesLeft > 0,
 			moveSpeedX: MOVE_SPEED_X,
 			halfHeight: PLAYER_RADIUS,
 			deltaTime,
@@ -330,6 +564,8 @@ export class Player extends PhysicsBody {
 
 		this.sprite.scale.set(this.baseScale * pose.scaleX, this.baseScale * pose.scaleY);
 		this.sprite.skew.x = pose.skewX;
+		this.sprite.skew.y = pose.skewY;
+		this.display.position.x += pose.offsetX;
 		this.display.position.y += pose.offsetY;
 	}
 
@@ -381,15 +617,25 @@ export class Player extends PhysicsBody {
 
 		if (!isContact) {
 			this.groundContacts.delete(platformBody);
+			this.stickyWallContacts.delete(platformBody.id);
 			return;
 		}
 
 		if (isWalkableContact(this.body, bodyA, bodyB, normal)) {
 			this.groundContacts.add(platformBody);
+			this.stickyWallContacts.delete(platformBody.id);
 			return;
 		}
 
 		this.groundContacts.delete(platformBody);
+
+		const wallSide = getWallContactSide(this.body, bodyA, bodyB, normal);
+		if (wallSide && isStickyWallBody(platformBody)) {
+			this.stickyWallContacts.set(platformBody.id, { body: platformBody, side: wallSide });
+			return;
+		}
+
+		this.stickyWallContacts.delete(platformBody.id);
 	}
 
 	private async loadSpritesheet(): Promise<void> {
