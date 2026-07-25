@@ -67,6 +67,16 @@ export class NineSliceTouchPad extends Container {
 		this.on('pointerup', this.onPointerUp);
 		this.on('pointerupoutside', this.onPointerUp);
 		this.on('pointercancel', this.onPointerUp);
+
+		// OS UI (notification shade, control center) often steals the touch so Pixi
+		// never gets pointerup/cancel on the canvas — clear stuck input globally.
+		window.addEventListener('pointerup', this.onGlobalPointerEnd, true);
+		window.addEventListener('pointercancel', this.onGlobalPointerEnd, true);
+		window.addEventListener('lostpointercapture', this.onGlobalPointerEnd, true);
+		window.addEventListener('touchend', this.onGlobalTouchEnd, true);
+		window.addEventListener('touchcancel', this.onGlobalTouchInterrupt, true);
+		window.addEventListener('blur', this.onWindowBlur);
+		document.addEventListener('visibilitychange', this.onVisibilityChange);
 	}
 
 	public getControls(): PlayerControls {
@@ -79,12 +89,32 @@ export class NineSliceTouchPad extends Container {
 		this.off('pointerup', this.onPointerUp);
 		this.off('pointerupoutside', this.onPointerUp);
 		this.off('pointercancel', this.onPointerUp);
-		this.activePointers.clear();
+
+		window.removeEventListener('pointerup', this.onGlobalPointerEnd, true);
+		window.removeEventListener('pointercancel', this.onGlobalPointerEnd, true);
+		window.removeEventListener('lostpointercapture', this.onGlobalPointerEnd, true);
+		window.removeEventListener('touchend', this.onGlobalTouchEnd, true);
+		window.removeEventListener('touchcancel', this.onGlobalTouchInterrupt, true);
+		window.removeEventListener('blur', this.onWindowBlur);
+		document.removeEventListener('visibilitychange', this.onVisibilityChange);
+
+		this.clearAllPointers();
 		super.destroy(options);
 	}
 
 	private readonly onPointerDown = (event: FederatedPointerEvent): void => {
 		event.preventDefault();
+		// After OS UI steals a touch, cancel may never arrive; a new primary press
+		// means previous tracked pointers are orphans — drop them before accepting.
+		if (
+			event.isPrimary
+			&& this.activePointers.size > 0
+			&& !this.activePointers.has(event.pointerId)
+		) {
+			this.clearAllPointers();
+		}
+
+		this.tryCapturePointer(event);
 		const local = event.getLocalPosition(this);
 		const zone = this.hitZone(local.x, local.y);
 		this.activePointers.set(event.pointerId, zone);
@@ -103,9 +133,72 @@ export class NineSliceTouchPad extends Container {
 	};
 
 	private readonly onPointerUp = (event: FederatedPointerEvent): void => {
-		this.activePointers.delete(event.pointerId);
-		this.recomputeControls();
+		this.releasePointer(event.pointerId);
 	};
+
+	private readonly onGlobalPointerEnd = (event: PointerEvent): void => {
+		if (!this.activePointers.has(event.pointerId)) {
+			return;
+		}
+
+		this.releasePointer(event.pointerId);
+	};
+
+	private readonly onGlobalTouchEnd = (event: TouchEvent): void => {
+		for (let i = 0; i < event.changedTouches.length; i += 1) {
+			this.releasePointer(event.changedTouches[i].identifier);
+		}
+	};
+
+	/** Android/iOS shade / gesture interrupt — drop every tracked touch. */
+	private readonly onGlobalTouchInterrupt = (): void => {
+		this.clearAllPointers();
+	};
+
+	private readonly onWindowBlur = (): void => {
+		this.clearAllPointers();
+	};
+
+	private readonly onVisibilityChange = (): void => {
+		if (document.visibilityState === 'hidden') {
+			this.clearAllPointers();
+		}
+	};
+
+	private tryCapturePointer(event: FederatedPointerEvent): void {
+		const native = event.nativeEvent;
+		if (!(native instanceof PointerEvent)) {
+			return;
+		}
+
+		const target = native.target;
+		if (!(target instanceof Element) || typeof target.setPointerCapture !== 'function') {
+			return;
+		}
+
+		try {
+			target.setPointerCapture(native.pointerId);
+		} catch {
+			// Capture can fail if the pointer was already released by the OS.
+		}
+	}
+
+	private releasePointer(pointerId: number): void {
+		if (!this.activePointers.delete(pointerId)) {
+			return;
+		}
+
+		this.recomputeControls();
+	}
+
+	private clearAllPointers(): void {
+		if (this.activePointers.size === 0) {
+			return;
+		}
+
+		this.activePointers.clear();
+		this.recomputeControls();
+	}
 
 	private rebuildZones(): void {
 		const inset = this.edgeInset;

@@ -31,6 +31,14 @@ const collectibleSchema = z.object({
 	type: z.string(),
 });
 
+const hazardSchema = z.object({
+	type: z.string(),
+	x: z.number(),
+	y: z.number(),
+	width: z.number().positive(),
+	height: z.number().positive(),
+});
+
 export const levelSchema = z.object({
 	id: z.string(),
 	size: sizeSchema,
@@ -40,9 +48,11 @@ export const levelSchema = z.object({
 		mid: backgroundLayerSchema,
 	}),
 	platforms: z.array(platformSchema),
+	hazards: z.array(hazardSchema),
 	collectibles: z.array(collectibleSchema),
 });
 
 export type LevelData = z.infer<typeof levelSchema>;
 export type LevelPlatform = z.infer<typeof platformSchema>;
+export type LevelHazard = z.infer<typeof hazardSchema>;
 export type LevelCollectible = z.infer<typeof collectibleSchema>;

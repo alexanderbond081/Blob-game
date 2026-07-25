@@ -1,6 +1,7 @@
 import { Container } from 'pixi.js';
 
 import { isCollectibleBody, isPlayerBody } from '../entities/collectible';
+import { isHazardBody } from '../entities/hazard';
 import { NineSliceTouchPad } from '../input/nine-slice-touch-pad';
 import { loadLevelData } from '../levels/level-loader';
 import { SoundManager } from '../managers/sound-manager';
@@ -91,6 +92,7 @@ export class PlatformLevelScene extends Scene {
 
 		this.physicsWorld.onCollisionStart((collision) => {
 			this.handleCollectibleCollision(collision);
+			this.handleHazardCollision(collision);
 		});
 
 		SoundManager.playMusic('bg-music');
@@ -104,7 +106,7 @@ export class PlatformLevelScene extends Scene {
 		for (const collectible of this.levelRoot.collectibles) {
 			collectible.update(deltaTime);
 		}
-		this.checkFallRespawn();
+		this.checkPlayerDeath();
 
 		const renderPos = this.levelRoot.player.getRenderPosition();
 		this.camera.update(renderPos.x, renderPos.y, deltaTime);
@@ -131,16 +133,47 @@ export class PlatformLevelScene extends Scene {
 		// World uses fixed design coordinates; letterbox handled in index.ts.
 	}
 
-	private checkFallRespawn(): void {
-		if (this.levelRoot.player.position.y <= this.fallLimitY) {
+	private checkPlayerDeath(): void {
+		const player = this.levelRoot.player;
+
+		if (player.finishDeathIfReady(this.spawnX, this.spawnY)) {
+			console.info('[player] burst complete — respawned at spawn');
 			return;
 		}
 
-		this.levelRoot.player.respawnAt(this.spawnX, this.spawnY);
-		console.info('[player] fell below level — respawned at spawn (death stub)');
+		if (player.isDying) {
+			return;
+		}
+
+		if (player.position.y > this.fallLimitY) {
+			player.beginDeath();
+			console.info('[player] fell below level — bursting');
+		}
+	}
+
+	private handleHazardCollision(collision: PhysicsCollisionInfo): void {
+		const player = this.levelRoot.player;
+		if (player.isDying) {
+			return;
+		}
+
+		const { bodyA, bodyB } = collision;
+		const playerInvolved = isPlayerBody(bodyA) || isPlayerBody(bodyB);
+		const hazardInvolved = isHazardBody(bodyA) || isHazardBody(bodyB);
+
+		if (!playerInvolved || !hazardInvolved) {
+			return;
+		}
+
+		player.beginDeath();
+		console.info('[player] hit hazard — bursting');
 	}
 
 	private handleCollectibleCollision(collision: PhysicsCollisionInfo): void {
+		if (this.levelRoot.player.isDying) {
+			return;
+		}
+
 		const { bodyA, bodyB } = collision;
 		const playerInvolved = isPlayerBody(bodyA) || isPlayerBody(bodyB);
 		const collectibleBody = isCollectibleBody(bodyA) ? bodyA : isCollectibleBody(bodyB) ? bodyB : null;

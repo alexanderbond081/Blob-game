@@ -37,6 +37,10 @@ const JUMP_CROUCH_FRAMES = 5;
 /** Remember jump press in air so a near-landing tap still jumps */
 const JUMP_BUFFER_FRAMES = 5;
 const RUN_ANIMATION_SPEED = 0.15;
+const BURST_ANIMATION_SPEED = 0.28;
+/** Hold on the last burst frame before respawn. */
+const DEATH_PAUSE_SEC = 1;
+const FRAME_HZ = 60;
 
 type StickyWallContact = {
 	body: Body;
@@ -64,6 +68,9 @@ export class Player extends PhysicsBody {
 	private wallJumpDirection = 0;
 	private clinging = false;
 	private clingSide: WallSide | null = null;
+	private dying = false;
+	private deathComplete = false;
+	private deathPauseSecondsLeft = 0;
 	private baseScale = 1;
 	private spritesheet: Spritesheet | null = null;
 	private currentVisual: string | null = null;
@@ -82,9 +89,29 @@ export class Player extends PhysicsBody {
 		this.keysDown.delete(event.code);
 	};
 
+	/** Browser/OS UI often swallows keyup while a key is held — drop stuck keys. */
+	private readonly onWindowBlur = (): void => {
+		this.clearKeysDown();
+	};
+
+	private readonly onVisibilityChange = (): void => {
+		if (document.visibilityState === 'hidden') {
+			this.clearKeysDown();
+		}
+	};
+
+	private clearKeysDown(): void {
+		this.keysDown.clear();
+		this.jumpHeld = false;
+	}
+
 	private readonly onBeforeUpdate = (): void => {
 		// Capture velocity before Matter resolves contacts — after the step, landing velocity is ~0.
 		this.preStepVelocityY = this.body.velocity.y;
+		if (this.dying) {
+			Body.setVelocity(this.body, { x: 0, y: 0 });
+			return;
+		}
 		this.applyInput();
 	};
 
@@ -118,6 +145,8 @@ export class Player extends PhysicsBody {
 
 		window.addEventListener('keydown', this.onKeyDown);
 		window.addEventListener('keyup', this.onKeyUp);
+		window.addEventListener('blur', this.onWindowBlur);
+		document.addEventListener('visibilitychange', this.onVisibilityChange);
 		void this.loadSpritesheet();
 	}
 
@@ -148,10 +177,77 @@ export class Player extends PhysicsBody {
 	public update(deltaTime: number): void {
 		Body.setAngularVelocity(this.body, 0);
 		Body.setAngle(this.body, 0);
+		this.updateDeathPause(deltaTime);
 		this.updateState();
 		this.updateVisual();
 		this.syncRenderPosition();
-		this.applyJelly(deltaTime);
+		if (!this.dying) {
+			this.applyJelly(deltaTime);
+		} else {
+			this.sprite.scale.set(this.baseScale);
+			this.sprite.skew.x = 0;
+			this.sprite.skew.y = 0;
+		}
+	}
+
+	public get isDying(): boolean {
+		return this.dying;
+	}
+
+	/**
+	 * Start burst death. Ignored if already dying.
+	 * Call `finishDeathIfReady` each frame to respawn after burst + pause.
+	 */
+	public beginDeath(): void {
+		if (this.dying) {
+			return;
+		}
+
+		this.dying = true;
+		this.deathComplete = false;
+		this.deathPauseSecondsLeft = 0;
+		this.clinging = false;
+		this.clingSide = null;
+		this.crouchFramesLeft = 0;
+		this.wallCrouchFramesLeft = 0;
+		this.clingPeelFramesLeft = 0;
+		this.jumpBufferFrames = 0;
+		this.wallJumpFramesLeft = 0;
+		this.groundContacts.clear();
+		this.stickyWallContacts.clear();
+		Body.setVelocity(this.body, { x: 0, y: 0 });
+		this.body.isSensor = true;
+		this.state = 'dying';
+		SoundManager.playSound('blob-burst', 1, { speed: Math.random() * 0.3 + 1.2 });
+		this.playBurstAnimation();
+	}
+
+	/** Respawn once burst animation and death pause have finished. Returns true if respawn happened. */
+	public finishDeathIfReady(x: number, y: number): boolean {
+		if (!this.dying || !this.deathComplete) {
+			return false;
+		}
+
+		this.respawnAt(x, y);
+		return true;
+	}
+
+	private updateDeathPause(deltaTime: number): void {
+		if (!this.dying || this.deathComplete || this.deathPauseSecondsLeft <= 0) {
+			return;
+		}
+
+		this.deathPauseSecondsLeft -= Math.max(deltaTime, 0) / FRAME_HZ;
+		if (this.deathPauseSecondsLeft <= 0) {
+			this.deathPauseSecondsLeft = 0;
+			this.deathComplete = true;
+		}
+	}
+
+	private startDeathPause(): void {
+		this.deathPauseSecondsLeft = DEATH_PAUSE_SEC;
+		// Hide blob for the pause; later splash / debris VFX can live here instead.
+		this.sprite.visible = false;
 	}
 
 	public get position(): { x: number; y: number } {
@@ -184,12 +280,14 @@ export class Player extends PhysicsBody {
 		return this.state;
 	}
 
-	/** Stub for death / fall-off: snap back to a point and clear motion. */
+	/** Snap back to a point and clear motion / death state. */
 	public respawnAt(x: number, y: number): void {
+		this.sprite.onComplete = undefined;
 		Body.setPosition(this.body, { x, y });
 		Body.setVelocity(this.body, { x: 0, y: 0 });
 		Body.setAngularVelocity(this.body, 0);
 		Body.setAngle(this.body, 0);
+		this.body.isSensor = false;
 		this.groundContacts.clear();
 		this.stickyWallContacts.clear();
 		this.airVelocityX = 0;
@@ -203,16 +301,26 @@ export class Player extends PhysicsBody {
 		this.wallJumpDirection = 0;
 		this.clinging = false;
 		this.clingSide = null;
+		this.dying = false;
+		this.deathComplete = false;
+		this.deathPauseSecondsLeft = 0;
 		this.renderX = x;
 		this.renderY = y;
 		this.renderPrevX = x;
 		this.renderPrevY = y;
+		this.currentVisual = null;
+		this.sprite.visible = true;
 		this.syncRenderPosition();
+		const frameKey = this.facingRight ? 'blob-right' : 'blob-left';
+		this.setStaticFrame(frameKey);
 	}
 
 	public override destroy(options?: Parameters<PhysicsBody['destroy']>[0]): void {
 		window.removeEventListener('keydown', this.onKeyDown);
 		window.removeEventListener('keyup', this.onKeyUp);
+		window.removeEventListener('blur', this.onWindowBlur);
+		document.removeEventListener('visibilitychange', this.onVisibilityChange);
+		this.clearKeysDown();
 
 		if (this.boundEngine) {
 			Events.off(this.boundEngine, 'beforeUpdate', this.onBeforeUpdate);
@@ -409,6 +517,8 @@ export class Player extends PhysicsBody {
 		this.facingRight = contact.side === 'left';
 		this.jumpBufferFrames = 0;
 		this.crouchFramesLeft = 0;
+		SoundManager.playSound('blob-stick', 1, { speed: Math.random() * 0.2 + 0.9 });
+		//void SoundManager.playSound('blob-land', 1, { speed: Math.random() * 0.2 + 1.8 });
 	}
 
 	private findClingableContact(moveDirection: number): StickyWallContact | null {
@@ -457,11 +567,17 @@ export class Player extends PhysicsBody {
 		});
 	}
 
-	private endCling(): void {
+	private endCling(playUnstickSound = true): void {
+		const wasClinging = this.clinging;
 		this.clinging = false;
 		this.clingSide = null;
 		this.wallCrouchFramesLeft = 0;
 		this.clingPeelFramesLeft = 0;
+
+		if (wasClinging && playUnstickSound) {
+			SoundManager.playSound('blob-unstick', 1, { speed: Math.random() * 0.2 + 0.9 });
+			//SoundManager.playSound('blob-jump', 1, { speed: Math.random() * 0.2 + 1.8 });
+		}
 	}
 
 	private beginJumpCrouch(): void {
@@ -492,7 +608,8 @@ export class Player extends PhysicsBody {
 		this.wallJumpDirection = awayDirection;
 		this.wallJumpFramesLeft = WALL_JUMP_HORIZONTAL_FRAMES;
 		this.facingRight = awayDirection > 0;
-		this.endCling();
+		// Wall jump already has jump SFX — skip peel unstick.
+		this.endCling(false);
 		Body.setVelocity(this.body, {
 			x: awayDirection * MOVE_SPEED_X,
 			y: WALL_JUMP_VELOCITY_Y,
@@ -510,6 +627,11 @@ export class Player extends PhysicsBody {
 	}
 
 	private updateState(): void {
+		if (this.dying) {
+			this.state = 'dying';
+			return;
+		}
+
 		const onGround = this.isOnGround();
 
 		if (onGround && !this.wasOnGround && this.preStepVelocityY > LANDING_VELOCITY_THRESHOLD) {
@@ -522,11 +644,12 @@ export class Player extends PhysicsBody {
 			velocityY: this.body.velocity.y,
 			onGround,
 			clinging: this.clinging,
+			dying: false,
 		});
 	}
 
 	private updateVisual(): void {
-		if (!this.spritesheet) {
+		if (!this.spritesheet || this.dying) {
 			return;
 		}
 
@@ -596,11 +719,35 @@ export class Player extends PhysicsBody {
 			return;
 		}
 
+		this.sprite.onComplete = undefined;
 		this.sprite.textures = frames;
 		this.sprite.loop = true;
 		this.sprite.animationSpeed = RUN_ANIMATION_SPEED;
 		this.sprite.play();
 		this.currentVisual = animationName;
+	}
+
+	private playBurstAnimation(): void {
+		if (!this.spritesheet) {
+			this.startDeathPause();
+			return;
+		}
+
+		const frames = this.spritesheet.animations.burst;
+
+		if (!frames?.length) {
+			this.startDeathPause();
+			return;
+		}
+
+		this.sprite.onComplete = () => {
+			this.startDeathPause();
+		};
+		this.sprite.textures = frames;
+		this.sprite.loop = false;
+		this.sprite.animationSpeed = BURST_ANIMATION_SPEED;
+		this.sprite.gotoAndPlay(0);
+		this.currentVisual = 'burst';
 	}
 
 	private isOnGround(): boolean {

@@ -70,6 +70,18 @@
 					"src": "assets/sounds/bounce2.ogg"
 				},
 				{
+					"alias": "blob-stick",
+					"src": "assets/sounds/stick.ogg"
+				},
+				{
+					"alias": "blob-unstick",
+					"src": "assets/sounds/unstick.ogg"
+				},
+				{
+					"alias": "blob-burst",
+					"src": "assets/sounds/drop1.wav"
+				},
+				{
 					"alias": "firefly",
 					"src": "assets/images/firefly.webp",
 					"data": {

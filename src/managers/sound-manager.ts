@@ -135,6 +135,12 @@ export class SoundManager {
 		this.ambientAlias = alias;
 	}
 
+	/**
+	 * Play an SFX by Assets / @pixi/sound alias.
+	 * Note: @pixi/sound registers only one library name per loaded src
+	 * (usually alias[0]). Two manifest aliases pointing at the same file
+	 * will not both be playable — use distinct src paths.
+	 */
 	public static async playSound(alias: string, maxAllowed: number = 1, options?: PlayOptions): Promise<void> {
 		if (!sound.exists(alias)) {
 			console.warn(`Sound ${alias} doesn't exist`);

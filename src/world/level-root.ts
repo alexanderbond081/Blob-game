@@ -1,6 +1,7 @@
 import { Container } from 'pixi.js';
 
 import { Collectible } from '../entities/collectible';
+import { Hazard } from '../entities/hazard';
 import { Player } from '../entities/player';
 import { LevelData } from '../levels/level-schema';
 import { PhysicsWorld } from '../physics/physics-world';
@@ -10,6 +11,7 @@ export class LevelRoot extends Container {
 	public readonly player: Player;
 	public readonly collectibles: Collectible[] = [];
 	public readonly staticBodies: StaticBody[] = [];
+	public readonly hazards: Hazard[] = [];
 
 	public constructor(levelData: LevelData, physicsWorld: PhysicsWorld) {
 		super();
@@ -25,6 +27,12 @@ export class LevelRoot extends Container {
 			});
 			staticBody.addToWorld(physicsWorld, this);
 			this.staticBodies.push(staticBody);
+		}
+
+		for (const hazardData of levelData.hazards) {
+			const hazard = new Hazard(hazardData);
+			hazard.addToWorld(physicsWorld, this);
+			this.hazards.push(hazard);
 		}
 
 		for (const collectibleData of levelData.collectibles) {
@@ -44,6 +52,12 @@ export class LevelRoot extends Container {
 			staticBody.destroy();
 		}
 		this.staticBodies.length = 0;
+
+		for (const hazard of this.hazards) {
+			hazard.removeFromWorld(physicsWorld);
+			hazard.destroy();
+		}
+		this.hazards.length = 0;
 
 		for (const collectible of this.collectibles) {
 			if (!collectible.collected) {

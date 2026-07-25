@@ -39,7 +39,7 @@ const CROUCH_SQUASH = 0.4;
  * skew.y shifts Y by X so the free side hangs while the wall edge stays put (via offset).
  */
 const WALL_HANG_SKEW = 0.1;
-const WALL_IDLE_SQUASH = 0.05;
+const WALL_IDLE_SQUASH = 0.04;
 const WALL_CROUCH_SQUASH = 0.4;
 const WALL_CROUCH_HANG = 0.06;
 /** Stretch away from the wall while peeling off (positive wallJelly). */
@@ -76,9 +76,9 @@ const VELOCITY_DRIVE = 0.035;
 const MAX_JELLY = 0.38;
 
 /** Horizontal wall spring (negative = squashed into the wall). */
-const WALL_SPRING_STIFFNESS = 280;
+const WALL_SPRING_STIFFNESS = 300;
 const WALL_SPRING_DAMPING = 6.5;
-const WALL_CLING_IMPULSE = 1.4;
+const WALL_CLING_IMPULSE = 4.0;
 const WALL_ANTICIPATION_IMPULSE = 1;
 const MAX_WALL_JELLY = 0.38;
 
@@ -182,13 +182,14 @@ export class PlayerJelly {
 		this.hangSkew += this.hangSkewVelocity * dtSec;
 		this.hangSkew = Math.max(-MAX_WALL_JELLY, Math.min(MAX_WALL_JELLY, this.hangSkew));
 
-		// Free mass breathes like idle once the cling wobble settles.
+		// Free mass breathes like idle (coupled X/Y jelly), once cling wobble settles.
 		const breath = !input.wallCrouching && !input.wallPeeling
 			? Math.sin(this.time * (BREATH_HZ / FRAME_HZ) * Math.PI * 2) * BREATH_AMOUNT
 			: 0;
 
-		const scaleX = 1 + this.wallJelly;
-		const scaleY = 1 - this.wallJelly * 0.85 + breath;
+		const clingPose = this.wallJelly + breath;
+		const scaleX = 1 + clingPose;
+		const scaleY = 1 - clingPose * 0.85;
 		// Plant stuck side on the wall (same idea as feet plant on ground via offsetY).
 		const plantOffsetX = wallSign * input.halfHeight * (1 - scaleX);
 		// Cancel vertical drift of the wall edge caused by skew.y so that edge stays stuck.
