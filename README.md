@@ -2,7 +2,7 @@
 
 Casual HTML5 platformer: a glowing blob jumps across leaves and collects fireflies. Short Poki-style levels, landscape **960×540**.
 
-**Status:** playable vertical slice / portfolio prototype (one JSON level, core movement + collectibles). Not yet submitted to portals.
+**Status:** playable vertical slice / portfolio prototype (one JSON level, movement + sticky walls + hazards + collectibles + death FX). Not yet submitted to portals.
 
 Built with **Pixi.js v8**, **Matter.js**, **TypeScript**, **Webpack 5**.
 
@@ -25,15 +25,21 @@ Open `http://localhost:3000`.
 | Mute SFX | — | Top-right sound button (`toggleSFX`) |
 | Mute music | — | Top-right music button (`toggleMusic`) |
 
+Stuck keys / touch after OS UI (notification shade, tab blur) are cleared on focus loss.
+
 ## What’s in this build
 
 - Matter.js physics, walkable ground detection (slopes-ready normals)
 - Camera follow + clamp, dual parallax backgrounds
-- Blob player: run / jump / crouch wind-up, jelly squash, spritesheet facing
+- Blob player: run / jump / crouch wind-up, jelly squash, facing + hang sprites
+- **Sticky walls** (`label: "sticky-wall"`): air cling, slow slide, peel-off stretch, wall-jump
+- **Hazards** (`hazards[]`, e.g. `type: "spikes"`): solid kill volumes
+- **Death:** `burst` animation → droplet splash (pooled kinematic FX) → short pause → respawn at spawn (same path for fall-off)
 - Fireflies: bob animation, pickup SFX, respawn after a few seconds
-- Fall below level → respawn at spawn
 - Top icon HUD: fullscreen, separate music / SFX mute (spritesheet buttons)
 - Platform SDK hooks for Poki / CrazyGames builds (ads not wired yet)
+
+Level data: JSON + Zod ([`src/levels/`](src/levels/)) — `platforms`, `hazards`, `collectibles`, spawn, size, backgrounds.
 
 ## Goals
 
@@ -47,6 +53,7 @@ Open `http://localhost:3000`.
 - Landscape-first; portrait / rotate UX deferred
 - Prefer **2×** art with `"data": { "resolution": 2 }` in [`src/assets/manifest.json`](src/assets/manifest.json) (logical sizes in Pixi — do not also `scale = 0.5`)
 - Backgrounds: logical bleed around the viewport; parallax clamped (no tiling)
+- Debug tinted rects for platforms / sticky walls / spikes until final art lands
 
 ## Scripts
 
@@ -67,8 +74,9 @@ Production builds write `dist/BUILD.txt` (version, channel, git meta). Upload th
 | Path | Role |
 |------|------|
 | `src/scenes/` | Loading + platform level scene |
-| `src/entities/` | Player, collectibles |
-| `src/physics/` | Matter world, static bodies, ground contact |
+| `src/entities/` | Player, collectibles, hazards |
+| `src/fx/` | Death droplet pool and other short-lived VFX |
+| `src/physics/` | Matter world, static bodies, ground / wall contact |
 | `src/world/` | Camera, parallax, level root |
 | `src/levels/` | Zod schema + JSON levels (`forest-01`) |
 | `src/input/` | Shared controls + 9-slice touch pad |
@@ -79,7 +87,8 @@ Production builds write `dist/BUILD.txt` (version, channel, git meta). Upload th
 ## Known gaps (not blockers for a first push)
 
 - One demo level; no win/lose loop or score / progression UI yet
-- No ambience track in the manifest yet
+- More player kit still queued (crouch/hide, double jump, dash, glide) — see mechanics backlog
+- Final art for sticky walls / spikes; droplet puddle polish deferred
 - Bundle is heavier than an ideal Poki first download (`bundle.js` ~1.4 MB + music) — optimize before portal submit
 - Ads / rewarded breaks not implemented
 - `MainGameScene` is unused legacy demo code
@@ -94,7 +103,7 @@ You may view the source for portfolio / learning; reuse of code or assets needs 
 | File | Contents |
 |------|----------|
 | [`plans/poki-2d-platformer-concept.md`](./plans/poki-2d-platformer-concept.md) | Game concept, scope, stack |
-| [`plans/player-mechanics-backlog.md`](./plans/player-mechanics-backlog.md) | Queued player mechanics (not implemented yet) |
+| [`plans/player-mechanics-backlog.md`](./plans/player-mechanics-backlog.md) | Player mechanics backlog (cling / spikes done; more queued) |
 | [`plans/poki.md`](./plans/poki.md) | Poki / CrazyGames technical notes |
 
 ## Author

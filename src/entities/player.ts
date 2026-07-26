@@ -16,7 +16,7 @@ import { PlayerJelly } from './player-jelly';
 import { PlayerState, resolvePlayerState } from './player-state';
 import { SoundManager } from '../managers/sound-manager';
 
-const PLAYER_RADIUS = 30;
+export const PLAYER_RADIUS = 30;
 const MOVE_SPEED_X = 6;
 const LANDING_VELOCITY_THRESHOLD = 2;
 const JUMP_VELOCITY = -15;
@@ -37,7 +37,7 @@ const JUMP_CROUCH_FRAMES = 5;
 /** Remember jump press in air so a near-landing tap still jumps */
 const JUMP_BUFFER_FRAMES = 5;
 const RUN_ANIMATION_SPEED = 0.15;
-const BURST_ANIMATION_SPEED = 0.28;
+const BURST_ANIMATION_SPEED = 0.4;
 /** Hold on the last burst frame before respawn. */
 const DEATH_PAUSE_SEC = 1;
 const FRAME_HZ = 60;
@@ -80,6 +80,8 @@ export class Player extends PhysicsBody {
 	private renderPrevY = 0;
 	private renderX = 0;
 	private renderY = 0;
+	/** Fired when burst animation ends and the blob hides (death VFX spawn point). */
+	private onBurstFx: ((x: number, y: number, radius: number) => void) | null = null;
 
 	private readonly onKeyDown = (event: KeyboardEvent): void => {
 		this.keysDown.add(event.code);
@@ -153,6 +155,10 @@ export class Player extends PhysicsBody {
 	/** Merge invisible touch pad / future on-screen buttons with keyboard. */
 	public setTouchControls(controls: PlayerControls): void {
 		this.touchControls = controls;
+	}
+
+	public setBurstFxHandler(handler: ((x: number, y: number, radius: number) => void) | null): void {
+		this.onBurstFx = handler;
 	}
 
 	public bindPhysics(world: PhysicsWorld): void {
@@ -246,8 +252,8 @@ export class Player extends PhysicsBody {
 
 	private startDeathPause(): void {
 		this.deathPauseSecondsLeft = DEATH_PAUSE_SEC;
-		// Hide blob for the pause; later splash / debris VFX can live here instead.
 		this.sprite.visible = false;
+		this.onBurstFx?.(this.body.position.x, this.body.position.y, PLAYER_RADIUS);
 	}
 
 	public get position(): { x: number; y: number } {

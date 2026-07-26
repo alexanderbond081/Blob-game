@@ -34,10 +34,10 @@ Not committed — reorder when scheduling:
 
 ## Asset gaps
 
-- Not every item has matching art yet (especially **fairy wings**, **sparkle trail**, possibly **spikes**, **sticky surfaces**, **dash squash**).  
+- Not every item has matching art yet (especially **fairy wings**, **sparkle trail**, **dash squash**).  
 - Prefer shared wing + trail FX for **double jump (#4)** and **glide (#6)**.  
 - Mark asset readiness when packs land; do not block design notes on missing sprites.
-- Sticky walls / spikes still use debug colored rects; final art TBD (mechanics done).
+- Sticky walls / spikes still use debug colored rects; droplet splash is in (even fan); puddle / land polish deferred.
 
 ---
 
@@ -46,4 +46,4 @@ Not committed — reorder when scheduling:
 | # | Mechanic | Notes |
 |---|----------|-------|
 | 1 | Sticky vertical cling | **Done.** Cling + wall-jump; `sticky-wall` label; hang-left/right; jelly hang/squash/peel; jump preferred over peel; cling only if wall top above blob center. |
-| 2 | Spikes / death surfaces | **Done.** Level `hazards[]` (`type: spikes`); solid Matter `hazard` bodies; shared death pipeline with fall (`beginDeath` → `burst` anim → respawn). Enemies later via `enemies[]`, same kill path. |
+| 2 | Spikes / death surfaces | **Done.** Level `hazards[]` (`type: spikes`); solid Matter `hazard` bodies; shared death pipeline with fall (`beginDeath` → `burst` anim → pause → respawn). Death VFX: pooled kinematic droplets (`src/fx/blob-droplet-pool.ts`), even circular fan. Enemies later via `enemies[]`, same kill path. |

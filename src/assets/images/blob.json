@@ -9,14 +9,15 @@
 		"blob-burst-3": { "frame": { "x": 402, "y": 402, "w": 200, "h": 200 } },
 		"blob-burst-4": { "frame": { "x": 603, "y": 402, "w": 200, "h": 200 } },
 		"blob-burst-5": { "frame": { "x": 804, "y": 402, "w": 200, "h": 200 } },
-		"blob-burst-6": { "frame": { "x": 1005, "y": 402, "w": 200, "h": 200 } }
+		"blob-burst-6": { "frame": { "x": 1005, "y": 402, "w": 200, "h": 200 } },
+		"blob-blanc": { "frame": { "x": 402, "y": 0, "w": 200, "h": 200 } }
 		},
 	"animations": {
 		"right": ["blob-right"],
 		"left": ["blob-left"],
 		"hang-right": ["blob-hang-right"],
 		"hang-left": ["blob-hang-left"],
-		"burst": ["blob-burst-2", "blob-burst-3", "blob-burst-5", "blob-burst-6"]
+		"burst": ["blob-blanc"]
 	},
 	"meta": {
 	  "image": "blob-right-left-hang-pop-200x200.png",

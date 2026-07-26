@@ -103,6 +103,7 @@ export class PlatformLevelScene extends Scene {
 		this.levelRoot.player.setTouchControls(this.touchPad.getControls());
 		this.physicsWorld.step(deltaTime);
 		this.levelRoot.player.update(deltaTime);
+		this.levelRoot.droplets.update(deltaTime);
 		for (const collectible of this.levelRoot.collectibles) {
 			collectible.update(deltaTime);
 		}

@@ -1,0 +1,12 @@
+{
+	"frames": {
+		"droplet-idle": { "frame": { "x": 0, "y": 0, "w": 30, "h": 30 } }
+		},
+	"animations": {
+		"idle": ["droplet-idle"]
+	},
+	"meta": {
+	  "image": "blob-droplet.png",
+	  "scale": "1"
+	}
+  }

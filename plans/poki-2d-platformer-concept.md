@@ -133,7 +133,7 @@ Keep the “mini-engine” thin: libraries for map + camera + physics; own code 
 |-------|--------|------|
 | Language | **TypeScript** | Same as existing projects |
 | Renderer | **Pixi.js v8** | Sprites, containers, filters (optional glow) |
-| Bundler | **Vite** or Webpack | Prefer Vite for a new game (faster DX); Webpack fine if preferred |
+| Bundler | **Webpack 5** (chosen) | Vite remains a fine alternative for a greenfield fork |
 | Level editor | **[Tiled](https://www.mapeditor.org/)** | Tile layers + object layers (collision, spawns, collectibles) |
 | Map loader | **[pixi-tiledmap](https://www.npmjs.com/package/pixi-tiledmap)** (v2 / Pixi 8) | Load `.tmj` / `.tmx`, render tiles, parallax helpers |
 | Camera | **[pixi-viewport](https://github.com/pixijs-userland/pixi-viewport)** *or* ~15-line follow | Center on blob, clamp to level bounds |
@@ -197,13 +197,20 @@ Collision shapes and entity spawns come from Tiled **object layers**, not from g
 
 ---
 
+## Prototype status (vertical slice)
+
+Shipped in-repo (not full MVP): one JSON level (`forest-01`), Matter player, sticky walls, spike hazards, fireflies, dual parallax, death burst + droplet FX, keyboard + touch, portal SDK adapters (ads not wired). Levels are Zod-validated JSON for now; **Tiled** still the preferred long-term authoring path above.
+
+---
+
 ## Open Decisions
 
-- [ ] Exact collectible fantasy (fireflies vs crystals vs dew)  
-- [ ] Camera: hard follow vs soft lerp; how much scroll on tiny maps  
-- [ ] Matter.js vs pure kinematic controller for leaf “stickiness”  
-- [ ] Vite vs Webpack for greenfield repo  
+- [x] Collectible fantasy → **fireflies** (v1)  
+- [x] Camera → follow + clamp to level bounds (lerp polish later if needed)  
+- [x] Stickiness → **Matter** static labels (`sticky-wall`) + cling controller (not pure kinematic world)  
+- [x] Bundler → **Webpack 5**  
 - [ ] Launch target first: itch / CrazyGames Basic / Poki submission  
+- [ ] When to adopt Tiled (`.tmj`) vs keep hand-authored JSON  
 
 ---
 
@@ -212,5 +219,6 @@ Collision shapes and entity spawns come from Tiled **object layers**, not from g
 | File | Contents |
 |------|----------|
 | `poki.md` | Poki / CrazyGames technical notes, SDK, physics library overview |
-| [`player-mechanics-backlog.md`](./player-mechanics-backlog.md) | Queued blob abilities (cling, spikes, crouch, double jump, dash, glide, …) — backlog only |
+| [`player-mechanics-backlog.md`](./player-mechanics-backlog.md) | Player kit backlog — cling / spikes done; crouch, double jump, dash, glide queued |
+| [`../README.md`](../README.md) | Current build summary + how to run |
 | This file | Game concept, scope min/max, timelines, Pixi stack for *this* title |

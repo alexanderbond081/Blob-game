@@ -82,6 +82,14 @@
 					"src": "assets/sounds/drop1.wav"
 				},
 				{
+					"alias": "blob-droplet",
+					"src": "assets/images/blob-droplet.json",
+					"data": {
+						"resolution": 2,
+						"scaleMode": "linear"
+					}
+				},
+				{
 					"alias": "firefly",
 					"src": "assets/images/firefly.webp",
 					"data": {
