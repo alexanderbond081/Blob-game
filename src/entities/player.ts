@@ -36,7 +36,7 @@ const CLING_PEEL_FRAMES = 8;
 const JUMP_CROUCH_FRAMES = 5;
 /** Remember jump press in air so a near-landing tap still jumps */
 const JUMP_BUFFER_FRAMES = 5;
-/** Hold-to-hide crouch: blend in/out duration (seconds). */
+/** Hold-to-hide crouch: blend-in duration (seconds). Exit is a tiny hop. */
 const CROUCH_BLEND_SEC = 0.1;
 /** Sprite alpha at full hide crouch. */
 const CROUCH_HIDE_ALPHA = 0.6;
@@ -44,6 +44,8 @@ const CROUCH_HIDE_ALPHA = 0.6;
 const CROUCH_BODY_SCALE_Y = 0.5;
 /** Blend threshold to report crouch state / isHidden readiness. */
 const CROUCH_STATE_BLEND = 0.05;
+/** Upward hop when releasing crouch into idle (Y-down, same units as JUMP_VELOCITY). */
+const CROUCH_STAND_HOP_VELOCITY = -3;
 const RUN_ANIMATION_SPEED = 0.15;
 const BURST_ANIMATION_SPEED = 0.4;
 /** Hold on the last burst frame before respawn. */
@@ -433,6 +435,13 @@ export class Player extends PhysicsBody {
 			} else if (!onGround) {
 				this.jumpBufferFrames = JUMP_BUFFER_FRAMES;
 			}
+		} else if (!crouchHeld && this.crouchBlend > 0 && this.jumpCrouchFramesLeft <= 0) {
+			// Release crouch: tiny hop instead of blend-out stand-up (jump path clears crouch itself).
+			if (onGround && this.crouchBlend > CROUCH_STATE_BLEND) {
+				this.launchCrouchStandHop();
+			} else {
+				this.clearHideCrouch();
+			}
 		}
 
 		if (this.jumpBufferFrames > 0) {
@@ -661,6 +670,16 @@ export class Player extends PhysicsBody {
 		SoundManager.playSound('blob-jump', 1, { speed: Math.random() * 0.4 + 0.8 });
 	}
 
+	/** Micro-hop out of hide crouch — leave/land jelly provides the settle wobble. */
+	private launchCrouchStandHop(): void {
+		this.clearHideCrouch();
+		Body.setVelocity(this.body, {
+			x: this.body.velocity.x,
+			y: CROUCH_STAND_HOP_VELOCITY,
+		});
+		this.groundContacts.clear();
+	}
+
 	private isCrouchHeld(): boolean {
 		return this.keysDown.has('ArrowDown')
 			|| this.keysDown.has('KeyS')
@@ -693,12 +712,13 @@ export class Player extends PhysicsBody {
 			&& this.jumpCrouchFramesLeft <= 0
 			&& this.isCrouchHeld();
 
-		const step = CROUCH_BLEND_SEC > 0 ? dtSec / CROUCH_BLEND_SEC : 1;
-		if (wantCrouch) {
-			this.crouchBlend = Math.min(1, this.crouchBlend + step);
-		} else {
-			this.crouchBlend = Math.max(0, this.crouchBlend - step);
+		// Blend in only — release is a stand hop from applyInput, not a blend-out.
+		if (!wantCrouch) {
+			return;
 		}
+
+		const step = CROUCH_BLEND_SEC > 0 ? dtSec / CROUCH_BLEND_SEC : 1;
+		this.crouchBlend = Math.min(1, this.crouchBlend + step);
 	}
 
 	/**
