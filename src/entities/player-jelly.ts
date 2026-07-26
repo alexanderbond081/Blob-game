@@ -6,13 +6,21 @@ export type JellyMotionInput = {
 	velocityX: number;
 	velocityY: number;
 	onGround: boolean;
-	crouching: boolean;
+	/** Jump wind-up squash (anticipation), not hide crouch. */
+	jumpCrouching: boolean;
+	/** Hide crouch blend 0…1 (half-height squash + quiet breath). */
+	crouchBlend: number;
 	clinging: boolean;
 	wallSide: WallSide | null;
 	wallCrouching: boolean;
 	wallPeeling: boolean;
 	moveSpeedX: number;
 	halfHeight: number;
+	/**
+	 * Current Matter collider scaleY (1 = full circle). Visual plantOffset must
+	 * subtract the body plant shift so the sprite does not sink twice.
+	 */
+	colliderScaleY: number;
 	deltaTime: number;
 };
 
@@ -32,7 +40,7 @@ const SKEW_LERP = 0.2;
 /** Soft resting squash on ground (1 = circle). */
 const IDLE_SQUASH = 0.06;
 const RUN_SQUASH = 0.15;
-const CROUCH_SQUASH = 0.4;
+const JUMP_CROUCH_SQUASH = 0.4;
 
 /**
  * Sticky-wall hang: stuck side plants like ground butt-drag; free mass sags down.
@@ -50,6 +58,10 @@ const WALL_PEEL_IMPULSE = 1.1;
 /** Idle / cling breath: slow squash/stretch, period = 1 / BREATH_HZ seconds. */
 const BREATH_HZ = 0.85;
 const BREATH_AMOUNT = 0.0545;
+/** Hide crouch uses quieter breathing. */
+const CROUCH_BREATH_SCALE = 0.25;
+/** Full hide crouch flattens the blob to half height. */
+const CROUCH_HIDE_SCALE_Y = 0.5;
 
 /** Run bob (Hz + amplitude in px). Idle has no bob. */
 const BOB_HZ = 2.2;
@@ -208,8 +220,13 @@ export class PlayerJelly {
 	}
 
 	private updateFreePose(input: JellyMotionInput, dt: number, dtSec: number): JellyPose {
+		const hideBlend = Math.max(0, Math.min(1, input.crouchBlend));
 		const restJelly = input.onGround
-			? -(input.crouching ? CROUCH_SQUASH : input.state === 'run' ? RUN_SQUASH : IDLE_SQUASH)
+			? -(input.jumpCrouching
+				? JUMP_CROUCH_SQUASH
+				: input.state === 'run'
+					? RUN_SQUASH
+					: IDLE_SQUASH)
 			: 0;
 		const velocityDrive = -input.velocityY * VELOCITY_DRIVE;
 		const targetJelly = restJelly + velocityDrive;
@@ -219,10 +236,16 @@ export class PlayerJelly {
 		this.jelly += this.jellyVelocity * dtSec;
 		this.jelly = Math.max(-MAX_JELLY, Math.min(MAX_JELLY, this.jelly));
 
-		const breath = input.onGround && input.state === 'idle' && !input.crouching
-			? Math.sin(this.time * (BREATH_HZ / FRAME_HZ) * Math.PI * 2) * BREATH_AMOUNT
+		const breathScale = 1 - (1 - CROUCH_BREATH_SCALE) * hideBlend;
+		const canBreathe = input.onGround
+			&& !input.jumpCrouching
+			&& (input.state === 'idle' || input.state === 'crouch' || hideBlend > 0);
+		const breath = canBreathe
+			? Math.sin(this.time * (BREATH_HZ / FRAME_HZ) * Math.PI * 2) * BREATH_AMOUNT * breathScale
 			: 0;
-		const jellyPose = this.jelly + breath;
+		// Hide crouch flattens like jelly squash (taller→wider) so X expands with Y compress.
+		const hideJelly = -(1 - CROUCH_HIDE_SCALE_Y) * hideBlend;
+		const jellyPose = this.jelly + breath + hideJelly;
 		const scaleY = 1 + jellyPose;
 		const scaleX = 1 - jellyPose * 0.85;
 
@@ -233,10 +256,12 @@ export class PlayerJelly {
 		const skewAlpha = 1 - Math.pow(1 - SKEW_LERP, dt);
 		this.skewX += (dragSkew - this.skewX) * skewAlpha;
 
-		const bob = input.onGround && input.state === 'run' && !input.crouching
+		const bob = input.onGround && input.state === 'run' && !input.jumpCrouching && hideBlend <= 0
 			? Math.sin(this.time * (BOB_HZ / FRAME_HZ) * Math.PI * 2) * BOB_RUN
 			: 0;
-		const plantOffset = input.halfHeight * (1 - scaleY);
+		// Body already shifted for collider plant; only offset the visual vs collider half-height.
+		const colliderScaleY = Math.max(input.colliderScaleY, 1e-6);
+		const plantOffset = input.halfHeight * (colliderScaleY - scaleY);
 
 		this.hangSkew += (0 - this.hangSkew) * (1 - Math.pow(1 - SKEW_LERP, dt));
 

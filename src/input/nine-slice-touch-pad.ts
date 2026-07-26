@@ -36,8 +36,9 @@ export type NineSliceTouchPadOptions = {
 /**
  * Invisible 9-slice touch pad over the design viewport.
  * Bottom-left / bottom-right → move.
+ * Bottom-center → crouch / hide.
  * Mid-left / mid-right → jump + move.
- * Center reserved for future gestures.
+ * Mid-center → jump.
  */
 export class NineSliceTouchPad extends Container {
 	private readonly viewWidth: number;
@@ -283,6 +284,9 @@ export class NineSliceTouchPad extends Container {
 				case 'mid-center':
 					next.jump = true;
 					break;
+				case 'bottom-center':
+					next.crouch = true;
+					break;
 				default:
 					break;
 			}
@@ -291,5 +295,6 @@ export class NineSliceTouchPad extends Container {
 		this.controls.moveLeft = next.moveLeft;
 		this.controls.moveRight = next.moveRight;
 		this.controls.jump = next.jump;
+		this.controls.crouch = next.crouch;
 	}
 }

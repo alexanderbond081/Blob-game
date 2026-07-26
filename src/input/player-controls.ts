@@ -3,10 +3,12 @@ export type PlayerControls = {
 	moveLeft: boolean;
 	moveRight: boolean;
 	jump: boolean;
+	crouch: boolean;
 };
 
 export const createEmptyPlayerControls = (): PlayerControls => ({
 	moveLeft: false,
 	moveRight: false,
 	jump: false,
+	crouch: false,
 });

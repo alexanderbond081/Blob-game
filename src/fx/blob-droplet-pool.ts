@@ -15,7 +15,7 @@ export type DropletLevelBounds = {
 const POOL_SIZE = 8;
 const RADIUS_MIN = 3;
 const RADIUS_MAX = 7;
-const SPEED_MIN = 6;
+const SPEED_MIN = 5;
 const SPEED_MAX = 10;
 /**
  * Matter applies gravity as scale * deltaMs² per Engine step (~0.0018 * 16.67² ≈ 0.5).

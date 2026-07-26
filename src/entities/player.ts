@@ -32,10 +32,18 @@ const WALL_JUMP_VELOCITY_Y = JUMP_VELOCITY * (4 / 5);
 const WALL_JUMP_HORIZONTAL_FRAMES = 12;
 /** Stretch away from the wall before peel-off when pressing move-away. */
 const CLING_PEEL_FRAMES = 8;
-/** Crouch wind-up frames before the jump impulse is applied */
+/** Jump wind-up frames before the jump impulse is applied */
 const JUMP_CROUCH_FRAMES = 5;
 /** Remember jump press in air so a near-landing tap still jumps */
 const JUMP_BUFFER_FRAMES = 5;
+/** Hold-to-hide crouch: blend in/out duration (seconds). */
+const CROUCH_BLEND_SEC = 0.1;
+/** Sprite alpha at full hide crouch. */
+const CROUCH_HIDE_ALPHA = 0.6;
+/** Matter collider scaleY at full hide crouch (half height). */
+const CROUCH_BODY_SCALE_Y = 0.5;
+/** Blend threshold to report crouch state / isHidden readiness. */
+const CROUCH_STATE_BLEND = 0.05;
 const RUN_ANIMATION_SPEED = 0.15;
 const BURST_ANIMATION_SPEED = 0.4;
 /** Hold on the last burst frame before respawn. */
@@ -60,7 +68,7 @@ export class Player extends PhysicsBody {
 	/** Vertical velocity before the physics step resolves collisions (useful for landing SFX / fall damage). */
 	private preStepVelocityY = 0;
 	private jumpHeld = false;
-	private crouchFramesLeft = 0;
+	private jumpCrouchFramesLeft = 0;
 	private wallCrouchFramesLeft = 0;
 	private clingPeelFramesLeft = 0;
 	private jumpBufferFrames = 0;
@@ -68,6 +76,10 @@ export class Player extends PhysicsBody {
 	private wallJumpDirection = 0;
 	private clinging = false;
 	private clingSide: WallSide | null = null;
+	/** Hide crouch blend 0…1 (visual + collider). */
+	private crouchBlend = 0;
+	/** Current Matter body scaleY relative to spawn circle (1 = full). */
+	private colliderScaleY = 1;
 	private dying = false;
 	private deathComplete = false;
 	private deathPauseSecondsLeft = 0;
@@ -184,15 +196,21 @@ export class Player extends PhysicsBody {
 		Body.setAngularVelocity(this.body, 0);
 		Body.setAngle(this.body, 0);
 		this.updateDeathPause(deltaTime);
+		if (!this.dying) {
+			this.updateCrouchBlend(deltaTime);
+			this.syncCrouchCollider();
+		}
 		this.updateState();
 		this.updateVisual();
 		this.syncRenderPosition();
 		if (!this.dying) {
 			this.applyJelly(deltaTime);
+			this.sprite.alpha = 1 - (1 - CROUCH_HIDE_ALPHA) * this.crouchBlend;
 		} else {
 			this.sprite.scale.set(this.baseScale);
 			this.sprite.skew.x = 0;
 			this.sprite.skew.y = 0;
+			this.sprite.alpha = 1;
 		}
 	}
 
@@ -214,11 +232,12 @@ export class Player extends PhysicsBody {
 		this.deathPauseSecondsLeft = 0;
 		this.clinging = false;
 		this.clingSide = null;
-		this.crouchFramesLeft = 0;
+		this.jumpCrouchFramesLeft = 0;
 		this.wallCrouchFramesLeft = 0;
 		this.clingPeelFramesLeft = 0;
 		this.jumpBufferFrames = 0;
 		this.wallJumpFramesLeft = 0;
+		this.resetCrouchPose();
 		this.groundContacts.clear();
 		this.stickyWallContacts.clear();
 		Body.setVelocity(this.body, { x: 0, y: 0 });
@@ -286,6 +305,11 @@ export class Player extends PhysicsBody {
 		return this.state;
 	}
 
+	/** Fully blended hide crouch — for future enemy LOS. */
+	public get isHidden(): boolean {
+		return this.crouchBlend >= 1;
+	}
+
 	/** Snap back to a point and clear motion / death state. */
 	public respawnAt(x: number, y: number): void {
 		this.sprite.onComplete = undefined;
@@ -299,7 +323,7 @@ export class Player extends PhysicsBody {
 		this.airVelocityX = 0;
 		this.wasOnGround = true;
 		this.preStepVelocityY = 0;
-		this.crouchFramesLeft = 0;
+		this.jumpCrouchFramesLeft = 0;
 		this.wallCrouchFramesLeft = 0;
 		this.clingPeelFramesLeft = 0;
 		this.jumpBufferFrames = 0;
@@ -307,6 +331,7 @@ export class Player extends PhysicsBody {
 		this.wallJumpDirection = 0;
 		this.clinging = false;
 		this.clingSide = null;
+		this.resetCrouchPose();
 		this.dying = false;
 		this.deathComplete = false;
 		this.deathPauseSecondsLeft = 0;
@@ -316,6 +341,7 @@ export class Player extends PhysicsBody {
 		this.renderPrevY = y;
 		this.currentVisual = null;
 		this.sprite.visible = true;
+		this.sprite.alpha = 1;
 		this.syncRenderPosition();
 		const frameKey = this.facingRight ? 'blob-right' : 'blob-left';
 		this.setStaticFrame(frameKey);
@@ -364,6 +390,10 @@ export class Player extends PhysicsBody {
 			|| this.keysDown.has('ArrowUp')
 			|| this.keysDown.has('KeyW')
 			|| this.touchControls.jump;
+		const crouchHeld =
+			this.keysDown.has('ArrowDown')
+			|| this.keysDown.has('KeyS')
+			|| this.touchControls.crouch;
 		const jumpPressed = jumpDown && !this.jumpHeld;
 		this.jumpHeld = jumpDown;
 		const onGround = this.isOnGround();
@@ -381,7 +411,16 @@ export class Player extends PhysicsBody {
 			return;
 		}
 
-		if (moveDirection !== 0) {
+		// Hold crouch on ground: stand still (no crawl in Poki). Facing still follows input.
+		const hideStanding = onGround && crouchHeld && this.jumpCrouchFramesLeft <= 0;
+		if (hideStanding) {
+			if (moveLeft && !moveRight) {
+				this.facingRight = false;
+			} else if (moveRight && !moveLeft) {
+				this.facingRight = true;
+			}
+			moveDirection = 0;
+		} else if (moveDirection !== 0) {
 			this.facingRight = moveDirection > 0;
 		}
 
@@ -389,8 +428,8 @@ export class Player extends PhysicsBody {
 		this.airVelocityX = speedX;
 
 		if (jumpPressed) {
-			if (onGround && this.crouchFramesLeft <= 0) {
-				this.beginJumpCrouch();
+			if (onGround && this.jumpCrouchFramesLeft <= 0) {
+				this.startGroundJump(speedX);
 			} else if (!onGround) {
 				this.jumpBufferFrames = JUMP_BUFFER_FRAMES;
 			}
@@ -399,14 +438,14 @@ export class Player extends PhysicsBody {
 		if (this.jumpBufferFrames > 0) {
 			this.jumpBufferFrames -= 1;
 
-			if (onGround && this.crouchFramesLeft <= 0) {
+			if (onGround && this.jumpCrouchFramesLeft <= 0) {
 				this.jumpBufferFrames = 0;
-				this.beginJumpCrouch();
+				this.startGroundJump(speedX);
 			}
 		}
 
-		if (this.crouchFramesLeft > 0) {
-			this.crouchFramesLeft -= 1;
+		if (this.jumpCrouchFramesLeft > 0) {
+			this.jumpCrouchFramesLeft -= 1;
 
 			// Left the platform during wind-up — commit the jump immediately
 			// instead of canceling (avoids walking off an edge during crouch).
@@ -415,7 +454,7 @@ export class Player extends PhysicsBody {
 				return;
 			}
 
-			if (this.crouchFramesLeft <= 0) {
+			if (this.jumpCrouchFramesLeft <= 0) {
 				this.launchJump(speedX);
 				return;
 			}
@@ -505,7 +544,7 @@ export class Player extends PhysicsBody {
 	}
 
 	private tryStartCling(moveDirection: number): void {
-		if (this.crouchFramesLeft > 0 || this.wallJumpFramesLeft > 0) {
+		if (this.jumpCrouchFramesLeft > 0 || this.wallJumpFramesLeft > 0) {
 			return;
 		}
 
@@ -522,7 +561,8 @@ export class Player extends PhysicsBody {
 		this.clingSide = contact.side;
 		this.facingRight = contact.side === 'left';
 		this.jumpBufferFrames = 0;
-		this.crouchFramesLeft = 0;
+		this.jumpCrouchFramesLeft = 0;
+		this.clearHideCrouch();
 		SoundManager.playSound('blob-stick', 1, { speed: Math.random() * 0.2 + 0.9 });
 		//void SoundManager.playSound('blob-land', 1, { speed: Math.random() * 0.2 + 1.8 });
 	}
@@ -586,8 +626,22 @@ export class Player extends PhysicsBody {
 		}
 	}
 
+	/**
+	 * Ground jump. From hide crouch the blob is already compressed — skip the
+	 * squat wind-up and stand up into the launch instead.
+	 */
+	private startGroundJump(speedX: number): void {
+		if (this.crouchBlend > CROUCH_STATE_BLEND) {
+			this.clearHideCrouch();
+			this.launchJump(speedX);
+			return;
+		}
+
+		this.beginJumpCrouch();
+	}
+
 	private beginJumpCrouch(): void {
-		this.crouchFramesLeft = JUMP_CROUCH_FRAMES;
+		this.jumpCrouchFramesLeft = JUMP_CROUCH_FRAMES;
 		this.jelly.anticipateJump();
 	}
 
@@ -597,7 +651,7 @@ export class Player extends PhysicsBody {
 	}
 
 	private launchJump(speedX: number): void {
-		this.crouchFramesLeft = 0;
+		this.jumpCrouchFramesLeft = 0;
 		this.jumpBufferFrames = 0;
 		Body.setVelocity(this.body, {
 			x: speedX,
@@ -605,6 +659,72 @@ export class Player extends PhysicsBody {
 		});
 		this.groundContacts.clear();
 		SoundManager.playSound('blob-jump', 1, { speed: Math.random() * 0.4 + 0.8 });
+	}
+
+	private isCrouchHeld(): boolean {
+		return this.keysDown.has('ArrowDown')
+			|| this.keysDown.has('KeyS')
+			|| this.touchControls.crouch;
+	}
+
+	/** Snap hide crouch off (jump / cling) and expand collider immediately. */
+	private clearHideCrouch(): void {
+		this.crouchBlend = 0;
+		this.syncCrouchCollider();
+	}
+
+	/** Full reset for death / respawn — restore circle without planting shift. */
+	private resetCrouchPose(): void {
+		this.crouchBlend = 0;
+		if (Math.abs(this.colliderScaleY - 1) < 1e-6) {
+			this.colliderScaleY = 1;
+			return;
+		}
+
+		Body.scale(this.body, 1, 1 / this.colliderScaleY);
+		this.colliderScaleY = 1;
+	}
+
+	private updateCrouchBlend(deltaTime: number): void {
+		const dtSec = Math.max(deltaTime, 0) / FRAME_HZ;
+		const onGround = this.isOnGround();
+		const wantCrouch = onGround
+			&& !this.clinging
+			&& this.jumpCrouchFramesLeft <= 0
+			&& this.isCrouchHeld();
+
+		const step = CROUCH_BLEND_SEC > 0 ? dtSec / CROUCH_BLEND_SEC : 1;
+		if (wantCrouch) {
+			this.crouchBlend = Math.min(1, this.crouchBlend + step);
+		} else {
+			this.crouchBlend = Math.max(0, this.crouchBlend - step);
+		}
+	}
+
+	/**
+	 * Scale the circle into a flatter ellipse and shift the center so the
+	 * bottom contact point stays planted (Matter scales about the center).
+	 * Also nudge the render pose — display uses interpolated renderY, not body.y,
+	 * so a plant shift must not lag a frame behind jelly stretch (jump-from-crouch).
+	 */
+	private syncCrouchCollider(): void {
+		const targetScaleY = 1 - (1 - CROUCH_BODY_SCALE_Y) * this.crouchBlend;
+		if (Math.abs(targetScaleY - this.colliderScaleY) < 1e-6) {
+			return;
+		}
+
+		const prevScaleY = this.colliderScaleY;
+		const factorY = targetScaleY / prevScaleY;
+		const plantDy = PLAYER_RADIUS * (prevScaleY - targetScaleY);
+		Body.scale(this.body, 1, factorY);
+		// Y-down: shrinking moves the bottom up; push center down to keep feet planted.
+		Body.setPosition(this.body, {
+			x: this.body.position.x,
+			y: this.body.position.y + plantDy,
+		});
+		this.renderY += plantDy;
+		this.renderPrevY += plantDy;
+		this.colliderScaleY = targetScaleY;
 	}
 
 	private launchWallJump(): void {
@@ -650,6 +770,7 @@ export class Player extends PhysicsBody {
 			velocityY: this.body.velocity.y,
 			onGround,
 			clinging: this.clinging,
+			crouching: onGround && this.crouchBlend > CROUCH_STATE_BLEND,
 			dying: false,
 		});
 	}
@@ -681,13 +802,15 @@ export class Player extends PhysicsBody {
 			velocityX: this.body.velocity.x,
 			velocityY: this.body.velocity.y,
 			onGround: this.isOnGround(),
-			crouching: this.crouchFramesLeft > 0,
+			jumpCrouching: this.jumpCrouchFramesLeft > 0,
+			crouchBlend: this.crouchBlend,
 			clinging: this.clinging,
 			wallSide: this.clingSide,
 			wallCrouching: this.wallCrouchFramesLeft > 0,
 			wallPeeling: this.clingPeelFramesLeft > 0,
 			moveSpeedX: MOVE_SPEED_X,
 			halfHeight: PLAYER_RADIUS,
+			colliderScaleY: this.colliderScaleY,
 			deltaTime,
 		});
 
