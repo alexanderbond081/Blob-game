@@ -4,6 +4,8 @@ Planned blob abilities / surface interactions for the platformer.
 **Status:** living backlog — ship items move to Done; list still grows.  
 This list will grow; append new items below, do not drop old ones without a note.
 
+**Campaign note:** abilities unlock **per episode** via **pollen relics** (inanimate tokens), not live insects. Start = walk only on first playthrough; replays keep earned kit; NG+ after full clear. Lore + hub rules: [`poki-2d-platformer-concept.md`](./poki-2d-platformer-concept.md). This file stays focused on *how* each move feels when unlocked.
+
 Related: [`poki-2d-platformer-concept.md`](./poki-2d-platformer-concept.md)
 
 ---
@@ -45,5 +47,5 @@ Not committed — reorder when scheduling:
 | # | Mechanic | Notes |
 |---|----------|-------|
 | 1 | Sticky vertical cling | **Done.** Cling + wall-jump; `sticky-wall` label; hang-left/right; jelly hang/squash/peel; jump preferred over peel; cling only if wall top above blob center. |
-| 2 | Spikes / death surfaces | **Done.** Level `hazards[]` (`type: spikes`); solid Matter `hazard` bodies; shared death pipeline with fall (`beginDeath` → `burst` anim → pause → respawn). Death VFX: pooled kinematic droplets (`src/fx/blob-droplet-pool.ts`), even circular fan. Enemies later via `enemies[]`, same kill path. |
-| 3 | Crouch / hide | **Done.** Hold ↓ / `KeyS` / touch bottom-center; 0.5s blend; idle frames at ½ height, breath ×¼, alpha 0.6; Matter collider scaleY → 0.5 (feet planted); stand still (no crawl); jump exits crouch; `isHidden` at full blend for future LOS. |
+| 2 | Spikes / death surfaces | **Done.** Level `hazards[]` (`type: spikes`); solid Matter `hazard` bodies; shared death pipeline with fall (`beginDeath` → `burst` anim → pause → respawn). Death VFX: pooled kinematic droplets (`src/fx/blob-droplet-pool.ts`), even circular fan. Burst sheet may be a blank frame (droplets carry the pop); last frame is not force-hidden. Enemies later via `enemies[]`, same kill path. |
+| 3 | Crouch / hide | **Done.** Hold ↓ / `KeyS` / touch bottom-center; blend-in squat (½ height, breath ×¼, alpha 0.6); Matter collider scaleY → 0.5 (feet planted); stand still (no crawl); release → micro-hop stand; jump from crouch skips squat wind-up; `isHidden` at full blend for future LOS. |

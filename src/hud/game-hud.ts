@@ -63,7 +63,7 @@ export class GameHUD extends HUD {
 
 	private async addFullscreenButton(): Promise<void> {
 		const sheet = await Assets.load<Spritesheet>('fullscreen-button');
-		const decorator = new HighlightDecoration(0.85);
+		const decorator = new HighlightDecoration(0.75);
 		this.fullscreenButton = UIButton.fromSpritesheet(
 			sheet,
 			'fullscreen-on',
@@ -77,7 +77,7 @@ export class GameHUD extends HUD {
 
 	private async addSoundButton(): Promise<void> {
 		const sheet = await Assets.load<Spritesheet>('sound-button');
-		const decorator = new HighlightDecoration(0.85);
+		const decorator = new HighlightDecoration(0.75);
 		this.soundButton = UIButton.fromSpritesheet(
 			sheet,
 			'sound-on',
@@ -100,7 +100,7 @@ export class GameHUD extends HUD {
 
 	private async addMusicButton(): Promise<void> {
 		const sheet = await Assets.load<Spritesheet>('music-button');
-		const decorator = new HighlightDecoration(0.85);
+		const decorator = new HighlightDecoration(0.75);
 		this.musicButton = UIButton.fromSpritesheet(
 			sheet,
 			'music-on',

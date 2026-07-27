@@ -2,7 +2,7 @@
 
 Casual HTML5 platformer: a glowing blob jumps across leaves and collects fireflies. Short Poki-style levels, landscape **960×540**.
 
-**Status:** playable vertical slice / portfolio prototype (one JSON level, movement + sticky walls + hazards + collectibles + death FX). Not yet submitted to portals.
+**Status:** playable vertical slice / portfolio prototype (one JSON level, sticky walls, hazards/death, crouch/hide, collectibles). Not yet submitted to portals.
 
 Built with **Pixi.js v8**, **Matter.js**, **TypeScript**, **Webpack 5**.
 
@@ -21,6 +21,7 @@ Open `http://localhost:3000`.
 |--------|----------|------------|
 | Move | `A` / `D` or ← → | Bottom-left / bottom-right of invisible 9-slice pad |
 | Jump | `Space` / `W` / ↑ | Mid-left / mid-right (also moves) |
+| Crouch / hide | `S` / ↓ | Bottom-center of 9-slice pad |
 | Fullscreen | `F` | Top-left HUD button |
 | Mute SFX | — | Top-right sound button (`toggleSFX`) |
 | Mute music | — | Top-right music button (`toggleMusic`) |
@@ -34,7 +35,8 @@ Stuck keys / touch after OS UI (notification shade, tab blur) are cleared on foc
 - Blob player: run / jump / crouch wind-up, jelly squash, facing + hang sprites
 - **Sticky walls** (`label: "sticky-wall"`): air cling, slow slide, peel-off stretch, wall-jump
 - **Hazards** (`hazards[]`, e.g. `type: "spikes"`): solid kill volumes
-- **Death:** `burst` animation → droplet splash (pooled kinematic FX) → short pause → respawn at spawn (same path for fall-off)
+- **Death:** shared kill path (hazard / fall) → optional `burst` anim → droplet splash → pause → respawn (empty burst frame OK; no forced hide of last frame)
+- **Crouch / hide:** hold ↓ / `S` / bottom-center; blend-in squat + alpha; collider half-height; release → micro-hop; jump from crouch skips squat wind-up
 - Fireflies: bob animation, pickup SFX, respawn after a few seconds
 - Top icon HUD: fullscreen, separate music / SFX mute (spritesheet buttons)
 - Platform SDK hooks for Poki / CrazyGames builds (ads not wired yet)
@@ -87,7 +89,7 @@ Production builds write `dist/BUILD.txt` (version, channel, git meta). Upload th
 ## Known gaps (not blockers for a first push)
 
 - One demo level; no win/lose loop or score / progression UI yet
-- More player kit still queued (crouch/hide, double jump, dash, glide) — see mechanics backlog
+- More player kit still queued (double jump, dash, glide) — see mechanics backlog
 - Final art for sticky walls / spikes; droplet puddle polish deferred
 - Bundle is heavier than an ideal Poki first download (`bundle.js` ~1.4 MB + music) — optimize before portal submit
 - Ads / rewarded breaks not implemented
@@ -103,7 +105,7 @@ You may view the source for portfolio / learning; reuse of code or assets needs 
 | File | Contents |
 |------|----------|
 | [`plans/poki-2d-platformer-concept.md`](./plans/poki-2d-platformer-concept.md) | Game concept, scope, stack |
-| [`plans/player-mechanics-backlog.md`](./plans/player-mechanics-backlog.md) | Player mechanics backlog (cling / spikes done; more queued) |
+| [`plans/player-mechanics-backlog.md`](./plans/player-mechanics-backlog.md) | Player mechanics backlog (cling / death / crouch done; double jump, dash, glide queued) |
 | [`plans/poki.md`](./plans/poki.md) | Poki / CrazyGames technical notes |
 
 ## Author

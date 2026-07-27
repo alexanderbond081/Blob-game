@@ -94,7 +94,7 @@ export class Player extends PhysicsBody {
 	private renderPrevY = 0;
 	private renderX = 0;
 	private renderY = 0;
-	/** Fired when burst animation ends and the blob hides (death VFX spawn point). */
+	/** Fired when burst animation ends (death VFX spawn point). */
 	private onBurstFx: ((x: number, y: number, radius: number) => void) | null = null;
 
 	private readonly onKeyDown = (event: KeyboardEvent): void => {
@@ -273,7 +273,6 @@ export class Player extends PhysicsBody {
 
 	private startDeathPause(): void {
 		this.deathPauseSecondsLeft = DEATH_PAUSE_SEC;
-		this.sprite.visible = false;
 		this.onBurstFx?.(this.body.position.x, this.body.position.y, PLAYER_RADIUS);
 	}
 
