@@ -13,7 +13,7 @@ import { initPlatform, platformGameplayStart, platformLoadingFinished } from './
 import './global-delay';
 import { GameHUD } from './hud/game-hud';
 import { SoundManager } from './managers/sound-manager';
-import { bindGameDelayTicker } from './global-delay';
+import { bindGameDelayTicker, setGameDelayPaused } from './global-delay';
 
 Filter.defaultOptions.resolution = 'inherit';
 gsap.registerPlugin(PixiPlugin);
@@ -37,8 +37,30 @@ let gameHeight = 540;
 let currentScene: Scene | null = null;
 let gameSceneAssets: string = '';
 
-/** Global scene pause (ticker + input) during bootstrap/load. */
+/** Global scene pause (ticker + input) during bootstrap/load / future UI pause. */
 let isPaused = true;
+/**
+ * Page hidden (tab switch / minimize). Window blur alone does NOT set this —
+ * intentional: keep simulating while the window stays visible but unfocused.
+ * SoundManager uses the same visibility rule independently.
+ */
+let isHiddenPaused = false;
+
+const isGamePaused = (): boolean => isPaused || isHiddenPaused;
+
+const syncVisibilityPause = (): void => {
+	const shouldPause = document.visibilityState === 'hidden';
+	if (shouldPause === isHiddenPaused) {
+		return;
+	}
+
+	isHiddenPaused = shouldPause;
+	if (shouldPause) {
+		gsap.globalTimeline.pause();
+	} else {
+		gsap.globalTimeline.resume();
+	}
+};
 
 const getClientSize = (): { width: number; height: number } => {
 	const visualViewport = window.visualViewport;
@@ -112,6 +134,12 @@ const bindViewportListeners = (): void => {
 	});
 };
 
+/** Pause simulation when the tab/page is hidden; do not pause on window blur. */
+const bindVisibilityPause = (): void => {
+	document.addEventListener('visibilitychange', syncVisibilityPause);
+	syncVisibilityPause();
+};
+
 /** Block long-press text selection / callout / vibration on mobile browsers. */
 const suppressBrowserTouchChrome = (canvas: HTMLCanvasElement): void => {
 	const prevent = (event: Event): void => {
@@ -131,6 +159,7 @@ async function initGame(): Promise<void> {
 	await initPlatform();
 	SoundManager.init();
 	bindViewportListeners();
+	bindVisibilityPause();
 
 	await app.init({
 		background: '0x222222',
@@ -141,6 +170,7 @@ async function initGame(): Promise<void> {
 		resolution: window.devicePixelRatio || 1,
 	});
 	bindGameDelayTicker(app.ticker);
+	setGameDelayPaused(isGamePaused);
 	document.body.appendChild(app.canvas);
 	suppressBrowserTouchChrome(app.canvas);
 	applyStageScale();
@@ -157,7 +187,9 @@ async function initGame(): Promise<void> {
 	await Assets.init({ manifest: 'assets/manifest.json' });
 
 	app.ticker.add((ticker) => {
-		if (isPaused) return;
+		if (isGamePaused()) {
+			return;
+		}
 
 		if (currentScene) {
 			currentScene.update(ticker.deltaTime);
@@ -293,7 +325,9 @@ function onKeyDown(event: KeyboardEvent): void {
 		return;
 	}
 
-	if (isPaused || gameHUD.isModalOpen()) return;
+	if (isGamePaused() || gameHUD.isModalOpen()) {
+		return;
+	}
 
 	// Gameplay input is handled by active scene entities (e.g. Player).
 }

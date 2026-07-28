@@ -61,6 +61,8 @@ export class SoundManager {
 	}
 
 	public static init(): void {
+		// Keep Pixi's auto-pause off: window blur must not mute/stop audio while the
+		// page stays visible (multi-monitor / Poki iframe focus). Tab hide is handled below.
 		sound.disableAutoPause = true;
 		document.addEventListener('visibilitychange', this.onVisibilityChange);
 	}
