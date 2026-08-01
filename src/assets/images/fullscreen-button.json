@@ -8,7 +8,7 @@
 		"off": ["fullscreen-off"]
 	},
 	"meta": {
-	  "image": "fullscreen-button.png",
+	  "image": "fullscreen-button.webp",
 	  "scale": "1"
 	}
   }

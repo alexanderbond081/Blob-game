@@ -1,0 +1,22 @@
+{
+	"frames": {
+	  "meadow": { "frame": { "x": 0, "y": 0, "w": 200, "h": 200 } },
+	  "stream": { "frame": { "x": 200, "y": 0, "w": 200, "h": 200 } },
+	  "cave": { "frame": { "x": 400, "y": 0, "w": 200, "h": 200 } },
+	  "house": { "frame": { "x": 600, "y": 0, "w": 200, "h": 200 } },
+	  "forest": { "frame": { "x": 800, "y": 0, "w": 200, "h": 200 } },
+	  "mushroom": { "frame": { "x": 1000, "y": 0, "w": 200, "h": 200 } }
+	},
+	"animations": {
+		"meadow": ["meadow"],
+		"stream": ["stream"],
+		"cave": ["cave"],
+		"house": ["house"],
+		"forest": ["forest"],
+		"mushroom": ["mushroom"]
+	},
+	"meta": {
+	  "image": "location-icons.webp",
+	  "scale": "1"
+	}
+  }

@@ -8,7 +8,7 @@
 		"off": ["sound-off"]
 	},
 	"meta": {
-	  "image": "sound-button.png",
+	  "image": "sound-button.webp",
 	  "scale": "1"
 	}
   }

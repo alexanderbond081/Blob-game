@@ -1,0 +1,14 @@
+{
+	"frames": {
+	  "progress-button": { "frame": { "x": 0, "y": 0, "w": 200, "h": 200 } },
+	  "custom-button": { "frame": { "x": 200, "y": 0, "w": 200, "h": 200 } }
+	},
+	"animations": {
+		"progress": ["progress-button"],
+		"customize": ["custom-button"]
+	},
+	"meta": {
+	  "image": "custom-buttons.webp",
+	  "scale": "1"
+	}
+  }

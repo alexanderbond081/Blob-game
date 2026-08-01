@@ -8,7 +8,7 @@
 		"off": ["music-off"]
 	},
 	"meta": {
-	  "image": "music-button.png",
+	  "image": "music-button.webp",
 	  "scale": "1"
 	}
   }

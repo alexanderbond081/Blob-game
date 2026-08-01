@@ -1,0 +1,14 @@
+{
+	"frames": {
+	  "list-left": { "frame": { "x": 0, "y": 0, "w": 150, "h": 150 } },
+	  "list-right": { "frame": { "x": 150, "y": 0, "w": 150, "h": 150 } }
+	},
+	"animations": {
+		"left": ["list-left"],
+		"right": ["list-right"]
+	},
+	"meta": {
+	  "image": "list-buttons.webp",
+	  "scale": "1"
+	}
+  }

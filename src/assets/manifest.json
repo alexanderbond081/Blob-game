@@ -5,7 +5,7 @@
 			"assets": [
 				{
 					"alias": "logo",
-					"src": "assets/preload/logo.png",
+					"src": "assets/preload/logo.webp",
 					"data": {
 						"resolution": 2,
 						"autoGenerateMipmaps": true,
@@ -51,6 +51,15 @@
 				{
 					"alias": "hit-a-button",
 					"src": "assets/sounds/hit-a-button.ogg"
+				},
+				{
+					"alias": "location-icons",
+					"src": "assets/images/location-icons.json",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
 				},
 				{
 					"alias": "blob",
@@ -116,7 +125,47 @@
 			"assets": [
 				{
 					"alias": "background",
-					"src": "assets/main-scene/background.webp",
+					"src": "assets/main-scene/main-menu-background.webp",
+					"data": {
+						"resolution": 1,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "play-button",
+					"src": "assets/main-scene/play-button.json",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "list-buttons",
+					"src": "assets/main-scene/list-buttons.json",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "custom-buttons",
+					"src": "assets/main-scene/custom-buttons.json",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				}
+			]
+		},
+		{
+			"name": "play-scene",
+			"assets": [
+				{
+					"alias": "background",
+					"src": "assets/play-scene/background.webp",
 					"data": {
 						"resolution": 1,
 						"scaleMode": "linear"
