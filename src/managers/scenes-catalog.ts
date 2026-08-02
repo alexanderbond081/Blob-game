@@ -1,4 +1,5 @@
 import { Scene } from '../scenes/scene';
+import { MainMenuScene } from '../scenes/main-menu-scene';
 import { PlatformLevelScene } from '../scenes/platform-level-scene';
 
 export type GameSceneCreateArgs = Record<string, unknown>;
@@ -10,15 +11,23 @@ export interface GameSceneCatalogEntry {
 	createScene: (args?: GameSceneCreateArgs) => Scene;
 }
 
-const createForestScene = (_args?: GameSceneCreateArgs): Scene => {
-	return new PlatformLevelScene('forest-01');
-};
+export const MAIN_MENU_SCENE_ID = 'main-menu';
 
 export const gameSceneCatalog: GameSceneCatalogEntry[] = [
 	{
-		id: 'main-scene',
-		title: 'Forest',
+		id: MAIN_MENU_SCENE_ID,
+		title: 'Main Menu',
 		assetBundle: 'main-scene',
-		createScene: createForestScene,
+		createScene: () => new MainMenuScene(),
+	},
+	{
+		id: 'forest-01',
+		title: 'Forest',
+		assetBundle: 'play-scene',
+		createScene: () => new PlatformLevelScene('forest-01'),
 	},
 ];
+
+export const findGameScene = (sceneId: string): GameSceneCatalogEntry | undefined => {
+	return gameSceneCatalog.find((entry) => entry.id === sceneId);
+};

@@ -5,6 +5,7 @@ import { HighlightDecoration } from '../components/highlight-decoration';
 import { UIButton } from '../components/ui-button';
 import { DebugHudPanel } from '../debug/debug-hud-panel';
 import { SoundManager } from '../managers/sound-manager';
+import { isFullscreenControlAllowed } from '../platform/platform';
 import { Scene } from '../scenes/scene';
 import { HUD } from './hud';
 
@@ -12,14 +13,25 @@ const HUD_MARGIN = 12;
 const HUD_BUTTON_SIZE = 50;
 const HUD_BUTTON_GAP = 12;
 
+/** Which controls the HUD exposes for the currently active screen. */
+export type HudProfile = 'menu' | 'gameplay';
+
 export class GameHUD extends HUD {
 	private fullscreenButton!: UIButton;
 	private soundButton!: UIButton;
 	private musicButton!: UIButton;
 	private modalLayer!: Container;
 	private debugPanel!: DebugHudPanel;
+	private isBuilt = false;
+	private profile: HudProfile = 'menu';
 
 	public async init(): Promise<void> {
+		if (this.isBuilt) {
+			return;
+		}
+
+		this.isBuilt = true;
+
 		await this.addFullscreenButton();
 		await this.addMusicButton();
 		await this.addSoundButton();
@@ -27,7 +39,17 @@ export class GameHUD extends HUD {
 		this.addChild(this.debugPanel);
 		this.modalLayer = new Container();
 		this.addChild(this.modalLayer);
+		this.applyProfile();
 		this.onResize();
+	}
+
+	public get activeProfile(): HudProfile {
+		return this.profile;
+	}
+
+	public setProfile(profile: HudProfile): void {
+		this.profile = profile;
+		this.applyProfile();
 	}
 
 	public override destroy(options?: DestroyOptions): void {
@@ -52,6 +74,13 @@ export class GameHUD extends HUD {
 		}
 
 		this.fullscreenButton.setFrame(isFullscreen ? 'fullscreen-off' : 'fullscreen-on');
+	}
+
+	/** Sound and music are always available; per-profile controls arrive with the pause stage. */
+	private applyProfile(): void {
+		if (this.fullscreenButton) {
+			this.fullscreenButton.visible = isFullscreenControlAllowed();
+		}
 	}
 
 	protected onResize(): void {

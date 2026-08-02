@@ -31,7 +31,8 @@ export class SoundManager {
 
 	private static musicAlias: string = '';
 	private static ambientAlias: string = '';
-	private static _pausedByVisibility: boolean = false;
+	private static _suspended: boolean = false;
+	private static _globalMuted: boolean = false;
 
 	public static get musicVolume(): number {
 		return this.musicBus.gain.value;
@@ -60,39 +61,56 @@ export class SoundManager {
 		this.sfxBus.gain.value = volume;
 	}
 
+	public static get isSuspended(): boolean {
+		return this._suspended;
+	}
+
+	public static get isGlobalMuted(): boolean {
+		return this._globalMuted;
+	}
+
 	public static init(): void {
 		// Keep Pixi's auto-pause off: window blur must not mute/stop audio while the
-		// page stays visible (multi-monitor / Poki iframe focus). Tab hide is handled below.
+		// page stays visible (multi-monitor / Poki iframe focus). Suspending on tab
+		// hide or on an ad is the platform layer's call, not this manager's.
 		sound.disableAutoPause = true;
-		document.addEventListener('visibilitychange', this.onVisibilityChange);
 	}
 
-	private static onVisibilityChange = (): void => {
-		if (document.visibilityState === 'hidden') {
-			SoundManager.pauseOnHidden();
+	/**
+	 * Suspend the whole audio context. Single flag by design: the platform layer
+	 * owns every reason to suspend and passes the already-combined state here.
+	 */
+	public static setSuspended(suspended: boolean): void {
+		if (suspended === this._suspended) {
 			return;
 		}
 
-		SoundManager.resumeOnVisible();
-	};
+		this._suspended = suspended;
 
-	public static pauseOnHidden(): void {
-		if (sound.context.paused) {
-			return;
+		if (suspended) {
+			sound.pauseAll();
+		} else {
+			sound.resumeAll();
 		}
-
-		sound.pauseAll();
-		this._pausedByVisibility = true;
 	}
 
-	public static resumeOnVisible(): void {
-		if (!this._pausedByVisibility) {
+	/**
+	 * Master mute. Rides the global gain applied per playing instance, so it is a
+	 * separate axis from the music / ambience / SFX buses: muting and unmuting
+	 * globally never resurrects a channel the player switched off.
+	 */
+	public static muteGlobal(muted: boolean): void {
+		if (muted === this._globalMuted) {
 			return;
 		}
 
-		sound.context.paused = false;
-		sound.context.refreshPaused();
-		this._pausedByVisibility = false;
+		this._globalMuted = muted;
+
+		if (muted) {
+			sound.muteAll();
+		} else {
+			sound.unmuteAll();
+		}
 	}
 
 	public static playMusic(alias: string): void {
@@ -177,7 +195,7 @@ export class SoundManager {
 	}
 
 	public static toggleMusic(): boolean {
-		// !! do not use together with toggleGlobal() - synchronization is not implemented yet
+		// !! be careful using together with toggleGlobal() - it will not be unmuted by toggleGlobal()
 		if (this._musicVolume > 0 && this.musicBus.gain.value === 0) {
 			this.musicBus.gain.value = this._musicVolume;
 			return false;
@@ -188,7 +206,7 @@ export class SoundManager {
 	}
 
 	public static toggleAmbience(): boolean {
-		// !! do not use together with toggleGlobal() - synchronization is not implemented yet
+		// !! be careful using together with toggleGlobal() - it will not be unmuted by toggleGlobal()
 		if (this._ambienceVolume > 0 && this.ambienceBus.gain.value === 0) {
 			this.ambienceBus.gain.value = this._ambienceVolume;
 			return false;
@@ -199,7 +217,7 @@ export class SoundManager {
 	}
 
 	public static toggleSFX(): boolean {
-		// !! do not use together with toggleGlobal() - synchronization is not implemented yet
+		// !! be careful using together with toggleGlobal() - it will not be unmuted by toggleGlobal()
 		if (this._sfxVolume > 0 && this.sfxBus.gain.value === 0) {
 			this.sfxBus.gain.value = this._sfxVolume;
 			return false;
@@ -210,7 +228,8 @@ export class SoundManager {
 	}
 
 	public static toggleGlobal(): boolean {
-		// !! do not use together with other toggle functions - synchronization is not implemented yet
-		return sound.toggleMuteAll();
+		// !! be careful using together with other toggle functions - it will not unmute music, ambient or sfx beibg turned off by corresponding method
+		this.muteGlobal(!this._globalMuted);
+		return this._globalMuted;
 	}
 }

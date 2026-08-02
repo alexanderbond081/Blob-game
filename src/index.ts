@@ -6,9 +6,10 @@ import { PixiPlugin } from 'gsap/PixiPlugin';
 
 import { Scene } from './scenes/scene';
 import { LoadingScene } from './scenes/loading-scene';
-import { GameSceneCatalogEntry, gameSceneCatalog } from './managers/scenes-catalog';
+import { MainMenuScene } from './scenes/main-menu-scene';
+import { findGameScene, MAIN_MENU_SCENE_ID } from './managers/scenes-catalog';
 import { logBuildInfo } from './version';
-import { initPlatform, platformGameplayStart, platformLoadingFinished } from './platform/platform';
+import { initPlatform, platformCommercialBreak, platformGameplayStart, platformLoadingFinished, setPlatformHooks } from './platform/platform';
 
 import './global-delay';
 import { GameHUD } from './hud/game-hud';
@@ -36,31 +37,14 @@ let gameHeight = 540;
 
 let currentScene: Scene | null = null;
 let gameSceneAssets: string = '';
+let isSwitchingScene = false;
 
 /** Global scene pause (ticker + input) during bootstrap/load / future UI pause. */
 let isPaused = true;
-/**
- * Page hidden (tab switch / minimize). Window blur alone does NOT set this —
- * intentional: keep simulating while the window stays visible but unfocused.
- * SoundManager uses the same visibility rule independently.
- */
-let isHiddenPaused = false;
+/** Ad break or hidden page; both are arbitrated by the platform layer. */
+let isPlatformPaused = false;
 
-const isGamePaused = (): boolean => isPaused || isHiddenPaused;
-
-const syncVisibilityPause = (): void => {
-	const shouldPause = document.visibilityState === 'hidden';
-	if (shouldPause === isHiddenPaused) {
-		return;
-	}
-
-	isHiddenPaused = shouldPause;
-	if (shouldPause) {
-		gsap.globalTimeline.pause();
-	} else {
-		gsap.globalTimeline.resume();
-	}
-};
+const isGamePaused = (): boolean => isPaused || isPlatformPaused;
 
 const getClientSize = (): { width: number; height: number } => {
 	const visualViewport = window.visualViewport;
@@ -134,10 +118,18 @@ const bindViewportListeners = (): void => {
 	});
 };
 
-/** Pause simulation when the tab/page is hidden; do not pause on window blur. */
-const bindVisibilityPause = (): void => {
-	document.addEventListener('visibilitychange', syncVisibilityPause);
-	syncVisibilityPause();
+/** Freeze the game whenever the platform says so (ad on screen / page hidden). */
+const bindPlatformPause = (): void => {
+	setPlatformHooks({
+		onPause: () => {
+			isPlatformPaused = true;
+			gsap.globalTimeline.pause();
+		},
+		onResume: () => {
+			isPlatformPaused = false;
+			gsap.globalTimeline.resume();
+		},
+	});
 };
 
 /** Block long-press text selection / callout / vibration on mobile browsers. */
@@ -156,10 +148,12 @@ const suppressBrowserTouchChrome = (canvas: HTMLCanvasElement): void => {
 
 async function initGame(): Promise<void> {
 	logBuildInfo();
-	await initPlatform();
+	// Audio settings and pause hooks must exist before the platform starts
+	// reporting visibility, otherwise the very first state change is lost.
 	SoundManager.init();
+	bindPlatformPause();
+	await initPlatform();
 	bindViewportListeners();
-	bindVisibilityPause();
 
 	await app.init({
 		background: '0x222222',
@@ -204,48 +198,89 @@ async function initGame(): Promise<void> {
 	await Promise.all([loadCommonPromise, delay(1000)]);
 	// no progress bar durin loading 'common', because there is no main menu and login screen yet
 
-	// load main game scene
-	await loadGameScene('main-scene');
-	platformLoadingFinished();
-	platformGameplayStart();
-
 	// setup keys and window focus - the app works fine without it
 	//app.canvas.setAttribute('tabindex', '0');
 	//app.canvas.focus();
 
 	window.addEventListener('keydown', onKeyDown);
 
+	await showMainMenu();
+
+	// Poki counts the game as loaded once the menu is interactive; gameplayStart
+	// belongs to the level transition, not to boot.
+	platformLoadingFinished();
+
 	isPaused = false;
 }
 
-async function loadGameScene(sceneId: string): Promise<void> {
-	const entry = gameSceneCatalog.find((catalogEntry) => catalogEntry.id === sceneId);
-
-	if (!entry) {
-		console.error(`loadGameScene: unknown scene id "${sceneId}"`);
+/** Swap the active asset bundle. The previous scene must already be destroyed. */
+async function swapAssetBundle(bundleName: string): Promise<void> {
+	if (gameSceneAssets === bundleName) {
 		return;
 	}
 
-	const loadingScene = new LoadingScene();
-	await changeScene(loadingScene);
 	if (gameSceneAssets) {
 		await Assets.unloadBundle(gameSceneAssets);
 		gameSceneAssets = '';
 	}
 
-	gameSceneAssets = entry.assetBundle;
-	await Assets.loadBundle(entry.assetBundle);
-
-	await initHUD();
-
-	const gameScene = createGameScene(entry);
-
-	await changeScene(gameScene, true);
+	await Assets.loadBundle(bundleName);
+	gameSceneAssets = bundleName;
 }
 
-function createGameScene(entry: GameSceneCatalogEntry): Scene {
-	const gameScene = entry.createScene();
-	return gameScene;
+async function showLoadingScene(): Promise<void> {
+	await changeScene(new LoadingScene());
+}
+
+async function showMainMenu(): Promise<void> {
+	const entry = findGameScene(MAIN_MENU_SCENE_ID);
+
+	if (!entry) {
+		console.error('showMainMenu: main menu is missing from the scene catalog');
+		return;
+	}
+
+	await showLoadingScene();
+	await swapAssetBundle(entry.assetBundle);
+	await initHUD();
+	gameHUD.setProfile('menu');
+
+	const menuScene = entry.createScene() as MainMenuScene;
+	menuScene.on('play-level', (sceneId: string) => {
+		void startLevel(sceneId);
+	});
+
+	await changeScene(menuScene, true);
+}
+
+async function startLevel(sceneId: string): Promise<void> {
+	if (isSwitchingScene) {
+		return;
+	}
+
+	const entry = findGameScene(sceneId);
+
+	if (!entry) {
+		console.error(`startLevel: unknown scene id "${sceneId}"`);
+		return;
+	}
+
+	isSwitchingScene = true;
+	isPaused = true;
+
+	try {
+		await showLoadingScene();
+		await swapAssetBundle(entry.assetBundle);
+		await initHUD();
+		gameHUD.setProfile('gameplay');
+		await changeScene(entry.createScene(), true);
+
+		await platformCommercialBreak();
+		platformGameplayStart();
+	} finally {
+		isPaused = false;
+		isSwitchingScene = false;
+	}
 }
 
 async function changeScene(newScene: Scene, showHud: boolean = false): Promise<void> {
@@ -310,7 +345,14 @@ async function fadeEffect(durationMs: number, fadeOut: boolean, color: number = 
 	}
 }
 
+const SCROLL_KEYS = ['Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+
 function onKeyDown(event: KeyboardEvent): void {
+	// Keep the host page from scrolling while the game owns these keys.
+	if (SCROLL_KEYS.includes(event.code)) {
+		event.preventDefault();
+	}
+
 	if (event.code === 'Escape') {
 		if (gameHUD.closeTopModal()) {
 			event.preventDefault();

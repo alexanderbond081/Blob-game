@@ -13,6 +13,7 @@ export class AnotherFly extends Particle {
 		private chaos: number = 1,
 		private speed: number = 20,
 		private distance: number = 400,
+		scale: number = 0,
 	) {
 		super(texture);
 		if (chaos <= 0) throw new Error('AnotherFly chaos < 0');
@@ -20,12 +21,14 @@ export class AnotherFly extends Particle {
 		if (distance <= 0) throw new Error('AnotherFly distance < 0');
 		this.width = texture.width;
 		this.height = texture.height;
-		let rndScale = Math.random() * 0.8 + 0.2;
-		this.scaleX = rndScale;
-		this.scaleY = rndScale;
-		speed *= rndScale;
-		distance *= rndScale;
-		this.initialY *= rndScale;
+		if (scale <= 0) {
+			scale = Math.random() * 0.8 + 0.2;
+			this.initialY *= scale;
+		}
+		this.scaleX = scale;
+		this.scaleY = scale;
+		speed *= scale;
+		distance *= scale;
 		this.anchorX = 0.5;
 		this.anchorY = 0.5;
 		this.x = this.initialX;

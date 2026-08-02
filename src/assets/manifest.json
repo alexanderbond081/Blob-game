@@ -62,6 +62,15 @@
 					}
 				},
 				{
+					"alias": "level-lock",
+					"src": "assets/images/level-lock-big.webp",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
 					"alias": "blob",
 					"src": "assets/images/blob.json",
 					"data": {
@@ -100,7 +109,7 @@
 				},
 				{
 					"alias": "firefly",
-					"src": "assets/images/firefly.webp",
+					"src": "assets/images/firefly-dot-less-glow.webp",
 					"data": {
 						"resolution": 2,
 						"scaleMode": "linear"
@@ -124,7 +133,7 @@
 			"name": "main-scene",
 			"assets": [
 				{
-					"alias": "background",
+					"alias": "menu-background",
 					"src": "assets/main-scene/main-menu-background.webp",
 					"data": {
 						"resolution": 1,
@@ -157,6 +166,14 @@
 						"autoGenerateMipmaps": true,
 						"scaleMode": "linear"
 					}
+				},
+				{
+					"alias": "level-start",
+					"src": "assets/sounds/blip-blip-short.ogg"
+				},
+				{
+					"alias": "level-locked",
+					"src": "assets/sounds/blip-blip-low.ogg"
 				}
 			]
 		},
@@ -173,7 +190,7 @@
 				},
 				{
 					"alias": "background-mid",
-					"src": "assets/main-scene/background-mid.webp",
+					"src": "assets/play-scene/background-mid.webp",
 					"data": {
 						"resolution": 1,
 						"scaleMode": "linear"
