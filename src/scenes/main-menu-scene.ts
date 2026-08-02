@@ -30,7 +30,7 @@ const PORTRAIT_SIDE_SPREAD = 110;
 
 /** Idle Play bounce while an unlocked level is selected. */
 const PLAY_IDLE_INTERVAL_SEC = 8;
-const PLAY_IDLE_HOP_PX = 16;
+const PLAY_IDLE_HOP_PX = 22;
 
 /**
  * Menu hub: level carousel plus Play and the two meta-screen entries.
@@ -351,23 +351,27 @@ export class MainMenuScene extends Scene {
 		button.scale.set(1);
 		button.y = restY;
 
-		const hop = (): gsap.core.Timeline => {
+		const sit = (): gsap.core.Timeline => {
 			return gsap.timeline()
 				.to(button, {
 					pixi: {
 						scaleX: 1.2, scaleY: 0.8, y: restY + height * 0.1
 					},
-					duration: 0.2,
+					duration: 0.22,
 					ease: 'power1.out',
-				})
+				});
+		};
+
+		const hop = (): gsap.core.Timeline => {
+			return gsap.timeline()
 				.to(button, {
 					pixi: { scaleX: 0.85, scaleY: 1.15, y: restY - PLAY_IDLE_HOP_PX },
 					duration: 0.15,
 					ease: 'power2.out',
 				})
 				.to(button, {
-					pixi: { scaleX: 1, scaleY: 1, y: restY - PLAY_IDLE_HOP_PX },
-					duration: 0.05,
+					pixi: { scaleX: 1.05, scaleY: 0.95, y: restY - PLAY_IDLE_HOP_PX - height * 0.025 },
+					duration: 0.07,
 					ease: 'power1.out',
 				})
 				.to(button, {
@@ -377,19 +381,26 @@ export class MainMenuScene extends Scene {
 				})
 				.to(button, {
 					pixi: { scaleX: 1.2, scaleY: 0.8, y: restY + height * 0.1 },
-					duration: 0.05,
+					duration: 0.07,
 					ease: 'power1.out',
-				})
+				});
+		};
+
+		const out = (): gsap.core.Timeline => {
+			return gsap.timeline()
 				.to(button, {
 					pixi: { scaleX: 1, scaleY: 1, y: restY },
-					duration: 0.3,
+					duration: 0.6,
 					ease: 'elastic.out(1.1, 0.4)',
 				});
 		};
 
 		this.playIdleBounce = gsap.timeline()
+			.add(sit())
 			.add(hop())
-			.add(hop(), '+=0.04');
+			//.add(hop(), '+=0.02')
+			.add(hop())
+			.add(out());
 	}
 
 	private readonly onKeyDown = (event: KeyboardEvent): void => {
