@@ -25,6 +25,8 @@ Thumbs.db
 # Editor / IDE (personal)
 .idea/
 .vscode/
+.desktop
+.directory
 *.swp
 *.swo
 *~

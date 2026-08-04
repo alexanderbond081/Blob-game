@@ -272,4 +272,6 @@ Pixi = draw yourself + pick physics package. Phaser/Defold = gameplay kit includ
 - [x] Stack for Fairy Blob → **Pixi DIY + Matter** (not Defold/Phaser)
 - [x] Orientation for v1 → **landscape-first** (portrait UX deferred)
 - [x] Physics for v1 → **Matter.js** (custom AABB only for death droplet FX)
+- [x] UI hub + pause loop (menu carousel, Pause Home/Resume/Restart, platform session + commercialBreak on intent to play)
 - [ ] Target Poki first vs CrazyGames Basic Launch first
+- [ ] Level catalog + win / next-level flow (portal threshold → next scene)

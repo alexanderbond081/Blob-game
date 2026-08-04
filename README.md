@@ -2,7 +2,7 @@
 
 Casual HTML5 platformer: a glowing blob jumps across leaves and collects fireflies. Short Poki-style levels, landscape **960×540**.
 
-**Status:** playable vertical slice / portfolio prototype (one JSON level, sticky walls, hazards/death, crouch/hide, collectibles). Not yet submitted to portals.
+**Status:** playable vertical slice / portfolio prototype — main menu with level carousel, one JSON level, sticky walls, hazards/death, crouch/hide, collectibles, pause → Home / Resume / Restart. Not yet submitted to portals.
 
 Built with **Pixi.js v8**, **Matter.js**, **TypeScript**, **Webpack 5**.
 
@@ -22,14 +22,18 @@ Open `http://localhost:3000`.
 | Move | `A` / `D` or ← → | Bottom-left / bottom-right of invisible 9-slice pad |
 | Jump | `Space` / `W` / ↑ | Mid-left / mid-right (also moves) |
 | Crouch / hide | `S` / ↓ | Bottom-center of 9-slice pad |
-| Fullscreen | `F` | Top-left HUD button |
-| Mute SFX | — | Top-right sound button (`toggleSFX`) |
-| Mute music | — | Top-right music button (`toggleMusic`) |
+| Pause | `Esc` | Pause button (gameplay HUD, right cluster) |
+| Resume / Home / Restart | `Esc` resumes | Pause modal buttons |
+| Fullscreen | `F` | Top-left HUD button (hidden on Poki builds) |
+| Mute SFX | — | Top-right sound button |
+| Mute music | — | Top-right music button |
 
 Stuck keys / touch after OS UI (notification shade, tab blur) are cleared on focus loss.
 
 ## What’s in this build
 
+- Main menu hub: background, level carousel, Play, Progress / Customize (UI feedback only, no-op screens)
+- Pause modal (gameplay): Home → menu (no ad break); Resume / Restart → `commercialBreak` when an ad actually starts, then gameplay
 - Matter.js physics, walkable ground detection (slopes-ready normals)
 - Camera follow + clamp, dual parallax backgrounds
 - Blob player: run / jump / crouch wind-up, jelly squash, facing + hang sprites
@@ -38,8 +42,8 @@ Stuck keys / touch after OS UI (notification shade, tab blur) are cleared on foc
 - **Death:** shared kill path (hazard / fall) → optional `burst` anim → droplet splash → pause → respawn (empty burst frame OK; no forced hide of last frame)
 - **Crouch / hide:** hold ↓ / `S` / bottom-center; blend-in squat + alpha; collider half-height; release → micro-hop; jump from crouch skips squat wind-up
 - Fireflies: bob animation, pickup SFX, respawn after a few seconds
-- Top icon HUD: fullscreen, separate music / SFX mute (spritesheet buttons)
-- Platform SDK hooks for Poki / CrazyGames builds (ads not wired yet)
+- Top icon HUD: fullscreen (non-Poki), pause (gameplay), separate music / SFX mute
+- Platform SDK bridge: `gameLoadingFinished`, `gameplayStart` / `Stop`, `commercialBreak` / rewarded hooks ([`src/platform/platform.ts`](src/platform/platform.ts))
 
 Level data: JSON + Zod ([`src/levels/`](src/levels/)) — `platforms`, `hazards`, `collectibles`, spawn, size, backgrounds.
 
@@ -75,25 +79,38 @@ Production builds write `dist/BUILD.txt` (version, channel, git meta). Upload th
 
 | Path | Role |
 |------|------|
-| `src/scenes/` | Loading + platform level scene |
+| `src/scenes/` | Loading, main menu, platform level |
+| `src/components/` | Level carousel and shared UI bits |
 | `src/entities/` | Player, collectibles, hazards |
 | `src/fx/` | Death droplet pool and other short-lived VFX |
 | `src/physics/` | Matter world, static bodies, ground / wall contact |
 | `src/world/` | Camera, parallax, level root |
 | `src/levels/` | Zod schema + JSON levels (`forest-01`) |
 | `src/input/` | Shared controls + 9-slice touch pad |
-| `src/hud/` | Top icon HUD (fullscreen, music, SFX) |
+| `src/hud/` | Icon HUD + modals (`pause-content`) |
+| `src/managers/` | Level catalog stub, scenes catalog, sound |
 | `src/platform/` | Poki / CrazyGames / no-op adapters |
 | `plans/` | Design / portal research notes |
 
+## UI workflow progress
+
+| Stage | Status |
+|-------|--------|
+| A — Main menu + carousel + platform session | Done |
+| B — Pause modal (Resume / Home / Restart) | Done |
+| A2 — Level catalog structure | Next |
+| C — Win + next-level modal | After A2 + win in level data |
+| D — GameProgress + Progress / Customize scenes | Later |
+| E — Help / rewarded teleport | Later |
+| F — Polish (movePill, etc.) | Later |
+
 ## Known gaps (not blockers for a first push)
 
-- One demo level; no win/lose loop or score / progression UI yet
+- One demo level; no win / next-level loop or saved progression yet
+- Level catalog is a stub (hardcoded unlocks); Progress / Customize buttons are no-op
 - More player kit still queued (double jump, dash, glide) — see mechanics backlog
 - Final art for sticky walls / spikes; droplet puddle polish deferred
 - Bundle is heavier than an ideal Poki first download (`bundle.js` ~1.4 MB + music) — optimize before portal submit
-- Ads / rewarded breaks not implemented
-- `MainGameScene` is unused legacy demo code
 
 ## License
 

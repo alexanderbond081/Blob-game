@@ -11,15 +11,7 @@ export interface GameSceneCatalogEntry {
 	createScene: (args?: GameSceneCreateArgs) => Scene;
 }
 
-export const MAIN_MENU_SCENE_ID = 'main-menu';
-
 export const gameSceneCatalog: GameSceneCatalogEntry[] = [
-	{
-		id: MAIN_MENU_SCENE_ID,
-		title: 'Main Menu',
-		assetBundle: 'main-scene',
-		createScene: () => new MainMenuScene(),
-	},
 	{
 		id: 'forest-01',
 		title: 'Forest',

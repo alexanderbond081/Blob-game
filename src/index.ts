@@ -7,7 +7,7 @@ import { PixiPlugin } from 'gsap/PixiPlugin';
 import { Scene } from './scenes/scene';
 import { LoadingScene } from './scenes/loading-scene';
 import { MainMenuScene } from './scenes/main-menu-scene';
-import { findGameScene, MAIN_MENU_SCENE_ID } from './managers/scenes-catalog';
+import { findGameScene } from './managers/scenes-catalog';
 import { logBuildInfo } from './version';
 import { initPlatform, platformCommercialBreak, platformGameplayStart, platformGameplayStop, platformLoadingFinished, setPlatformHooks } from './platform/platform';
 
@@ -148,6 +148,10 @@ const suppressBrowserTouchChrome = (canvas: HTMLCanvasElement): void => {
 	canvas.addEventListener('touchmove', prevent, { passive: false });
 };
 
+
+
+// ---- methods implementation ---- (do not touch my comments!!!)
+
 async function initGame(): Promise<void> {
 	logBuildInfo();
 	// Audio settings and pause hooks must exist before the platform starts
@@ -193,12 +197,10 @@ async function initGame(): Promise<void> {
 	});
 
 	isPaused = true;
-	hudLayer.visible = false;
-	// show logo
-	await Assets.loadBundle('preload');
-	const loadCommonPromise = Assets.loadBundle('common');
-	await Promise.all([loadCommonPromise, delay(1000)]);
-	// no progress bar durin loading 'common', because there is no main menu and login screen yet
+
+	// show logo and loading screen
+	await preload();
+	await initHUD();
 
 	// setup keys and window focus - the app works fine without it
 	//app.canvas.setAttribute('tabindex', '0');
@@ -215,47 +217,81 @@ async function initGame(): Promise<void> {
 	isPaused = false;
 }
 
-/** Swap the active asset bundle. The previous scene must already be destroyed. */
-async function swapAssetBundle(bundleName: string): Promise<void> {
-	if (gameSceneAssets === bundleName) {
-		return;
-	}
+async function changeScene(newScene: Scene, bundleName: string = '', doThings?: () => void): Promise<void> {
+	if (currentScene) {
+		// fade out and load new assets bundle
+		const promiseFadeIsOn = fadeEffect(500, true);
 
-	if (gameSceneAssets) {
-		await Assets.unloadBundle(gameSceneAssets);
-		gameSceneAssets = '';
-	}
+		if (gameSceneAssets === bundleName) {
+			bundleName = '';
+		}
 
-	await Assets.loadBundle(bundleName);
-	gameSceneAssets = bundleName;
+		let oldSceneAssets = '';
+		if (bundleName) {
+			await Assets.loadBundle(bundleName);
+			oldSceneAssets = gameSceneAssets;
+			gameSceneAssets = bundleName;
+		}
+
+		const promiseSceneInit = newScene.init();
+		await Promise.all([promiseFadeIsOn, promiseSceneInit]);
+
+		// change scenes and do things while it is dark
+		//hudLayer.visible = showHud;
+		gameLayer.removeChild(currentScene);
+		doThings?.();
+		gameLayer.addChild(newScene);
+
+		// fade out and unload old assets bundle
+		const fadeIsOff = fadeEffect(500, false);
+		currentScene.destroy({ children: true });
+		currentScene = newScene;
+
+		const oldBundleUnloaded = oldSceneAssets
+			? Assets.unloadBundle(oldSceneAssets)
+			: Promise.resolve();
+
+		const promiseFadeIsOff = fadeIsOff;
+		await Promise.all([promiseFadeIsOff, oldBundleUnloaded]);
+
+	} else {
+		// the very first screen load
+		if (bundleName) {
+			await Assets.loadBundle(bundleName);
+			gameSceneAssets = bundleName;
+		}
+
+		await newScene.init();
+		doThings?.();
+		gameLayer.addChild(newScene);
+		currentScene = newScene;
+		await fadeEffect(100, false, 0x00);
+	}
 }
 
-async function showLoadingScene(): Promise<void> {
-	await changeScene(new LoadingScene(), false);
+async function preload(): Promise<void> {
+	hudLayer.visible = false;
+
+	await Assets.loadBundle('preload');
+	const loadingScene = new LoadingScene();
+	await changeScene(loadingScene);
+	await Assets.loadBundle('common', p => loadingScene.onProgress(p * 0.9 + 0.1));
 }
 
 async function showMainMenu(): Promise<void> {
-	const entry = findGameScene(MAIN_MENU_SCENE_ID);
-
-	if (!entry) {
-		console.error('showMainMenu: main menu is missing from the scene catalog');
-		return;
-	}
 
 	currentPlaySceneId = null;
 	platformGameplayStop();
 
-	await showLoadingScene();
-	await swapAssetBundle(entry.assetBundle);
-	await initHUD();
-	gameHUD.setProfile('menu');
-
-	const menuScene = entry.createScene() as MainMenuScene;
+	const menuScene = new MainMenuScene;
 	menuScene.on('play-level', (sceneId: string) => {
 		void startLevel(sceneId);
 	});
 
-	await changeScene(menuScene, true);
+	await changeScene(menuScene, 'main-menu-scene', () => {
+		gameHUD.setProfile('menu');
+		hudLayer.visible = true;
+	});
 }
 
 async function startLevel(sceneId: string): Promise<void> {
@@ -276,14 +312,13 @@ async function startLevel(sceneId: string): Promise<void> {
 	platformGameplayStop();
 
 	try {
-		// Break on the loading screen — before the level is mounted / unfrozen.
-		await showLoadingScene();
 		await platformCommercialBreak();
-		await swapAssetBundle(entry.assetBundle);
-		await initHUD();
-		gameHUD.setProfile('gameplay');
 		currentPlaySceneId = sceneId;
-		await changeScene(entry.createScene(), true);
+		await changeScene(entry.createScene(), entry.assetBundle, () => {
+			gameHUD.setProfile('gameplay');
+			hudLayer.visible = true;
+		});
+
 		platformGameplayStart();
 	} finally {
 		isPaused = false;
@@ -336,29 +371,6 @@ async function restartFromPause(): Promise<void> {
 	}
 
 	await startLevel(currentPlaySceneId);
-}
-
-async function changeScene(newScene: Scene, showHud: boolean = false): Promise<void> {
-	if (currentScene) {
-		const promiseFadeIsOn = fadeEffect(500, true);
-		const promiseSceneInit = newScene.init();
-		await Promise.all([promiseFadeIsOn, promiseSceneInit]);
-		hudLayer.visible = showHud;
-
-		gameLayer.removeChild(currentScene);
-		gameLayer.addChild(newScene);
-
-		const fadeIsOff = fadeEffect(500, false);
-		currentScene.destroy({ children: true });
-		currentScene = newScene;
-		await fadeIsOff;
-
-	} else {
-		await newScene.init();
-		gameLayer.addChild(newScene);
-		currentScene = newScene;
-		await fadeEffect(100, false, 0x00);
-	}
 }
 
 async function initHUD(): Promise<void> {

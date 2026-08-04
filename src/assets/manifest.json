@@ -202,7 +202,7 @@
 			]
 		},
 		{
-			"name": "main-scene",
+			"name": "main-menu-scene",
 			"assets": [
 				{
 					"alias": "menu-background",
