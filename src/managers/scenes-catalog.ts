@@ -1,5 +1,4 @@
 import { Scene } from '../scenes/scene';
-import { MainMenuScene } from '../scenes/main-menu-scene';
 import { PlatformLevelScene } from '../scenes/platform-level-scene';
 
 export type GameSceneCreateArgs = Record<string, unknown>;
