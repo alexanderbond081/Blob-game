@@ -6,8 +6,11 @@ type PokiSDK = {
 	gameLoadingFinished: () => void;
 	gameplayStart: () => void;
 	gameplayStop: () => void;
+	/** pauseHandler runs only when an ad actually starts (not on empty breaks). */
 	commercialBreak: (pauseHandler?: () => void) => Promise<void>;
-	rewardedBreak: (options?: { size?: string }) => Promise<boolean>;
+	rewardedBreak: (
+		optionsOrPause?: (() => void) | { size?: string; onStart?: () => void },
+	) => Promise<boolean>;
 	movePill: (topPercent: number, topPx?: number) => void;
 };
 
@@ -170,6 +173,9 @@ export const platformGameplayStop = (): void => {
 
 /**
  * Interstitial before entering gameplay (play / resume / continue / restart).
+ * Call while the game is already stopped / on a loading screen — not after the
+ * level is live. Audio suspends only if an ad actually starts (Poki pauseHandler /
+ * CrazyGames adStarted); empty breaks are silent no-ops on local/itch.
  * Always resolves: a missing or failing SDK must not block the transition.
  */
 export const platformCommercialBreak = async (): Promise<void> => {
@@ -178,11 +184,12 @@ export const platformCommercialBreak = async (): Promise<void> => {
 	}
 
 	isAdRunning = true;
-	beginAdBreak();
 
 	try {
 		if (BUILD_INFO.channel === 'poki' && window.PokiSDK) {
-			await window.PokiSDK.commercialBreak();
+			await window.PokiSDK.commercialBreak(() => {
+				beginAdBreak();
+			});
 		} else if (BUILD_INFO.channel === 'crazygames' && window.CrazyGames?.SDK) {
 			await requestCrazyGamesAd('midgame');
 		}
@@ -201,12 +208,13 @@ export const platformRewardedBreak = async (): Promise<boolean> => {
 	}
 
 	isAdRunning = true;
-	beginAdBreak();
 	let rewarded = false;
 
 	try {
 		if (BUILD_INFO.channel === 'poki' && window.PokiSDK) {
-			rewarded = await window.PokiSDK.rewardedBreak();
+			rewarded = await window.PokiSDK.rewardedBreak(() => {
+				beginAdBreak();
+			});
 		} else if (BUILD_INFO.channel === 'crazygames' && window.CrazyGames?.SDK) {
 			await requestCrazyGamesAd('rewarded');
 			rewarded = true;
@@ -235,11 +243,13 @@ export const platformMovePill = (topPercent: number, topPx: number = 0): void =>
 	}
 };
 
+/** Only when an ad is actually on screen — empty commercialBreak must not call this. */
 const beginAdBreak = (): void => {
 	platformGameplayStop();
 	setPauseReason('ad', true);
 };
 
+/** Safe if beginAdBreak never ran (no-op when 'ad' is not in the reason set). */
 const endAdBreak = (): void => {
 	setPauseReason('ad', false);
 };
@@ -284,6 +294,9 @@ const setPauseReason = (reason: PlatformPauseReason, active: boolean): void => {
 const requestCrazyGamesAd = (type: 'midgame' | 'rewarded'): Promise<void> => {
 	return new Promise((resolve, reject) => {
 		window.CrazyGames?.SDK.ad.requestAd(type, {
+			adStarted: () => {
+				beginAdBreak();
+			},
 			adFinished: () => resolve(),
 			adError: (error: unknown) => reject(error),
 		});

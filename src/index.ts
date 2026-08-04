@@ -9,7 +9,7 @@ import { LoadingScene } from './scenes/loading-scene';
 import { MainMenuScene } from './scenes/main-menu-scene';
 import { findGameScene, MAIN_MENU_SCENE_ID } from './managers/scenes-catalog';
 import { logBuildInfo } from './version';
-import { initPlatform, platformCommercialBreak, platformGameplayStart, platformLoadingFinished, setPlatformHooks } from './platform/platform';
+import { initPlatform, platformCommercialBreak, platformGameplayStart, platformGameplayStop, platformLoadingFinished, setPlatformHooks } from './platform/platform';
 
 import './global-delay';
 import { GameHUD } from './hud/game-hud';
@@ -38,6 +38,8 @@ let gameHeight = 540;
 let currentScene: Scene | null = null;
 let gameSceneAssets: string = '';
 let isSwitchingScene = false;
+/** Scene catalog id of the level currently in play (for Restart). */
+let currentPlaySceneId: string | null = null;
 
 /** Global scene pause (ticker + input) during bootstrap/load / future UI pause. */
 let isPaused = true;
@@ -191,7 +193,7 @@ async function initGame(): Promise<void> {
 	});
 
 	isPaused = true;
-
+	hudLayer.visible = false;
 	// show logo
 	await Assets.loadBundle('preload');
 	const loadCommonPromise = Assets.loadBundle('common');
@@ -229,7 +231,7 @@ async function swapAssetBundle(bundleName: string): Promise<void> {
 }
 
 async function showLoadingScene(): Promise<void> {
-	await changeScene(new LoadingScene());
+	await changeScene(new LoadingScene(), false);
 }
 
 async function showMainMenu(): Promise<void> {
@@ -239,6 +241,9 @@ async function showMainMenu(): Promise<void> {
 		console.error('showMainMenu: main menu is missing from the scene catalog');
 		return;
 	}
+
+	currentPlaySceneId = null;
+	platformGameplayStop();
 
 	await showLoadingScene();
 	await swapAssetBundle(entry.assetBundle);
@@ -267,15 +272,18 @@ async function startLevel(sceneId: string): Promise<void> {
 
 	isSwitchingScene = true;
 	isPaused = true;
+	gameHUD.closePauseModal();
+	platformGameplayStop();
 
 	try {
+		// Break on the loading screen — before the level is mounted / unfrozen.
 		await showLoadingScene();
+		await platformCommercialBreak();
 		await swapAssetBundle(entry.assetBundle);
 		await initHUD();
 		gameHUD.setProfile('gameplay');
+		currentPlaySceneId = sceneId;
 		await changeScene(entry.createScene(), true);
-
-		await platformCommercialBreak();
 		platformGameplayStart();
 	} finally {
 		isPaused = false;
@@ -283,12 +291,59 @@ async function startLevel(sceneId: string): Promise<void> {
 	}
 }
 
+async function openPause(): Promise<void> {
+	if (isSwitchingScene || gameHUD.activeProfile !== 'gameplay' || gameHUD.isModalOpen()) {
+		return;
+	}
+
+	isPaused = true;
+	platformGameplayStop();
+	await gameHUD.openPauseModal();
+}
+
+async function resumeFromPause(): Promise<void> {
+	if (!gameHUD.isModalOpen()) {
+		return;
+	}
+
+	gameHUD.closePauseModal();
+	isPaused = true;
+	await platformCommercialBreak();
+	platformGameplayStart();
+	isPaused = false;
+}
+
+async function leaveToMenuFromPause(): Promise<void> {
+	if (isSwitchingScene) {
+		return;
+	}
+
+	isSwitchingScene = true;
+	isPaused = true;
+	gameHUD.closePauseModal();
+
+	try {
+		await showMainMenu();
+	} finally {
+		isPaused = false;
+		isSwitchingScene = false;
+	}
+}
+
+async function restartFromPause(): Promise<void> {
+	if (!currentPlaySceneId) {
+		return;
+	}
+
+	await startLevel(currentPlaySceneId);
+}
+
 async function changeScene(newScene: Scene, showHud: boolean = false): Promise<void> {
 	if (currentScene) {
 		const promiseFadeIsOn = fadeEffect(500, true);
 		const promiseSceneInit = newScene.init();
 		await Promise.all([promiseFadeIsOn, promiseSceneInit]);
-		//hudLayer.visible = showHud; // !! disables yet
+		hudLayer.visible = showHud;
 
 		gameLayer.removeChild(currentScene);
 		gameLayer.addChild(newScene);
@@ -314,12 +369,33 @@ async function initHUD(): Promise<void> {
 	}
 
 	connectFullscreenControl();
+	connectPauseControls();
 }
 
 function connectFullscreenControl(): void {
 	gameHUD.off('toggle-fullscreen');
 	gameHUD.on('toggle-fullscreen', () => {
 		void toggleFullscreen();
+	});
+}
+
+function connectPauseControls(): void {
+	gameHUD.off('request-pause');
+	gameHUD.off('pause-resume');
+	gameHUD.off('pause-home');
+	gameHUD.off('pause-restart');
+
+	gameHUD.on('request-pause', () => {
+		void openPause();
+	});
+	gameHUD.on('pause-resume', () => {
+		void resumeFromPause();
+	});
+	gameHUD.on('pause-home', () => {
+		void leaveToMenuFromPause();
+	});
+	gameHUD.on('pause-restart', () => {
+		void restartFromPause();
 	});
 }
 
@@ -354,10 +430,19 @@ function onKeyDown(event: KeyboardEvent): void {
 	}
 
 	if (event.code === 'Escape') {
-		if (gameHUD.closeTopModal()) {
-			event.preventDefault();
+		event.preventDefault();
+		if (event.repeat) {
 			return;
 		}
+
+		if (gameHUD.closeTopModal()) {
+			return;
+		}
+
+		if (gameHUD.activeProfile === 'gameplay' && !isSwitchingScene) {
+			void openPause();
+		}
+		return;
 	}
 
 	if (event.code === 'KeyF') {

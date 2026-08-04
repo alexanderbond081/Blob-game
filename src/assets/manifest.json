@@ -40,8 +40,26 @@
 					}
 				},
 				{
+					"alias": "pause-button",
+					"src": "assets/images/pause-button.webp",
+					"data": {
+						"resolution": 3,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
 					"alias": "fullscreen-button",
 					"src": "assets/images/fullscreen-button.json",
+					"data": {
+						"resolution": 3,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "play-button",
+					"src": "assets/images/play-button.json",
 					"data": {
 						"resolution": 2,
 						"autoGenerateMipmaps": true,
@@ -49,8 +67,58 @@
 					}
 				},
 				{
-					"alias": "hit-a-button",
-					"src": "assets/sounds/hit-a-button.ogg"
+					"alias": "list-buttons",
+					"src": "assets/images/list-buttons.json",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "custom-buttons",
+					"src": "assets/images/custom-buttons.json",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "pause-panel-buttons",
+					"src": "assets/images/pause-panel-buttons.json",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "9slice-panel-gray",
+					"src": "assets/images/9slice-paper-gray.webp",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "9slice-panel-old",
+					"src": "assets/images/9slice-sunken-paper-graydirt.webp",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "9slice-panel-yellow",
+					"src": "assets/images/9slice-paper-yellow.webp",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
 				},
 				{
 					"alias": "location-icons",
@@ -116,6 +184,10 @@
 					}
 				},
 				{
+					"alias": "hit-a-button",
+					"src": "assets/sounds/hit-a-button.ogg"
+				},
+				{
 					"alias": "firefly-collect1",
 					"src": "assets/sounds/chime-A4.ogg"
 				},
@@ -141,35 +213,8 @@
 					}
 				},
 				{
-					"alias": "play-button",
-					"src": "assets/main-scene/play-button.json",
-					"data": {
-						"resolution": 2,
-						"autoGenerateMipmaps": true,
-						"scaleMode": "linear"
-					}
-				},
-				{
-					"alias": "list-buttons",
-					"src": "assets/main-scene/list-buttons.json",
-					"data": {
-						"resolution": 2,
-						"autoGenerateMipmaps": true,
-						"scaleMode": "linear"
-					}
-				},
-				{
-					"alias": "custom-buttons",
-					"src": "assets/main-scene/custom-buttons.json",
-					"data": {
-						"resolution": 2,
-						"autoGenerateMipmaps": true,
-						"scaleMode": "linear"
-					}
-				},
-				{
 					"alias": "level-start",
-					"src": "assets/sounds/blip-blip-short.ogg"
+					"src": "assets/sounds/blip-blip-higher-up-smooth.ogg"
 				},
 				{
 					"alias": "level-locked",

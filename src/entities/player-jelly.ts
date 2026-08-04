@@ -46,7 +46,7 @@ const JUMP_CROUCH_SQUASH = 0.4;
  * Sticky-wall hang: stuck side plants like ground butt-drag; free mass sags down.
  * skew.y shifts Y by X so the free side hangs while the wall edge stays put (via offset).
  */
-const WALL_HANG_SKEW = 0.1;
+const WALL_HANG_SKEW = 0.05;
 const WALL_IDLE_SQUASH = 0.04;
 const WALL_CROUCH_SQUASH = 0.4;
 const WALL_CROUCH_HANG = 0.06;

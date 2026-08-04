@@ -1,5 +1,5 @@
 import { gsap } from 'gsap';
-import { Assets, Container, DestroyOptions, FederatedPointerEvent, Graphics, Rectangle, Sprite, Spritesheet, Text, TextStyle, Texture } from 'pixi.js';
+import { Assets, Container, DestroyOptions, FederatedPointerEvent, FillGradient, Graphics, NineSliceSprite, Rectangle, Sprite, Spritesheet, Text, TextStyle, Texture } from 'pixi.js';
 
 import { getCollectedFireflies, isLevelPlayable, LevelCatalogEntry } from '../managers/level-catalog';
 import { SoundManager } from '../managers/sound-manager';
@@ -12,10 +12,23 @@ const TILE_HEIGHT = 220;
 const TILE_RADIUS = 28;
 const TILE_STEP = 165;
 const SIDE_TILE_SCALE = 0.75;
-const TILE_FILL = 0xfcda73;
-const TILE_FILL_LOCKED = 0x9a9483;
+
+/**
+ * true  → paper 9-slice panels (yellow / gray).
+ * false → Graphics radial fill + stroke (previous look, for A/B comparison).
+ */
+const USE_TILE_NINE_SLICE_PANEL = true;
+/** Logical border on the 150×150 (resolution 2) panel textures. */
+const TILE_PANEL_SLICE = 30;
+
+const TILE_FILL = 0xf6c944; //0xfcda73;
+const TILE_FILL_CENTER = 0xffe8a4;
+const TILE_FILL_LOCKED = 0x8a8474; //0x9a9483
+const TILE_FILL_LOCKED_CENTER = 0xa8a294;
 const TILE_STROKE = 0x000000;
 const TILE_STROKE_WIDTH = 6;
+/** Soft vignette: bright center, slightly darker toward the edges (like the paper panel). */
+const TILE_FILL_OUTER_RADIUS = 0.78;
 /** Logical on-tile size; keep tunable so source art need not be re-exported. */
 const TILE_ICON_SIZE = 120;
 const TILE_LOCK_HEIGHT = 88;
@@ -73,6 +86,32 @@ const createTileText = (value: string, fontSize: number, playable: boolean): Tex
 	return text;
 };
 
+const createTileFillGradient = (playable: boolean): FillGradient => {
+	return new FillGradient({
+		type: 'radial',
+		center: { x: 0.5, y: 0.5 },
+		outerCenter: { x: 0.5, y: 0.5 },
+		innerRadius: 0,
+		outerRadius: TILE_FILL_OUTER_RADIUS,
+		// Stretch into an ellipse matching the portrait tile so corners darken evenly.
+		scale: TILE_HEIGHT / TILE_WIDTH,
+		colorStops: playable
+			? [
+				{ offset: 0, color: TILE_FILL_CENTER },
+				{ offset: 1, color: TILE_FILL },
+			]
+			: [
+				{ offset: 0, color: TILE_FILL_LOCKED_CENTER },
+				{ offset: 1, color: TILE_FILL_LOCKED },
+			],
+	});
+};
+
+type LevelTilePanelTextures = {
+	yellow: Texture;
+	gray: Texture;
+};
+
 class LevelTile extends Container {
 	private lockSprite: Sprite | null = null;
 
@@ -81,16 +120,12 @@ class LevelTile extends Container {
 		levelNumber: number,
 		iconSheet: Spritesheet,
 		lockTexture: Texture,
+		panels: LevelTilePanelTextures,
 	) {
 		super();
 
 		const playable = isLevelPlayable(entry);
-
-		const background = new Graphics()
-			.roundRect(-TILE_WIDTH / 2, -TILE_HEIGHT / 2, TILE_WIDTH, TILE_HEIGHT, TILE_RADIUS)
-			.fill({ color: playable ? TILE_FILL : TILE_FILL_LOCKED })
-			.stroke({ width: TILE_STROKE_WIDTH, color: TILE_STROKE, alignment: 0.5, join: 'round' });
-		this.addChild(background);
+		this.addChild(this.createBackground(playable, panels));
 
 		const numberText = createTileText(String(levelNumber), 30, playable);
 		numberText.y = -TILE_HEIGHT / 2 + 30;
@@ -129,6 +164,26 @@ class LevelTile extends Container {
 			this.addChild(lock);
 			this.lockSprite = lock;
 		}
+	}
+
+	private createBackground(playable: boolean, panels: LevelTilePanelTextures): Graphics | NineSliceSprite {
+		if (USE_TILE_NINE_SLICE_PANEL) {
+			return new NineSliceSprite({
+				texture: playable ? panels.yellow : panels.gray,
+				leftWidth: TILE_PANEL_SLICE,
+				rightWidth: TILE_PANEL_SLICE,
+				topHeight: TILE_PANEL_SLICE,
+				bottomHeight: TILE_PANEL_SLICE,
+				width: TILE_WIDTH,
+				height: TILE_HEIGHT,
+				anchor: 0.5,
+			});
+		}
+
+		return new Graphics()
+			.roundRect(-TILE_WIDTH / 2, -TILE_HEIGHT / 2, TILE_WIDTH, TILE_HEIGHT, TILE_RADIUS)
+			.fill(createTileFillGradient(playable))
+			.stroke({ width: TILE_STROKE_WIDTH, color: TILE_STROKE, alignment: 0.5, join: 'round' });
 	}
 
 	public override destroy(options?: DestroyOptions): void {
@@ -204,6 +259,12 @@ export class LevelCarousel extends Container {
 		const iconSheet = await Assets.load<Spritesheet>('location-icons');
 		const lockTexture = await Assets.load<Texture>('level-lock');
 		const arrowSheet = await Assets.load<Spritesheet>('list-buttons');
+		const panels: LevelTilePanelTextures = USE_TILE_NINE_SLICE_PANEL
+			? {
+				yellow: await Assets.load<Texture>('9slice-panel-yellow'),
+				gray: await Assets.load<Texture>('9slice-panel-gray'),
+			}
+			: { yellow: Texture.EMPTY, gray: Texture.EMPTY };
 
 		this.dragArea.eventMode = 'static';
 		this.dragArea.cursor = 'grab';
@@ -219,7 +280,7 @@ export class LevelCarousel extends Container {
 		this.addChild(this.tilesLayer);
 
 		for (const [index, entry] of this.entries.entries()) {
-			const tile = new LevelTile(entry, index + 1, iconSheet, lockTexture);
+			const tile = new LevelTile(entry, index + 1, iconSheet, lockTexture, panels);
 			this.tiles.push(tile);
 			this.tilesLayer.addChild(tile);
 		}

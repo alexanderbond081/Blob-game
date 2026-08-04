@@ -119,6 +119,10 @@ export class SoundManager {
 			return;
 		}
 
+		if (alias === this.musicAlias) {
+			return;
+		}
+
 		if (sound.exists(this.musicAlias)) {
 			sound.stop(this.musicAlias);
 		}
@@ -137,6 +141,10 @@ export class SoundManager {
 	public static playAmbience(alias: string): void {
 		if (!sound.exists(alias)) {
 			console.warn(`Sound ${alias} doesn't exist`);
+			return;
+		}
+
+		if (alias === this.ambientAlias) {
 			return;
 		}
 
