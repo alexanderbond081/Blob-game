@@ -23,7 +23,7 @@ export interface LevelCatalogEntry {
 
 /** Carousel data for stage A — not wired to saves. */
 export const levelCatalog: LevelCatalogEntry[] = [
-	{ id: 'forest-01', sceneId: 'forest-01', title: 'Forest', locationIcon: 'forest', totalFireflies: 9, unlocked: true },
+	{ id: 'testlevel-00', sceneId: 'testlevel-00', title: 'Forest', locationIcon: 'forest', totalFireflies: 9, unlocked: true },
 	{ id: 'meadow-01', sceneId: null, title: 'Meadow', locationIcon: 'meadow', totalFireflies: 12, unlocked: false },
 	{ id: 'stream-01', sceneId: null, title: 'Stream', locationIcon: 'stream', totalFireflies: 12, unlocked: false },
 	{ id: 'mushroom-01', sceneId: null, title: 'Mushrooms', locationIcon: 'mushroom', totalFireflies: 12, unlocked: false },

@@ -33,8 +33,7 @@ export class PlatformLevelScene extends Scene {
 	private readonly physicsWorld = new PhysicsWorld();
 	private readonly worldRoot = new Container();
 	private touchPad!: NineSliceTouchPad;
-	private parallaxFar!: ParallaxLayer;
-	private parallaxMid!: ParallaxLayer;
+	private parallaxLayers: ParallaxLayer[] = [];
 	private camera!: GameCamera;
 	private levelRoot!: LevelRoot;
 	private spawnX = 0;
@@ -61,21 +60,18 @@ export class PlatformLevelScene extends Scene {
 			levelData.size.height,
 		);
 
-		this.parallaxFar = new ParallaxLayer({
-			textureAlias: levelData.backgrounds.far.texture,
-			parallaxFactor: levelData.backgrounds.far.parallax,
-			viewportWidth: this.designWidth,
-			viewportHeight: this.designHeight,
-		});
-		this.parallaxMid = new ParallaxLayer({
-			textureAlias: levelData.backgrounds.mid.texture,
-			parallaxFactor: levelData.backgrounds.mid.parallax,
-			viewportWidth: this.designWidth,
-			viewportHeight: this.designHeight,
-		});
-
-		this.addChild(this.parallaxFar);
-		this.addChild(this.parallaxMid);
+		this.parallaxLayers = [];
+		for (const layer of levelData.backgrounds) {
+			const parallax = new ParallaxLayer({
+				textureAlias: layer.texture,
+				parallaxFactor: layer.parallax,
+				viewportWidth: this.designWidth,
+				viewportHeight: this.designHeight,
+				levelHeight: levelData.size.height,
+			});
+			this.parallaxLayers.push(parallax);
+			this.addChild(parallax);
+		}
 		this.addChild(this.worldRoot);
 
 		this.levelRoot = new LevelRoot(levelData, this.physicsWorld);
@@ -117,8 +113,9 @@ export class PlatformLevelScene extends Scene {
 		const cameraY = this.camera.getRenderY(renderScale);
 		this.camera.applyToContainer(this.worldRoot, renderScale);
 		this.levelRoot.player.alignDisplayToCameraPixels(cameraX, cameraY, renderScale);
-		this.parallaxFar.update(cameraX, cameraY);
-		this.parallaxMid.update(cameraX, cameraY);
+		for (const layer of this.parallaxLayers) {
+			layer.update(cameraX, cameraY);
+		}
 	}
 
 	public override destroy(options?: Parameters<Container['destroy']>[0]): void {

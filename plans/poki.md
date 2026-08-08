@@ -123,30 +123,45 @@ Gameplay and layout use **logical** design pixels (960×540). Source art is auth
 
 | Asset | Source file (2×) | Logical size (1×) | How |
 |-------|------------------|-------------------|-----|
-| Full-bleed / parallax **background** | **2200×1200** | **1100×600** | Manifest `data.resolution: 2` |
+| Static **sky** (landscape) | often **1920×1080** (exact cover) or **1920×1280** (3:2 mild spare) | **960×540** or **960×640** | Manifest `data.resolution: 2` |
+| Parallax **far / mid** | size to taste; prefer tuning `parallax` over huge bleed canvases | usually ≈ viewport or slightly larger | Same `resolution` hook |
 | Other sprites / UI (typical) | 2× the on-screen size | on-screen size | Same: `resolution: 2`, or spritesheet `meta.scale` |
 
 - In Pixi, **`resolution: 2`** on the asset means `texture.width` / `height` are already logical (half of the file pixels). Do **not** also apply `sprite.scale = 0.5` on those assets — that would be 0.25×.
 - Equivalent idea to “scale 0.5”, but the correct Pixi hook for textures is **`resolution`**, not a hardcoded sprite scale in every consumer.
 
-### Background placement (bleed + parallax)
+### Background placement (parallax)
 
-Background is **not** stretched to the full level length and **does not tile**. Place it on the **viewport**:
+Background is **not** stretched to the level size and **does not tile**. It sits in **screen space** ([`ParallaxLayer`](../src/world/parallax-layer.ts)):
 
-- Logical **1100×600** centered on **960×540** → about **70px** bleed left/right and **30px** top/bottom.
-- With a perfect 16:9 frame, bleed sits outside the clip and is hidden.
-- If the host iframe aspect shifts slightly, those margins can show instead of empty bars (when resize strategy allows).
-- Parallax uses the **same factor on X and Y**. Shift is **clamped to the bleed**: the layer moves with the camera, then **stops at the edges** so the texture always covers the viewport (no cropped sides / empty gaps).
-- **Far** layer: nearly fixed; small parallax within bleed.
-- **Mid** layer (clouds, trees, props): can drift (e.g. downward as the player climbs); still no tiling — travel limited by bleed; art/layout beyond that is the designer’s job.
-- Travel budget ≈ `bleed / parallax` in camera pixels. Example: 70px horizontal bleed at `parallax: 0.1` → ~700px of camera scroll before the bg freezes. Longer levels simply leave the far/mid layers parked at the clamp.
+- Logical size = file pixels / manifest `resolution` (sprite is not scaled in code).
+- **Anchor:** when the camera is on the level floor (`cameraY = levelHeight − 540`) and `cameraX = 0`, the layer is **horizontally centered** and its **bottom** matches the viewport bottom
+- Parallax: `offset = (camera − anchor) × factor` on X/Y. **No edge clamp** — if travel × factor exceeds texture oversize, the image edge can enter the frame.
+- Level JSON: `backgrounds` is an **array** (back→front). Optional `id` (`sky` / `far` / `mid` / …) is designer markup only.
+
+### Background art strategy (landscape now, portrait later)
+
+Painful lesson: painted mid/far layers (grass tufts, props, etc.) are **expensive to author**. Do **not** rely on large spare bleed margins as the default way to hide parallax edges.
+
+**Preferred approach**
+
+1. **Gameplay / platforms first** — colliders and layout do not depend on bg cover; orientation must not break platform geometry.
+2. **Sky (static, `parallax: 0`)**
+   - Landscape: can be exact **960×540** logical (e.g. 1920×1080 @ 2) — fills the design rect; will not show edges while `p = 0`.
+   - Portrait (when we build it): use a **separate sky texture**. It does **not** need to match the landscape sky logically (mood plate, not a shared world slice). Optional later: `texturePortrait` / portrait backgrounds array.
+3. **Far / mid (and any moving layers)**
+   - **Primary control: lower `parallax`** in the level JSON so `(levelSize − viewport) × p` stays within whatever oversize the art already has.
+   - Small oversize is fine if it falls out of the paint naturally; **avoid** rebuilding huge bleed canvases just to support a high `p`.
+   - Zooming the whole game to “cover” a tall phone makes the **playable width** much narrower (~540–640 instead of 960) — that is a playability problem, not solved by fatter sky art. Portrait play may stay landscape-only + rotate hint, or get a dedicated UI/camera layout later.
+
+**Rejected as default:** mandating **1100×600** / large universal bleed for every parallax layer; mandating square skies only to serve portrait without a second asset.
 
 ### Mobile / orientation (deferred)
 
 Landscape-only 16:9 on a portrait phone → large letterboxing. Options later:
 
-- Landscape-only + “rotate device” hint, or
-- Separate portrait layout.
+- Landscape-only + “rotate device” hint (likely for v1 gameplay), or
+- Separate portrait layout + **separate sky** + retuned far/mid `parallax` (see strategy above).
 
 **Current decision:** landscape-first only; portrait UX later. Many Poki games ship horizontal; still verify portal requirements before submit so a publisher agreement is not accidentally violated.
 
@@ -246,7 +261,7 @@ Pixi = draw yourself + pick physics package. Phaser/Defold = gameplay kit includ
 | Layer | Suggestion |
 |-------|------------|
 | Render / game | Pixi.js + TS **or** Defold / Phaser if wanting editor + physics bundled |
-| Design resolution | **960×540** (16:9) + contain scale + clip to design rect; **2×** art via `resolution: 2` (bg **2200×1200** → logical **1100×600** with bleed; parallax clamp, no tile) |
+| Design resolution | **960×540** (16:9) + contain scale + clip; **2×** art via `resolution: 2`; bg: exact/static sky OK; far/mid **tune parallax** over large bleed; portrait → **separate sky** (see Background art strategy) |
 | Physics | Matter (start) → Rapier if needed |
 | Monetization | Thin adapter: `PokiSDK` / `CrazyGames.SDK` behind one interface |
 | Bundle size | Design for **Poki’s ~8 MB** first — then CrazyGames is easy |

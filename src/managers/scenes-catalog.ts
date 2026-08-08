@@ -12,10 +12,10 @@ export interface GameSceneCatalogEntry {
 
 export const gameSceneCatalog: GameSceneCatalogEntry[] = [
 	{
-		id: 'forest-01',
-		title: 'Forest',
-		assetBundle: 'play-scene',
-		createScene: () => new PlatformLevelScene('forest-01'),
+		id: 'testlevel-00',
+		title: 'test',
+		assetBundle: 'test-scene',
+		createScene: () => new PlatformLevelScene('testlevel-00'),
 	},
 ];
 

@@ -247,6 +247,9 @@ async function changeScene(newScene: Scene, bundleName: string = '', doThings?: 
 		currentScene.destroy({ children: true });
 		currentScene = newScene;
 
+		// !!! assets unload temporary turned off!
+		oldSceneAssets = ''; // !!! assets unload temporary turned off!
+
 		const oldBundleUnloaded = oldSceneAssets
 			? Assets.unloadBundle(oldSceneAssets)
 			: Promise.resolve();

@@ -223,19 +223,48 @@
 			]
 		},
 		{
-			"name": "play-scene",
+			"name": "meadow-scene",
 			"assets": [
 				{
-					"alias": "background",
-					"src": "assets/play-scene/background.webp",
+					"alias": "meadow-bg-sky",
+					"src": "assets/meadow-scene/meadow-bg-sky.webp",
+					"data": {
+						"resolution": 2,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "meadow-bg-far",
+					"src": "assets/meadow-scene/meadow-bg-far.webp",
+					"data": {
+						"resolution": 2,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "meadow-bg-mid",
+					"src": "assets/meadow-scene/meadow-bg-mid.webp",
+					"data": {
+						"resolution": 2,
+						"scaleMode": "linear"
+					}
+				}
+			]
+		},
+		{
+			"name": "test-scene",
+			"assets": [
+				{
+					"alias": "test-background-far",
+					"src": "assets/test-scene/background-far.webp",
 					"data": {
 						"resolution": 1,
 						"scaleMode": "linear"
 					}
 				},
 				{
-					"alias": "background-mid",
-					"src": "assets/play-scene/background-mid.webp",
+					"alias": "test-background-mid",
+					"src": "assets/test-scene/background-mid.webp",
 					"data": {
 						"resolution": 1,
 						"scaleMode": "linear"

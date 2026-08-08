@@ -143,7 +143,7 @@ Old “Arcade timer on the same casual run” folds into **Speedrun** as the pos
 | Soft glow + slight dimming | Real lighting / shadows engine |
 | Simple hazards (spikes etc. as blockers / kill) | Energy drain systems |
 | Static + light parallax backgrounds | Complex weather / day cycle |
-| Touch + keyboard; **960×540** design, contain-scale + clip; **2×** art (`resolution: 2`); bg **2200×1200** → logical **1100×600** with bleed; parallax clamp (no tile) | Portrait / rotate-device UX (deferred; many Poki titles ship landscape-first) |
+| Touch + keyboard; **960×540** design, contain-scale + clip; **2×** art; bg: static sky can be exact viewport; far/mid **tune parallax** rather than huge bleed (art is costly); portrait later → **separate sky** | Portrait playable FOV is narrow for side-scroll — likely rotate-hint or dedicated layout, not “one square bg for all” |
 | Local progress save (levels, abilities, firefly totals) | Cloud saves / accounts |
 | Basic SFX + 1 music track | Full adaptive soundtrack pack |
 | Gold fireflies + gold skin **nice-to-have in MVP** if cheap | Must-ship gold skin on day one |
@@ -191,7 +191,9 @@ Old “Arcade timer on the same casual run” folds into **Speedrun** as the pos
 | Playfield | Camera follow | Ground, leaves, entities |
 | FX / glow | Screen or world space | Blob/item aura (additive / alpha sprites) |
 
-Parallax = **offset layers by camera × factor** (Tiled parallax props or manual). No need for a lighting engine.
+Parallax = **offset layers by camera × factor** (manual in [`ParallaxLayer`](../src/world/parallax-layer.ts); Tiled props later if we adopt it).
+
+**Art / orientation policy (do not forget):** painted mid/far plates are labor-heavy (hand-placed tufts/props). Prefer **lowering `parallax`** so edges stay off-screen over inventing large bleed margins. For **portrait**, use a **separate sky** texture (mood only — need not match landscape sky); far/mid keep the same plates with retuned `p` if needed. Platforms/colliders are the source of truth for playability — bg cover is secondary. Full write-up: [`plans/poki.md`](./poki.md) → *Background art strategy*.
 
 ---
 
