@@ -4,6 +4,18 @@ import { Container, Graphics } from 'pixi.js';
 import { PLATFORM_BODY_LABEL, STICKY_WALL_SURFACE_LABEL, setPlatformSurfaceLabel } from './ground-contact';
 import { PhysicsBody } from './physics-body';
 
+const CORNER_RADIUS = 8;
+const OUTLINE_WIDTH = 2;
+const FILL_ALPHA = 0.8;
+
+const PLATFORM_FILL = 0x005020;
+const PLATFORM_OUTLINE = 0x30bf52;
+const STICKY_FILL = 0x0073a0;//328caf;//2e90b6;//2a9ecb;
+const STICKY_OUTLINE = 0x5fd2ff;//9fe4ff;
+
+const PLATFORM_FACE = 0x00280f;
+const STICKY_FACE = 0x003a52;
+
 export type StaticBodyOptions = {
 	x: number;
 	y: number;
@@ -38,11 +50,20 @@ export class StaticBody extends PhysicsBody {
 		const container = new Container();
 		const graphics = new Graphics();
 		const isSticky = surfaceLabel === STICKY_WALL_SURFACE_LABEL;
-		const color = options.color ?? (isSticky ? 0x5b4a8a : 0x3d6b4f);
-		const topColor = isSticky ? 0xb39ddb : 0x6fcf97;
+		const fillColor = options.color ?? (isSticky ? STICKY_FILL : PLATFORM_FILL);
+		const outlineColor = isSticky ? STICKY_OUTLINE : PLATFORM_OUTLINE;
+		const faceColor = isSticky ? STICKY_FACE : PLATFORM_FACE;
 
-		graphics.rect(0, 0, options.width, options.height).fill({ color, alpha: 0.95 });
-		graphics.rect(0, 0, options.width, 4).fill({ color: topColor, alpha: 0.8 });
+		// Inset by half the stroke so the outline sits inside the collider bounds.
+		const inset = OUTLINE_WIDTH * 0.5;
+		const innerWidth = Math.max(0, options.width - OUTLINE_WIDTH);
+		const innerHeight = Math.max(0, options.height - OUTLINE_WIDTH);
+
+		graphics
+			.roundRect(inset, inset, innerWidth, innerHeight, CORNER_RADIUS)
+			.fill({ color: fillColor, alpha: FILL_ALPHA })
+			.stroke({ color: outlineColor, width: OUTLINE_WIDTH, alpha: 1 });
+
 		container.addChild(graphics);
 		container.pivot.set(options.width * 0.5, options.height * 0.5);
 

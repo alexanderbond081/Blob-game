@@ -7,6 +7,11 @@ import { PhysicsBody } from '../physics/physics-body';
 /** Matter body label for anything that kills the player on contact. */
 export const HAZARD_BODY_LABEL = 'hazard';
 
+const OUTLINE_WIDTH = 2;
+const FILL_ALPHA = 0.6;
+const HAZARD_FILL = 0x9b111e;
+const HAZARD_OUTLINE = 0xee7777;
+
 const hazardTypes = new WeakMap<Body, string>();
 
 export class Hazard extends PhysicsBody {
@@ -35,10 +40,16 @@ export class Hazard extends PhysicsBody {
 	private static createDisplay(data: LevelHazard): Container {
 		const container = new Container();
 		const graphics = new Graphics();
-		const color = data.type === 'spikes' ? 0xa63d3d : 0xc45c26;
 
-		graphics.rect(0, 0, data.width, data.height).fill({ color, alpha: 0.95 });
-		graphics.rect(0, 0, data.width, 4).fill({ color: 0xff8a80, alpha: 0.85 });
+		// Inset by half the stroke so the outline sits inside the collider bounds.
+		const inset = OUTLINE_WIDTH * 0.5;
+		const innerWidth = Math.max(0, data.width - OUTLINE_WIDTH);
+		const innerHeight = Math.max(0, data.height - OUTLINE_WIDTH);
+
+		graphics
+			.rect(inset, inset, innerWidth, innerHeight)
+			.fill({ color: HAZARD_FILL, alpha: FILL_ALPHA })
+			.stroke({ color: HAZARD_OUTLINE, width: OUTLINE_WIDTH, alpha: 1 });
 		container.addChild(graphics);
 		container.pivot.set(data.width * 0.5, data.height * 0.5);
 

@@ -15,12 +15,53 @@
 			]
 		},
 		{
-			"name": "common",
+			"name": "sounds",
 			"assets": [
 				{
 					"alias": "bg-music",
 					"src": "assets/sounds/must-be-magic-not-sad.ogg"
 				},
+				{
+					"alias": "blob-jump",
+					"src": "assets/sounds/jump1c.ogg"
+				},
+				{
+					"alias": "blob-land",
+					"src": "assets/sounds/bounce2.ogg"
+				},
+				{
+					"alias": "blob-stick",
+					"src": "assets/sounds/stick.ogg"
+				},
+				{
+					"alias": "blob-unstick",
+					"src": "assets/sounds/unstick.ogg"
+				},
+				{
+					"alias": "blob-burst",
+					"src": "assets/sounds/drop1.wav"
+				},
+				{
+					"alias": "hit-a-button",
+					"src": "assets/sounds/hit-a-button.ogg"
+				},
+				{
+					"alias": "firefly-collect1",
+					"src": "assets/sounds/chime-A4.ogg"
+				},
+				{
+					"alias": "firefly-collect2",
+					"src": "assets/sounds/chime-A5.ogg"
+				},
+				{
+					"alias": "firefly-collect3",
+					"src": "assets/sounds/chime-A6.ogg"
+				}
+			]
+		},
+		{
+			"name": "ui-elements",
+			"assets": [
 				{
 					"alias": "sound-button",
 					"src": "assets/images/sound-button.json",
@@ -137,7 +178,12 @@
 						"autoGenerateMipmaps": true,
 						"scaleMode": "linear"
 					}
-				},
+				}
+			]
+		},
+		{
+			"name": "game",
+			"assets": [
 				{
 					"alias": "blob",
 					"src": "assets/images/blob.json",
@@ -146,26 +192,6 @@
 						"autoGenerateMipmaps": true,
 						"scaleMode": "linear"
 					}
-				},
-				{
-					"alias": "blob-jump",
-					"src": "assets/sounds/jump1c.ogg"
-				},
-				{
-					"alias": "blob-land",
-					"src": "assets/sounds/bounce2.ogg"
-				},
-				{
-					"alias": "blob-stick",
-					"src": "assets/sounds/stick.ogg"
-				},
-				{
-					"alias": "blob-unstick",
-					"src": "assets/sounds/unstick.ogg"
-				},
-				{
-					"alias": "blob-burst",
-					"src": "assets/sounds/drop1.wav"
 				},
 				{
 					"alias": "blob-droplet",
@@ -184,20 +210,28 @@
 					}
 				},
 				{
-					"alias": "hit-a-button",
-					"src": "assets/sounds/hit-a-button.ogg"
+					"alias": "door",
+					"src": "assets/images/door-wood-oval.webp",
+					"data": {
+						"resolution": 2,
+						"scaleMode": "linear"
+					}
 				},
 				{
-					"alias": "firefly-collect1",
-					"src": "assets/sounds/chime-A4.ogg"
+					"alias": "portal",
+					"src": "assets/images/portal-brass-oval.webp",
+					"data": {
+						"resolution": 2,
+						"scaleMode": "linear"
+					}
 				},
 				{
-					"alias": "firefly-collect2",
-					"src": "assets/sounds/chime-A5.ogg"
-				},
-				{
-					"alias": "firefly-collect3",
-					"src": "assets/sounds/chime-A6.ogg"
+					"alias": "slot",
+					"src": "assets/images/brass-slot.webp",
+					"data": {
+						"resolution": 2,
+						"scaleMode": "linear"
+					}
 				}
 			]
 		},
@@ -227,7 +261,7 @@
 			"assets": [
 				{
 					"alias": "meadow-bg-sky",
-					"src": "assets/meadow-scene/meadow-bg-sky.webp",
+					"src": "assets/meadow-scene/meadow-bg-sky-blur2.webp",
 					"data": {
 						"resolution": 2,
 						"scaleMode": "linear"
@@ -235,7 +269,7 @@
 				},
 				{
 					"alias": "meadow-bg-far",
-					"src": "assets/meadow-scene/meadow-bg-far.webp",
+					"src": "assets/meadow-scene/meadow-bg-far-blur2.webp",
 					"data": {
 						"resolution": 2,
 						"scaleMode": "linear"
@@ -243,7 +277,7 @@
 				},
 				{
 					"alias": "meadow-bg-mid",
-					"src": "assets/meadow-scene/meadow-bg-mid.webp",
+					"src": "assets/meadow-scene/meadow-bg-mid-blur3.webp",
 					"data": {
 						"resolution": 2,
 						"scaleMode": "linear"

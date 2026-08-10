@@ -113,7 +113,7 @@ export class BlobDropletPool extends Container {
 	private buildPool(): void {
 		const sheet = Assets.get<Spritesheet>('blob-droplet');
 		if (!sheet) {
-			throw new Error('Asset "blob-droplet" is not loaded. Load common bundle before the level.');
+			throw new Error('Asset "blob-droplet" is not loaded. Load game bundle before the level.');
 		}
 
 		const frames = sheet.animations.idle;

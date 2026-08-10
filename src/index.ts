@@ -278,7 +278,7 @@ async function preload(): Promise<void> {
 	await Assets.loadBundle('preload');
 	const loadingScene = new LoadingScene();
 	await changeScene(loadingScene);
-	await Assets.loadBundle('common', p => loadingScene.onProgress(p * 0.9 + 0.1));
+	await Assets.loadBundle(['sounds', 'ui-elements', 'game'], p => loadingScene.onProgress(p * 0.9 + 0.1));
 }
 
 async function showMainMenu(): Promise<void> {

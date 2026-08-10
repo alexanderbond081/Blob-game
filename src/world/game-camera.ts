@@ -24,13 +24,19 @@ export class GameCamera {
 		this.followLerp = followLerp;
 	}
 
+	/** Jumps straight to the target without smoothing (level start, respawn, teleports). */
+	public snapTo(targetX: number, targetY: number): void {
+		this.x = this.getDesiredX(targetX);
+		this.y = this.getDesiredY(targetY);
+	}
+
 	/** @param deltaTime Pixi ticker deltaTime (1.0 = one frame at 60 FPS). */
 	public update(targetX: number, targetY: number, deltaTime = 1): void {
 		const maxX = Math.max(0, this.levelWidth - this.viewportWidth);
 		const maxY = Math.max(0, this.levelHeight - this.viewportHeight);
 
-		const desiredX = this.clamp(targetX - this.viewportWidth * 0.5, 0, maxX);
-		const desiredY = this.clamp(targetY - this.viewportHeight * 0.5, 0, maxY);
+		const desiredX = this.getDesiredX(targetX);
+		const desiredY = this.getDesiredY(targetY);
 
 		const alpha = 1 - Math.pow(1 - this.followLerp, deltaTime);
 		this.x += (desiredX - this.x) * alpha;
@@ -64,6 +70,16 @@ export class GameCamera {
 	public getRenderY(renderScale = 1): number {
 		const scale = renderScale > 0 ? renderScale : 1;
 		return Math.round(this.y * scale) / scale;
+	}
+
+	private getDesiredX(targetX: number): number {
+		const maxX = Math.max(0, this.levelWidth - this.viewportWidth);
+		return this.clamp(targetX - this.viewportWidth * 0.5, 0, maxX);
+	}
+
+	private getDesiredY(targetY: number): number {
+		const maxY = Math.max(0, this.levelHeight - this.viewportHeight);
+		return this.clamp(targetY - this.viewportHeight * 0.5, 0, maxY);
 	}
 
 	private clamp(value: number, min: number, max: number): number {

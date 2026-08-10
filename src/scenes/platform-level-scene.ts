@@ -76,6 +76,7 @@ export class PlatformLevelScene extends Scene {
 
 		this.levelRoot = new LevelRoot(levelData, this.physicsWorld);
 		this.worldRoot.addChild(this.levelRoot);
+		this.centerCameraOnPlayer();
 
 		this.touchPad = new NineSliceTouchPad({
 			width: this.designWidth,
@@ -129,6 +130,24 @@ export class PlatformLevelScene extends Scene {
 
 	protected onResize(): void {
 		// World uses fixed design coordinates; letterbox handled in index.ts.
+	}
+
+	/**
+	 * Places the camera on the player before the first frame so the level opens
+	 * at the spawn point instead of scrolling in from the level origin.
+	 * Runs before the scene is on stage, so the stage scale is not known yet —
+	 * the first update() re-applies scroll with the real render scale.
+	 */
+	private centerCameraOnPlayer(): void {
+		const renderPos = this.levelRoot.player.getRenderPosition();
+		this.camera.snapTo(renderPos.x, renderPos.y);
+
+		const cameraX = this.camera.getRenderX();
+		const cameraY = this.camera.getRenderY();
+		this.camera.applyToContainer(this.worldRoot);
+		for (const layer of this.parallaxLayers) {
+			layer.update(cameraX, cameraY);
+		}
 	}
 
 	private checkPlayerDeath(): void {

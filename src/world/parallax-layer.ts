@@ -32,6 +32,9 @@ export class ParallaxLayer extends Container {
 	/** Sprite Y when cameraY = anchorCameraY (bottom-aligned + bleed). */
 	private originY = 0;
 	private ready = false;
+	/** Last requested camera pose, replayed once the texture arrives. */
+	private lastCameraX = 0;
+	private lastCameraY: number;
 
 	public constructor(options: ParallaxLayerOptions) {
 		super();
@@ -39,6 +42,7 @@ export class ParallaxLayer extends Container {
 		this.viewportWidth = options.viewportWidth;
 		this.viewportHeight = options.viewportHeight;
 		this.anchorCameraY = Math.max(0, options.levelHeight - options.viewportHeight);
+		this.lastCameraY = this.anchorCameraY;
 		this.sprite = new Sprite(Texture.EMPTY);
 		this.sprite.eventMode = 'none';
 		this.addChild(this.sprite);
@@ -47,6 +51,9 @@ export class ParallaxLayer extends Container {
 	}
 
 	public update(cameraX: number, cameraY: number): void {
+		this.lastCameraX = cameraX;
+		this.lastCameraY = cameraY;
+
 		if (!this.ready) {
 			return;
 		}
@@ -69,6 +76,6 @@ export class ParallaxLayer extends Container {
 		this.originY = this.viewportHeight - tileHeight;
 
 		this.ready = true;
-		this.update(0, this.anchorCameraY);
+		this.update(this.lastCameraX, this.lastCameraY);
 	}
 }
