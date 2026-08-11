@@ -5,7 +5,7 @@ import { z } from 'zod';
  * - `y` = height above the bottom of the level (`size.height`).
  * - Platforms / hazards: `x` = left edge, `y` = **top** edge
  *   (ground with `y: 0` sits entirely below the playfield and is not visible).
- * - Spawn / collectibles (points): `x`, `y` = **center**.
+ * - Spawn / collectibles / exit (points): `x`, `y` = **center**.
  */
 
 const sizeSchema = z.object({
@@ -26,12 +26,22 @@ const backgroundLayerSchema = z.object({
 	parallax: z.number().min(0).max(1),
 });
 
+export const platformTypeSchema = z.enum(['ground', 'wall', 'leaf', 'sticky']);
+export type PlatformType = z.infer<typeof platformTypeSchema>;
+
 const platformSchema = z.object({
 	x: z.number(),
 	y: z.number(),
 	width: z.number().positive(),
 	height: z.number().positive(),
-	label: z.string().optional(),
+	type: platformTypeSchema,
+});
+
+const exitSchema = z.object({
+	x: z.number(),
+	y: z.number(),
+	/** Firefly socket count around the portal rim (0–12). Layout uses a fixed 12-slot oval grid. */
+	slots: z.number().int().min(0).max(12).default(0),
 });
 
 const collectibleSchema = z.object({
@@ -53,6 +63,7 @@ export const levelSchema = z.object({
 	id: z.string(),
 	size: sizeSchema,
 	spawn: pointSchema,
+	exit: exitSchema,
 	/** Back-to-front draw order. Engine uses texture + parallax only; `id` is optional designer markup. */
 	backgrounds: z.array(backgroundLayerSchema).min(1),
 	platforms: z.array(platformSchema),
@@ -63,6 +74,7 @@ export const levelSchema = z.object({
 /** Parsed level after authoring→runtime conversion (Y-down from top of level). */
 export type LevelData = z.infer<typeof levelSchema>;
 export type LevelPlatform = z.infer<typeof platformSchema>;
+export type LevelExit = z.infer<typeof exitSchema>;
 export type LevelHazard = z.infer<typeof hazardSchema>;
 export type LevelCollectible = z.infer<typeof collectibleSchema>;
 export type LevelBackgroundLayer = z.infer<typeof backgroundLayerSchema>;

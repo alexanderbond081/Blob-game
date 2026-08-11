@@ -1,10 +1,9 @@
 import { Body, Vector } from 'matter-js';
 
-/** Bodies with this label count as walkable surfaces (static or moving). */
-export const PLATFORM_BODY_LABEL = 'platform';
+import { PlatformType } from '../levels/level-schema';
 
-/** Level JSON / design label for clingable vertical surfaces. */
-export const STICKY_WALL_SURFACE_LABEL = 'sticky-wall';
+/** Matter `body.label` for walkable surfaces (static or moving). */
+export const PLATFORM_BODY_LABEL = 'platform';
 
 /** Minimum dot(normal, worldUp) for a contact to count as standing on a surface (~60° max slope). */
 export const WALKABLE_NORMAL_THRESHOLD = 0.5;
@@ -14,8 +13,8 @@ export const WALL_NORMAL_THRESHOLD = 0.5;
 
 const WORLD_UP: Vector = { x: 0, y: -1 };
 
-/** Semantic surface kind from level data (Matter body.label stays `platform`). */
-const platformSurfaceLabels = new WeakMap<Body, string>();
+/** Level platform kind; Matter `body.label` stays `platform` for all of these. */
+const platformTypes = new WeakMap<Body, PlatformType>();
 
 export type WallSide = 'left' | 'right';
 
@@ -25,16 +24,16 @@ export type PhysicsCollisionInfo = {
 	normal: Vector;
 };
 
-export const setPlatformSurfaceLabel = (body: Body, surfaceLabel: string): void => {
-	platformSurfaceLabels.set(body, surfaceLabel);
+export const setPlatformType = (body: Body, type: PlatformType): void => {
+	platformTypes.set(body, type);
 };
 
-export const getPlatformSurfaceLabel = (body: Body): string => {
-	return platformSurfaceLabels.get(body) ?? PLATFORM_BODY_LABEL;
+export const getPlatformType = (body: Body): PlatformType | null => {
+	return platformTypes.get(body) ?? null;
 };
 
 export const isStickyWallBody = (body: Body): boolean => {
-	return getPlatformSurfaceLabel(body) === STICKY_WALL_SURFACE_LABEL;
+	return platformTypes.get(body) === 'sticky';
 };
 
 /** Normal pointing from the surface toward the player (support direction). */

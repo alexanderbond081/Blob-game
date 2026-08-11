@@ -88,7 +88,7 @@ Production builds write `dist/BUILD.txt` (version, channel, git meta). Upload th
 | `src/levels/` | Zod schema + JSON levels (`forest-01`) |
 | `src/input/` | Shared controls + 9-slice touch pad |
 | `src/hud/` | Icon HUD + modals (`pause-content`) |
-| `src/managers/` | Level catalog stub, scenes catalog, sound |
+| `src/managers/` | Scenes catalog, GameProgress, sound |
 | `src/platform/` | Poki / CrazyGames / no-op adapters |
 | `plans/` | Design / portal research notes |
 
@@ -98,20 +98,19 @@ Production builds write `dist/BUILD.txt` (version, channel, git meta). Upload th
 |-------|--------|
 | A — Main menu + carousel + platform session | Done |
 | B — Pause modal (Resume / Home / Restart) | Done |
-| A2 — Level catalog structure | Next |
-| C — Win + next-level modal | After A2 + win in level data |
-| D — GameProgress + Progress / Customize scenes | Later |
+| A2 — Portal chain + GameProgress + catalog | Done |
+| C — Win + next-level modal | Next |
+| D — Progress / Customize scenes | Later |
 | E — Help / rewarded teleport | Later |
 | F — Polish (movePill, etc.) | Later |
 
 ## Known gaps (not blockers for a first push)
 
-- One demo level; no win / next-level loop or saved progression yet
-- Level catalog is a stub (hardcoded unlocks); Progress / Customize buttons are no-op
+- Instant portal → next level (no result modal yet — stage C)
+- Progress / Customize buttons still no-op (scenes — stage D)
 - More player kit still queued (double jump, dash, glide) — see mechanics backlog
 - Final art for sticky walls / spikes; droplet puddle polish deferred
 - Bundle is heavier than an ideal Poki first download (`bundle.js` ~1.4 MB + music) — optimize before portal submit
-
 ## License
 
 **All Rights Reserved** — see [`LICENSE`](./LICENSE).  

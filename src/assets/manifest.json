@@ -289,16 +289,16 @@
 			"name": "test-scene",
 			"assets": [
 				{
-					"alias": "test-background-far",
-					"src": "assets/test-scene/background-far.webp",
+					"alias": "test-bg-far",
+					"src": "assets/test-scene/test-bg-far.webp",
 					"data": {
 						"resolution": 1,
 						"scaleMode": "linear"
 					}
 				},
 				{
-					"alias": "test-background-mid",
-					"src": "assets/test-scene/background-mid.webp",
+					"alias": "test-bg-mid",
+					"src": "assets/test-scene/test-bg-mid.webp",
 					"data": {
 						"resolution": 1,
 						"scaleMode": "linear"

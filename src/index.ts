@@ -8,6 +8,8 @@ import { Scene } from './scenes/scene';
 import { LoadingScene } from './scenes/loading-scene';
 import { MainMenuScene } from './scenes/main-menu-scene';
 import { findGameScene } from './managers/scenes-catalog';
+import { GameProgress } from './managers/game-progress';
+import { LevelExitEvent, PlatformLevelScene } from './scenes/platform-level-scene';
 import { logBuildInfo } from './version';
 import { initPlatform, platformCommercialBreak, platformGameplayStart, platformGameplayStop, platformLoadingFinished, setPlatformHooks } from './platform/platform';
 
@@ -157,6 +159,8 @@ async function initGame(): Promise<void> {
 	// Audio settings and pause hooks must exist before the platform starts
 	// reporting visibility, otherwise the very first state change is lost.
 	SoundManager.init();
+	const progress = GameProgress.load();
+	applyProgressAudioSettings(progress);
 	bindPlatformPause();
 	await initPlatform();
 	bindViewportListeners();
@@ -317,12 +321,71 @@ async function startLevel(sceneId: string): Promise<void> {
 	try {
 		await platformCommercialBreak();
 		currentPlaySceneId = sceneId;
-		await changeScene(entry.createScene(), entry.assetBundle, () => {
+		GameProgress.shared.setLastPlayed(sceneId);
+		GameProgress.shared.save();
+		const levelScene = entry.createScene() as PlatformLevelScene;
+		levelScene.on('level-exit', (payload: LevelExitEvent) => {
+			void handleLevelExit(payload);
+		});
+		await changeScene(levelScene, entry.assetBundle, () => {
 			gameHUD.setProfile('gameplay');
 			hudLayer.visible = true;
 		});
 
 		platformGameplayStart();
+	} finally {
+		isPaused = false;
+		isSwitchingScene = false;
+	}
+}
+
+async function handleLevelExit(payload: LevelExitEvent): Promise<void> {
+	if (isSwitchingScene) {
+		return;
+	}
+
+	const nextSceneId = GameProgress.shared.applyLevelExit(payload.levelId, payload.collected);
+	console.info(`[level] leave ${payload.levelId} → ${nextSceneId ?? 'main-menu'}`);
+
+	if (nextSceneId) {
+		await startLevel(nextSceneId);
+		return;
+	}
+
+	isSwitchingScene = true;
+	isPaused = true;
+	gameHUD.closePauseModal();
+
+	try {
+		await showMainMenu();
+	} finally {
+		isPaused = false;
+		isSwitchingScene = false;
+	}
+}
+
+const applyProgressAudioSettings = (progress: GameProgress): void => {
+	const { musicMuted, sfxMuted } = progress.settings;
+	SoundManager.setMusicMuted(musicMuted);
+	SoundManager.setSfxMuted(sfxMuted);
+	gameHUD.syncAudioButtonFrames();
+};
+
+async function resetProgressDebug(): Promise<void> {
+	if (isSwitchingScene) {
+		return;
+	}
+
+	GameProgress.shared.resetToDefaults();
+	applyProgressAudioSettings(GameProgress.shared);
+	console.info('[GameProgress] reset via Alt+R');
+
+	isSwitchingScene = true;
+	isPaused = true;
+	gameHUD.closePauseModal();
+
+	try {
+		await showMainMenu();
 	} finally {
 		isPaused = false;
 		isSwitchingScene = false;
@@ -464,6 +527,16 @@ function onKeyDown(event: KeyboardEvent): void {
 		event.preventDefault();
 		if (event.repeat) return;
 		void toggleFullscreen();
+		return;
+	}
+
+	if (event.code === 'KeyR' && event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+		event.preventDefault();
+		if (event.repeat) {
+			return;
+		}
+
+		void resetProgressDebug();
 		return;
 	}
 

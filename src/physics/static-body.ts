@@ -1,33 +1,31 @@
 import { Bodies } from 'matter-js';
 import { Container, Graphics } from 'pixi.js';
 
-import { PLATFORM_BODY_LABEL, STICKY_WALL_SURFACE_LABEL, setPlatformSurfaceLabel } from './ground-contact';
+import { PlatformType } from '../levels/level-schema';
+import { PLATFORM_BODY_LABEL, setPlatformType } from './ground-contact';
 import { PhysicsBody } from './physics-body';
 
 const CORNER_RADIUS = 8;
 const OUTLINE_WIDTH = 2;
 const FILL_ALPHA = 0.8;
 
-const PLATFORM_FILL = 0x005020;
-const PLATFORM_OUTLINE = 0x30bf52;
-const STICKY_FILL = 0x0073a0;//328caf;//2e90b6;//2a9ecb;
-const STICKY_OUTLINE = 0x5fd2ff;//9fe4ff;
-
-const PLATFORM_FACE = 0x00280f;
-const STICKY_FACE = 0x003a52;
+const PLATFORM_STYLE: Record<PlatformType, { fill: number; outline: number }> = {
+	ground: { fill: 0x3b2412, outline: 0x8b5a2b },
+	wall: { fill: 0xa67c52, outline: 0xe2c49a },
+	leaf: { fill: 0x005020, outline: 0x30bf52 },
+	sticky: { fill: 0x0073a0, outline: 0x5fd2ff },
+};
 
 export type StaticBodyOptions = {
 	x: number;
 	y: number;
 	width: number;
 	height: number;
-	label?: string;
-	color?: number;
+	type: PlatformType;
 };
 
 export class StaticBody extends PhysicsBody {
 	public constructor(options: StaticBodyOptions) {
-		const surfaceLabel = options.label ?? PLATFORM_BODY_LABEL;
 		const body = Bodies.rectangle(
 			options.x + options.width * 0.5,
 			options.y + options.height * 0.5,
@@ -40,19 +38,16 @@ export class StaticBody extends PhysicsBody {
 				restitution: 0,
 			},
 		);
-		setPlatformSurfaceLabel(body, surfaceLabel);
+		setPlatformType(body, options.type);
 
-		const display = StaticBody.createDisplay(options, surfaceLabel);
+		const display = StaticBody.createDisplay(options);
 		super(body, display);
 	}
 
-	private static createDisplay(options: StaticBodyOptions, surfaceLabel: string): Container {
+	private static createDisplay(options: StaticBodyOptions): Container {
 		const container = new Container();
 		const graphics = new Graphics();
-		const isSticky = surfaceLabel === STICKY_WALL_SURFACE_LABEL;
-		const fillColor = options.color ?? (isSticky ? STICKY_FILL : PLATFORM_FILL);
-		const outlineColor = isSticky ? STICKY_OUTLINE : PLATFORM_OUTLINE;
-		const faceColor = isSticky ? STICKY_FACE : PLATFORM_FACE;
+		const style = PLATFORM_STYLE[options.type];
 
 		// Inset by half the stroke so the outline sits inside the collider bounds.
 		const inset = OUTLINE_WIDTH * 0.5;
@@ -61,8 +56,8 @@ export class StaticBody extends PhysicsBody {
 
 		graphics
 			.roundRect(inset, inset, innerWidth, innerHeight, CORNER_RADIUS)
-			.fill({ color: fillColor, alpha: FILL_ALPHA })
-			.stroke({ color: outlineColor, width: OUTLINE_WIDTH, alpha: 1 });
+			.fill({ color: style.fill, alpha: FILL_ALPHA })
+			.stroke({ color: style.outline, width: OUTLINE_WIDTH, alpha: 1 });
 
 		container.addChild(graphics);
 		container.pivot.set(options.width * 0.5, options.height * 0.5);

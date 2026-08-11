@@ -5,6 +5,7 @@ import { HighlightDecoration } from '../components/highlight-decoration';
 import { UIButton } from '../components/ui-button';
 import { DebugHudPanel } from '../debug/debug-hud-panel';
 import { SoundManager } from '../managers/sound-manager';
+import { GameProgress } from '../managers/game-progress';
 import { isFullscreenControlAllowed } from '../platform/platform';
 import { Scene } from '../scenes/scene';
 import { HUD } from './hud';
@@ -81,6 +82,17 @@ export class GameHUD extends HUD {
 
 	public isModalOpen(): boolean {
 		return this.pauseModal?.isOpen === true;
+	}
+
+	/** Refresh mute icons after GameProgress load/reset applied SoundManager state. */
+	public syncAudioButtonFrames(): void {
+		if (this.soundButton) {
+			this.soundButton.setFrame(SoundManager.isSfxMuted ? 'sound-off' : 'sound-on');
+		}
+
+		if (this.musicButton) {
+			this.musicButton.setFrame(SoundManager.isMusicMuted ? 'music-off' : 'music-on');
+		}
 	}
 
 	/**
@@ -209,15 +221,15 @@ export class GameHUD extends HUD {
 			decorator,
 		);
 		this.controlsLayer.addChild(this.soundButton);
+		this.soundButton.setFrame(SoundManager.isSfxMuted ? 'sound-off' : 'sound-on');
 
 		bindDebouncedTap(this.soundButton, () => {
 			SoundManager.playSound('hit-a-button');
 
-			if (SoundManager.toggleSFX()) {
-				this.soundButton.setFrame('sound-off');
-			} else {
-				this.soundButton.setFrame('sound-on');
-			}
+			const muted = SoundManager.toggleSFX();
+			this.soundButton.setFrame(muted ? 'sound-off' : 'sound-on');
+			GameProgress.shared.setSettings({ sfxMuted: muted });
+			GameProgress.shared.save();
 		});
 	}
 
@@ -232,15 +244,15 @@ export class GameHUD extends HUD {
 			decorator,
 		);
 		this.controlsLayer.addChild(this.musicButton);
+		this.musicButton.setFrame(SoundManager.isMusicMuted ? 'music-off' : 'music-on');
 
 		bindDebouncedTap(this.musicButton, () => {
 			SoundManager.playSound('hit-a-button');
 
-			if (SoundManager.toggleMusic()) {
-				this.musicButton.setFrame('music-off');
-			} else {
-				this.musicButton.setFrame('music-on');
-			}
+			const muted = SoundManager.toggleMusic();
+			this.musicButton.setFrame(muted ? 'music-off' : 'music-on');
+			GameProgress.shared.setSettings({ musicMuted: muted });
+			GameProgress.shared.save();
 		});
 	}
 

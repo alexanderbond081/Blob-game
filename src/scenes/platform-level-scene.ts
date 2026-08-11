@@ -2,6 +2,7 @@ import { Container } from 'pixi.js';
 
 import { isCollectibleBody, isPlayerBody } from '../entities/collectible';
 import { isHazardBody } from '../entities/hazard';
+import { isLevelExitBody } from '../entities/level-portal';
 import { NineSliceTouchPad } from '../input/nine-slice-touch-pad';
 import { loadLevelData } from '../levels/level-loader';
 import { SoundManager } from '../managers/sound-manager';
@@ -11,6 +12,11 @@ import { GameCamera } from '../world/game-camera';
 import { LevelRoot } from '../world/level-root';
 import { ParallaxLayer } from '../world/parallax-layer';
 import { Scene } from './scene';
+
+export type LevelExitEvent = {
+	levelId: string;
+	collected: number;
+};
 
 const COLLECT_SOUNDS = [
 	'firefly-collect1',
@@ -40,6 +46,7 @@ export class PlatformLevelScene extends Scene {
 	private spawnY = 0;
 	private fallLimitY = 0;
 	private collected = 0;
+	private hasExited = false;
 
 	public constructor(levelId: string) {
 		super();
@@ -90,6 +97,7 @@ export class PlatformLevelScene extends Scene {
 		this.physicsWorld.onCollisionStart((collision) => {
 			this.handleCollectibleCollision(collision);
 			this.handleHazardCollision(collision);
+			this.handleLevelExitCollision(collision);
 		});
 
 		SoundManager.playMusic('bg-music');
@@ -166,6 +174,34 @@ export class PlatformLevelScene extends Scene {
 			player.beginDeath();
 			console.info('[player] fell below level — bursting');
 		}
+	}
+
+	private handleLevelExitCollision(collision: PhysicsCollisionInfo): void {
+		if (this.hasExited || this.levelRoot.player.isDying) {
+			return;
+		}
+
+		const portal = this.levelRoot.portal;
+		if (!portal.canTrigger) {
+			return;
+		}
+
+		const { bodyA, bodyB } = collision;
+		const playerInvolved = isPlayerBody(bodyA) || isPlayerBody(bodyB);
+		const exitInvolved = isLevelExitBody(bodyA) || isLevelExitBody(bodyB);
+
+		if (!playerInvolved || !exitInvolved) {
+			return;
+		}
+
+		this.hasExited = true;
+		portal.setState('entered');
+		const payload: LevelExitEvent = {
+			levelId: this.levelId,
+			collected: this.collected,
+		};
+		console.info(`[level] exit ${payload.levelId} collected=${payload.collected}`);
+		this.emit('level-exit', payload);
 	}
 
 	private handleHazardCollision(collision: PhysicsCollisionInfo): void {

@@ -1,7 +1,7 @@
 import { gsap } from 'gsap';
 import { Assets, Container, DestroyOptions, FederatedPointerEvent, FillGradient, Graphics, NineSliceSprite, Rectangle, Sprite, Spritesheet, Text, TextStyle, Texture } from 'pixi.js';
 
-import { getCollectedFireflies, isLevelPlayable, LevelCatalogEntry } from '../managers/level-catalog';
+import { isCarouselLevelPlayable, LevelCarouselEntry } from '../managers/game-progress';
 import { SoundManager } from '../managers/sound-manager';
 import { bindDebouncedTap } from './debounced-tap';
 import { HighlightDecoration } from './highlight-decoration';
@@ -116,7 +116,7 @@ class LevelTile extends Container {
 	private lockSprite: Sprite | null = null;
 
 	public constructor(
-		entry: LevelCatalogEntry,
+		entry: LevelCarouselEntry,
 		levelNumber: number,
 		iconSheet: Spritesheet,
 		lockTexture: Texture,
@@ -124,7 +124,7 @@ class LevelTile extends Container {
 	) {
 		super();
 
-		const playable = isLevelPlayable(entry);
+		const playable = isCarouselLevelPlayable(entry);
 		this.addChild(this.createBackground(playable, panels));
 
 		const numberText = createTileText(String(levelNumber), 30, playable);
@@ -147,7 +147,7 @@ class LevelTile extends Container {
 		}
 
 		const countText = createTileText(
-			`${getCollectedFireflies(entry.id)} / ${entry.totalFireflies}`,
+			`${entry.collected} / ${entry.totalFireflies}`,
 			22,
 			playable,
 		);
@@ -222,7 +222,7 @@ class LevelTile extends Container {
  * Drag follows the pointer continuously and snaps to the nearest tile on release.
  */
 export class LevelCarousel extends Container {
-	private readonly entries: LevelCatalogEntry[];
+	private readonly entries: LevelCarouselEntry[];
 	private readonly tiles: LevelTile[] = [];
 	private readonly tilesLayer = new Container();
 	private readonly dragArea = new Container();
@@ -243,7 +243,7 @@ export class LevelCarousel extends Container {
 	private dragVelocity = 0;
 	private snapTween: gsap.core.Tween | null = null;
 
-	public constructor(entries: LevelCatalogEntry[], initialIndex: number = 0) {
+	public constructor(entries: LevelCarouselEntry[], initialIndex: number = 0) {
 		super();
 
 		this.entries = entries;
@@ -251,7 +251,7 @@ export class LevelCarousel extends Container {
 		this.scrollIndex = this.selectedIndex;
 	}
 
-	public get selectedEntry(): LevelCatalogEntry {
+	public get selectedEntry(): LevelCarouselEntry {
 		return this.entries[this.selectedIndex];
 	}
 

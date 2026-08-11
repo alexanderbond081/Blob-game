@@ -6,7 +6,7 @@ import { HighlightDecoration } from '../components/highlight-decoration';
 import { LevelCarousel } from '../components/level-carousel';
 import { AnotherFly } from '../components/particle-fly';
 import { UIButton } from '../components/ui-button';
-import { findFirstPlayableIndex, isLevelPlayable, levelCatalog } from '../managers/level-catalog';
+import { GameProgress, isCarouselLevelPlayable } from '../managers/game-progress';
 import { SoundManager } from '../managers/sound-manager';
 import { Scene } from './scene';
 
@@ -168,7 +168,8 @@ export class MainMenuScene extends Scene {
 	}
 
 	private async addCarousel(): Promise<void> {
-		this.carousel = new LevelCarousel(levelCatalog, findFirstPlayableIndex());
+		const progress = GameProgress.shared;
+		this.carousel = new LevelCarousel(progress.getCarouselEntries(), progress.getCarouselStartIndex());
 		await this.carousel.init();
 		this.carousel.on('selectionChanged', () => {
 			this.syncPlayButton();
@@ -270,7 +271,7 @@ export class MainMenuScene extends Scene {
 			return;
 		}
 
-		const enabled = isLevelPlayable(this.carousel.selectedEntry);
+		const enabled = isCarouselLevelPlayable(this.carousel.selectedEntry);
 
 		if (enabled === this.isPlayEnabled) {
 			return;
@@ -294,7 +295,7 @@ export class MainMenuScene extends Scene {
 
 		this.clearPlayIdle();
 
-		if (!isLevelPlayable(entry) || !entry.sceneId) {
+		if (!isCarouselLevelPlayable(entry)) {
 			SoundManager.playSound('level-locked');
 			this.carousel.playSelectedLockDenied();
 			this.schedulePlayIdle();
@@ -302,7 +303,7 @@ export class MainMenuScene extends Scene {
 		}
 
 		SoundManager.playSound('level-start');
-		this.emit('play-level', entry.sceneId);
+		this.emit('play-level', entry.id);
 	}
 
 	private schedulePlayIdle(): void {

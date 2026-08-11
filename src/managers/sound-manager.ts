@@ -213,6 +213,14 @@ export class SoundManager {
 		}
 	}
 
+	public static setMusicMuted(muted: boolean): void {
+		this.musicBus.gain.value = muted ? 0 : this._musicVolume;
+	}
+
+	public static get isMusicMuted(): boolean {
+		return this.musicBus.gain.value === 0;
+	}
+
 	public static toggleAmbience(): boolean {
 		// !! be careful using together with toggleGlobal() - it will not be unmuted by toggleGlobal()
 		if (this._ambienceVolume > 0 && this.ambienceBus.gain.value === 0) {
@@ -233,6 +241,14 @@ export class SoundManager {
 			this.sfxBus.gain.value = 0;
 			return true;
 		}
+	}
+
+	public static setSfxMuted(muted: boolean): void {
+		this.sfxBus.gain.value = muted ? 0 : this._sfxVolume;
+	}
+
+	public static get isSfxMuted(): boolean {
+		return this.sfxBus.gain.value === 0;
 	}
 
 	public static toggleGlobal(): boolean {

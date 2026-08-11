@@ -2,6 +2,7 @@ import { Container } from 'pixi.js';
 
 import { Collectible } from '../entities/collectible';
 import { Hazard } from '../entities/hazard';
+import { LevelPortal } from '../entities/level-portal';
 import { Player } from '../entities/player';
 import { BlobDropletPool, DropletObstacleRect } from '../fx/blob-droplet-pool';
 import { LevelData } from '../levels/level-schema';
@@ -10,6 +11,7 @@ import { StaticBody } from '../physics/static-body';
 
 export class LevelRoot extends Container {
 	public readonly player: Player;
+	public readonly portal: LevelPortal;
 	public readonly collectibles: Collectible[] = [];
 	public readonly staticBodies: StaticBody[] = [];
 	public readonly hazards: Hazard[] = [];
@@ -25,7 +27,7 @@ export class LevelRoot extends Container {
 				y: platform.y,
 				width: platform.width,
 				height: platform.height,
-				label: platform.label ?? 'platform',
+				type: platform.type,
 			});
 			staticBody.addToWorld(physicsWorld, this);
 			this.staticBodies.push(staticBody);
@@ -42,6 +44,10 @@ export class LevelRoot extends Container {
 			collectible.addToWorld(physicsWorld, this);
 			this.collectibles.push(collectible);
 		}
+
+		// Portal under the player so the blob draws on top.
+		this.portal = new LevelPortal(levelData.exit);
+		this.portal.addToWorld(physicsWorld, this);
 
 		this.player = new Player(levelData.spawn.x, levelData.spawn.y);
 		this.player.bindPhysics(physicsWorld);
@@ -80,6 +86,9 @@ export class LevelRoot extends Container {
 			collectible.destroy();
 		}
 		this.collectibles.length = 0;
+
+		this.portal.removeFromWorld(physicsWorld);
+		this.portal.destroy();
 
 		this.player.removeFromWorld(physicsWorld);
 		this.player.destroy();
