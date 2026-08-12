@@ -295,6 +295,24 @@ Shipped in-repo (not full MVP): one JSON level (`forest-01`), Matter player with
 
 ---
 
+## Playable demo (milestone before MVP)
+
+A smaller milestone than the MVP above: a build worth publishing on itch.io and sending to Poki for publishing approval. Tracked as **stage E** in [`poki.md`](./poki.md) and the README.
+
+**Demo done when:**
+
+- [ ] Portal opens on a firefly threshold, with door art and a satisfying entry sequence  
+- [ ] Moving enemies exist (beetle / spider / wasp on fixed paths) and share the death pipeline  
+- [ ] 10 levels with a readable difficulty curve  
+- [ ] Touch controls are genuinely playable on a phone (gesture-first, no on-screen buttons)  
+- [ ] Hints teach the mechanics that ship in the demo  
+- [ ] Outro screen after the last level points at the full version  
+- [ ] Poki submission prerequisites pass (see [`poki.md`](./poki.md))  
+
+Scope differences from the MVP: 10 levels instead of 15–20, no pollen-relic episode gating (most of the kit is available from the start; **flight** is the candidate for the single unlockable / rewarded move), no NG+, no gold fireflies or crowns, no hub meta beyond Progress / Customize. Portrait support, rewarded help and the wider content pass move to stage F.
+
+---
+
 ## Open Decisions
 
 - [x] Collectible fantasy → **fireflies** as settled fairy pollen (v1; can be glowing dots)  
@@ -305,6 +323,7 @@ Shipped in-repo (not full MVP): one JSON level (`forest-01`), Matter player with
 - [x] Meta progression → **episodes unlock abilities** via **inanimate pollen relics**; hub shows icons + totals  
 - [x] Replays keep earned abilities; full clear → **Play from start** with full kit (NG+); relics re-collectable  
 - [x] Level 1: wake as crawl-only → on-screen **bouncing dewdrop** → **jump**; early episodes **shorter**, stretch after 2–3 abilities  
+- [ ] Demo gating: flight as the only unlockable move (rest available from the start) vs relic-style episode gating — decide before authoring the 10 demo levels  
 - [ ] Exact later episode order / relic → ability mapping (stem-spark, wing, …)  
 - [ ] How much of the fairy intro to ship in MVP (implied lore vs short cutscene vs full animation)  
 - [ ] Do gold fireflies count toward the portal threshold, or optional only?  

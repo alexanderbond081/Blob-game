@@ -163,7 +163,7 @@ Landscape-only 16:9 on a portrait phone → large letterboxing. Options later:
 - Landscape-only + “rotate device” hint (likely for v1 gameplay), or
 - Separate portrait layout + **separate sky** + retuned far/mid `parallax` (see strategy above).
 
-**Current decision:** landscape-first only; portrait UX later. Many Poki games ship horizontal; still verify portal requirements before submit so a publisher agreement is not accidentally violated.
+**Current decision:** landscape-first only; portrait UX in **stage F**, i.e. after the demo is submitted. Many Poki games ship horizontal; still verify portal requirements before submit so a publisher agreement is not accidentally violated.
 
 ---
 
@@ -290,6 +290,48 @@ Pixi = draw yourself + pick physics package. Phaser/Defold = gameplay kit includ
 - [x] UI hub + pause loop (menu carousel, Pause Home/Resume/Restart, platform session + commercialBreak on intent to play)
 - [x] Level catalog + portal exit chain + GameProgress save (A2); level-clear modal (C)
 - [x] Progress / Customize HudModals (stage D; OK dismiss) + skins catalog applied in-level
+- [x] Portrait / rotate support → **stage F** (Poki accepts landscape-only; camera + HUD + hub modals rework is too costly for the demo)
+- [x] Rewarded help → **stage F**; shape still open (flight vs teleport to portal)
 - [ ] Target Poki first vs CrazyGames Basic Launch first
-- [ ] Portal firefly threshold / exit gate polish later
-- [ ] Help / rewarded teleport (stage E)
+- [ ] Firefly economy beyond the portal gate (currency for skins?) — affects 100 % completion rewards
+
+---
+
+## Roadmap after stage D
+
+### Stage E — playable demo (ship to itch, submit to Poki)
+
+Ordered by dependency: anything that changes level rules lands before the levels are authored.
+
+| # | Task | Depends on / notes |
+|---|------|--------------------|
+| 1 | Portal unlock by fireflies + door art | Gate rule is part of every level's design |
+| 2 | Portal entry animation + SFX before the result modal | Independent, can run in parallel |
+| 3 | Enemies: moving hazards (beetle / spider / wasp), fixed paths | New `enemies[]`-style schema entry; blocks level authoring |
+| 4 | 10 levels, progressive difficulty | After 1 and 3 |
+| 5 | Touch controls rework | Current invisible 9-slice pad is a stopgap and not playable enough. Gesture-first, no on-screen buttons. Likely shape: thumbstick spawned under the finger + tap-to-jump zone; pure swipes read badly with wall cling |
+| 6 | Hints for existing mechanics only | After the mechanic set is frozen |
+| 7 | Demo outro screen after the last level | "Thanks for playing the demo, wishlist the full version…" |
+| 8 | Poki submission prerequisites | `gameLoadingFinished`, no external links, incognito / no-`localStorage` path, first-download size, 60 FPS on mid-range mobile |
+
+Balancing note: gating design is still open. Flight may replace a plain double jump as the unlockable move, with the remaining mechanics available from the start.
+
+Suggested support work for balancing 10 levels: lightweight local telemetry (per-level time, deaths, fireflies collected) — tuning ten levels by feel alone is guesswork.
+
+### Stage F — content & feature depth (after publishing approval)
+
+- Portrait / rotate support (moved out of the demo)
+- Finish player mechanics — mainly animations and VFX for them
+- Finish locations and levels, including enemy art and level design
+- Rewarded help: flight or teleport to the portal
+- More characters
+- Asset optimization (atlases, audio, first-download size)
+- Sound design and music pass
+- More skins
+- Skin (or other) unlocks for full completion and 100 % collection
+
+### Stage G — final polish before portal tests
+
+- `movePill` placement so the Poki pill never overlaps our HUD
+- Safe areas / portal chrome adaptation
+- Whatever the platform test round turns up

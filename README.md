@@ -30,6 +30,8 @@ Open `http://localhost:3000`.
 
 Stuck keys / touch after OS UI (notification shade, tab blur) are cleared on focus loss.
 
+The 9-slice touch pad is a stopgap so the game can be tried on a phone at all; it gets replaced by a gesture-first scheme in stage E.
+
 ## What’s in this build
 
 - Main menu hub: background, level carousel, Play, Progress / Customize modals
@@ -96,22 +98,41 @@ Production builds write `dist/BUILD.txt` (version, channel, git meta). Upload th
 
 ## UI workflow progress
 
-| Stage | Status |
-|-------|--------|
-| A — Main menu + carousel + platform session | Done |
-| B — Pause modal (Resume / Home / Restart) | Done |
-| A2 — Portal chain + GameProgress + catalog | Done |
-| C — Level-clear modal (stats + Continue) | Done |
-| D — Progress / Customize modals + selected skin in-level | Done |
-| E — Help / rewarded teleport | Next |
-| F — Polish (movePill, etc.) | Later |
+| Stage | Scope | Status |
+|-------|-------|--------|
+| A — Main menu + carousel + platform session | UI shell | Done |
+| B — Pause modal (Resume / Home / Restart) | UI shell | Done |
+| A2 — Portal chain + GameProgress + catalog | Save / flow | Done |
+| C — Level-clear modal (stats + Continue) | UI shell | Done |
+| D — Progress / Customize modals + selected skin in-level | UI shell | Done |
+| **E — Playable demo** (portal gate, enemies, 10 levels, touch rework, hints, demo outro) | Ship to itch + submit to Poki | **Next** |
+| F — Content & feature depth (portrait, rewarded help, more mechanics / skins / audio, asset optimization) | Post-approval | Later |
+| G — Final polish before portal tests (`movePill`, safe areas, etc.) | Pre-release | Later |
+
+### Stage E — demo checklist
+
+Goal: a build good enough to publish on itch.io and send to Poki for publishing approval.
+
+| # | Task | Notes |
+|---|------|-------|
+| 1 | Portal unlock by fireflies + door art | Gate rule drives every level's design — do first |
+| 2 | Portal entry animation + SFX before the result modal | Self-contained, can run in parallel |
+| 3 | Enemies: moving hazards (beetle / spider / wasp) on fixed paths | New level-schema object; needed before authoring levels |
+| 4 | 10 levels with a progressive difficulty curve | Only after 1 and 3 |
+| 5 | Touch controls rework | Current 9-slice pad is a stopgap — full replacement, gesture-first, no on-screen buttons |
+| 6 | Hints for the mechanics that already exist | Needs the final mechanic set |
+| 7 | Demo outro screen after the last level | "Thanks for playing the demo…" |
+| 8 | Poki submission prerequisites | Requirements checklist, first-download size, 60 FPS on mid-range mobile, no-`localStorage` (incognito) path |
 
 ## Known gaps (not blockers for a first push)
 
-- More player kit still queued (double jump, dash, glide) — see mechanics backlog
+- Touch input is a placeholder (invisible 9-slice pad) — being replaced in stage E
+- More player kit still queued (double jump / flight, dash, glide) — see mechanics backlog
 - Final art for sticky walls / spikes; per-skin droplet assets deferred (catalog field ready)
 - Bundle is heavier than an ideal Poki first download (`bundle.js` ~1.4 MB + music) — optimize before portal submit
-- Portrait / rotate UX and portal safe-area adaptation deferred## License
+- Portrait / rotate UX and portal safe-area adaptation deferred to stage F
+
+## License
 
 **All Rights Reserved** — see [`LICENSE`](./LICENSE).  
 You may view the source for portfolio / learning; reuse of code or assets needs written permission (or a platform publishing agreement).
