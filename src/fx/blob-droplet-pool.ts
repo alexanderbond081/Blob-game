@@ -47,10 +47,12 @@ export class BlobDropletPool extends Container {
 	private readonly slots: DropletSlot[] = [];
 	private obstacles: DropletObstacleRect[] = [];
 	private levelBounds: DropletLevelBounds = { width: 0, height: 0 };
+	private readonly dropletSheetAlias: string;
 
-	public constructor() {
+	public constructor(dropletSheetAlias = 'blob-droplet') {
 		super();
 		this.eventMode = 'none';
+		this.dropletSheetAlias = dropletSheetAlias;
 		this.buildPool();
 	}
 
@@ -111,9 +113,11 @@ export class BlobDropletPool extends Container {
 	}
 
 	private buildPool(): void {
-		const sheet = Assets.get<Spritesheet>('blob-droplet');
+		const sheet = Assets.get<Spritesheet>(this.dropletSheetAlias);
 		if (!sheet) {
-			throw new Error('Asset "blob-droplet" is not loaded. Load game bundle before the level.');
+			throw new Error(
+				`Asset "${this.dropletSheetAlias}" is not loaded. Load game bundle before the level.`,
+			);
 		}
 
 		const frames = sheet.animations.idle;

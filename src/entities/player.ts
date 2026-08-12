@@ -88,6 +88,7 @@ export class Player extends PhysicsBody {
 	private baseScale = 1;
 	private spritesheet: Spritesheet | null = null;
 	private currentVisual: string | null = null;
+	private readonly blobSheetAlias: string;
 	private boundEngine: Engine | null = null;
 	private boundWorld: PhysicsWorld | null = null;
 	private renderPrevX = 0;
@@ -138,7 +139,7 @@ export class Player extends PhysicsBody {
 		this.renderY = this.body.position.y;
 	};
 
-	public constructor(x: number, y: number) {
+	public constructor(x: number, y: number, blobSheetAlias = 'blob') {
 		const body = Bodies.circle(x, y, PLAYER_RADIUS, {
 			label: 'player',
 			friction: 0,
@@ -154,6 +155,7 @@ export class Player extends PhysicsBody {
 		display.eventMode = 'none';
 		super(body, display);
 
+		this.blobSheetAlias = blobSheetAlias;
 		this.renderX = x;
 		this.renderY = y;
 		this.renderPrevX = x;
@@ -934,7 +936,7 @@ export class Player extends PhysicsBody {
 	}
 
 	private async loadSpritesheet(): Promise<void> {
-		const sheet = await Assets.load<Spritesheet>('blob');
+		const sheet = await Assets.load<Spritesheet>(this.blobSheetAlias);
 		this.spritesheet = sheet;
 
 		const displaySize = PLAYER_RADIUS * 2;

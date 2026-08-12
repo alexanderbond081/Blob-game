@@ -32,11 +32,13 @@ Stuck keys / touch after OS UI (notification shade, tab blur) are cleared on foc
 
 ## What’s in this build
 
-- Main menu hub: background, level carousel, Play, Progress / Customize (UI feedback only, no-op screens)
+- Main menu hub: background, level carousel, Play, Progress / Customize modals
+- Progress modal: episode summaries (completion % + fireflies) on a fixed grid
+- Customize modal: skin grid, lock feedback, selection saved; applied on next level start
 - Pause modal (gameplay): Home → menu (no ad break); Resume / Restart → `commercialBreak` when an ad actually starts, then gameplay
 - Matter.js physics, walkable ground detection (slopes-ready normals)
 - Camera follow + clamp, dual parallax backgrounds
-- Blob player: run / jump / crouch wind-up, jelly squash, facing + hang sprites
+- Blob player: run / jump / crouch wind-up, jelly squash, facing + hang sprites; colored skins via `skins-catalog`
 - **Sticky walls** (`label: "sticky-wall"`): air cling, slow slide, peel-off stretch, wall-jump
 - **Hazards** (`hazards[]`, e.g. `type: "spikes"`): solid kill volumes
 - **Death:** shared kill path (hazard / fall) → optional `burst` anim → droplet splash → pause → respawn (empty burst frame OK; no forced hide of last frame)
@@ -45,7 +47,7 @@ Stuck keys / touch after OS UI (notification shade, tab blur) are cleared on foc
 - Top icon HUD: fullscreen (non-Poki), pause (gameplay), separate music / SFX mute
 - Platform SDK bridge: `gameLoadingFinished`, `gameplayStart` / `Stop`, `commercialBreak` / rewarded hooks ([`src/platform/platform.ts`](src/platform/platform.ts))
 
-Level data: JSON + Zod ([`src/levels/`](src/levels/)) — `platforms`, `hazards`, `collectibles`, spawn, size, backgrounds.
+Level data: JSON + Zod ([`src/levels/`](src/levels/)) — `platforms`, `hazards`, `collectibles`, spawn, size, backgrounds, exit portal.
 
 ## Goals
 
@@ -87,8 +89,8 @@ Production builds write `dist/BUILD.txt` (version, channel, git meta). Upload th
 | `src/world/` | Camera, parallax, level root |
 | `src/levels/` | Zod schema + JSON levels (`forest-01`) |
 | `src/input/` | Shared controls + 9-slice touch pad |
-| `src/hud/` | Icon HUD + modals (`pause-content`) |
-| `src/managers/` | Scenes catalog, GameProgress, sound |
+| `src/hud/` | Icon HUD + modals (pause, result, Progress, Customize) |
+| `src/managers/` | Scenes catalog, skins catalog, GameProgress, sound |
 | `src/platform/` | Poki / CrazyGames / no-op adapters |
 | `plans/` | Design / portal research notes |
 
@@ -100,17 +102,16 @@ Production builds write `dist/BUILD.txt` (version, channel, git meta). Upload th
 | B — Pause modal (Resume / Home / Restart) | Done |
 | A2 — Portal chain + GameProgress + catalog | Done |
 | C — Level-clear modal (stats + Continue) | Done |
-| D — Progress / Customize modals | Next |
-| E — Help / rewarded teleport | Later |
+| D — Progress / Customize modals + selected skin in-level | Done |
+| E — Help / rewarded teleport | Next |
 | F — Polish (movePill, etc.) | Later |
 
 ## Known gaps (not blockers for a first push)
 
-- Progress / Customize buttons still no-op (HudModals — stage D)
 - More player kit still queued (double jump, dash, glide) — see mechanics backlog
-- Final art for sticky walls / spikes; droplet puddle polish deferred
+- Final art for sticky walls / spikes; per-skin droplet assets deferred (catalog field ready)
 - Bundle is heavier than an ideal Poki first download (`bundle.js` ~1.4 MB + music) — optimize before portal submit
-## License
+- Portrait / rotate UX and portal safe-area adaptation deferred## License
 
 **All Rights Reserved** — see [`LICENSE`](./LICENSE).  
 You may view the source for portfolio / learning; reuse of code or assets needs written permission (or a platform publishing agreement).

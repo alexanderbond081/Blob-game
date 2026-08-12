@@ -6,6 +6,8 @@ import { LevelPortal } from '../entities/level-portal';
 import { Player } from '../entities/player';
 import { BlobDropletPool, DropletObstacleRect } from '../fx/blob-droplet-pool';
 import { LevelData } from '../levels/level-schema';
+import { GameProgress } from '../managers/game-progress';
+import { resolveSkin } from '../managers/skins-catalog';
 import { PhysicsWorld } from '../physics/physics-world';
 import { StaticBody } from '../physics/static-body';
 
@@ -49,11 +51,12 @@ export class LevelRoot extends Container {
 		this.portal = new LevelPortal(levelData.exit);
 		this.portal.addToWorld(physicsWorld, this);
 
-		this.player = new Player(levelData.spawn.x, levelData.spawn.y);
+		const skin = resolveSkin(GameProgress.shared.selectedSkinId);
+		this.player = new Player(levelData.spawn.x, levelData.spawn.y, skin.blobSheetAlias);
 		this.player.bindPhysics(physicsWorld);
 		this.player.addToWorld(physicsWorld, this);
 
-		this.droplets = new BlobDropletPool();
+		this.droplets = new BlobDropletPool(skin.dropletAlias);
 		this.droplets.setLevelBounds(levelData.size);
 		this.droplets.setObstacles(this.collectObstacleRects());
 		this.addChild(this.droplets);
