@@ -225,6 +225,7 @@ export class GameHUD extends HUD {
 
 		this.closeCustomizeModal();
 		this.layoutHubModal(this.progressModal);
+		this.progressContent?.refresh();
 		this.progressModal.open();
 	}
 

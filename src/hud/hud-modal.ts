@@ -29,7 +29,12 @@ export type HudModalOptions = {
 };
 
 type ReflowableContent = Container & {
-	reflow(contentWidth: number, panelHeight?: number): void;
+	reflow(
+		contentWidth: number,
+		panelHeight?: number,
+		viewportWidth?: number,
+		viewportHeight?: number,
+	): void;
 };
 
 export class HudModal extends Container {
@@ -192,7 +197,7 @@ export class HudModal extends Container {
 		this.panel.height = height;
 
 		const contentView = this.content.children[0] as ReflowableContent | undefined;
-		contentView?.reflow?.(contentWidth, height);
+		contentView?.reflow?.(contentWidth, height, viewportWidth, viewportHeight);
 
 		this.content.x = 0;
 		this.content.y = this.showOkButton

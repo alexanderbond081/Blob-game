@@ -189,6 +189,10 @@ export class GameProgress {
 		return this.state.levels[levelId]?.unlocked ?? false;
 	}
 
+	public getLevelProgress(levelId: string): LevelProgress {
+		return this.ensureLevel(levelId);
+	}
+
 	public unlock(levelId: string): void {
 		const level = this.ensureLevel(levelId);
 		level.unlocked = true;

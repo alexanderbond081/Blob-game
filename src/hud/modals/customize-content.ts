@@ -22,7 +22,12 @@ export class CustomizeModalContent extends Container {
 		return content;
 	}
 
-	public reflow(_contentWidth: number, panelHeight?: number): void {
+	public reflow(
+		_contentWidth: number,
+		panelHeight?: number,
+		_viewportWidth?: number,
+		_viewportHeight?: number,
+	): void {
 		if (panelHeight !== undefined) {
 			this.panelHeight = panelHeight;
 		}

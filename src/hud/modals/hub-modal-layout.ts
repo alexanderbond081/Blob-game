@@ -40,3 +40,7 @@ export const computeHubModalLayout = (
 export const hubModalTitleY = (panelHeight: number): number => {
 	return -panelHeight * 0.5 + 60;
 };
+
+export const isPortraitViewport = (viewportWidth: number, viewportHeight: number): boolean => {
+	return viewportHeight > viewportWidth;
+};
