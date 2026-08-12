@@ -241,10 +241,12 @@ export class GameHUD extends HUD {
 
 		this.closeProgressModal();
 		this.layoutHubModal(this.customizeModal);
+		this.customizeContent?.refresh();
 		this.customizeModal.open();
 	}
 
 	public closeCustomizeModal(): void {
+		this.customizeContent?.stopSelectedAnimation();
 		this.customizeModal?.close();
 	}
 

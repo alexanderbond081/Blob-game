@@ -3,6 +3,7 @@ import {
 	getLevelTotalFireflies,
 	getNextGameSceneId,
 } from './scenes-catalog';
+import { DEFAULT_UNLOCKED_SKIN_IDS } from './skins-catalog';
 
 const SAVE_KEY = 'fairy-blob-progress-v1';
 const SAVE_VERSION = 1;
@@ -26,7 +27,13 @@ export type GameProgressState = {
 	levels: Record<string, LevelProgress>;
 	settings: GameProgressSettings;
 	abilities: string[];
+	/**
+	 * Unlocked skin ids.
+	 * (Persisted, used by Customize modal test UI.)
+	 */
 	skins: string[];
+	/** Currently selected skin id. */
+	selectedSkinId: string;
 };
 
 /** Merged catalog + progress row for the main-menu carousel. */
@@ -64,7 +71,8 @@ const createDefaultState = (): GameProgressState => {
 			sfxMuted: false,
 		},
 		abilities: [],
-		skins: [],
+		skins: [...DEFAULT_UNLOCKED_SKIN_IDS],
+		selectedSkinId: 'default',
 	};
 };
 
@@ -114,7 +122,9 @@ const parseState = (raw: unknown): GameProgressState | null => {
 			sfxMuted: typeof rawSettings.sfxMuted === 'boolean' ? rawSettings.sfxMuted : false,
 		},
 		abilities: Array.isArray(raw.abilities) ? raw.abilities.filter((item): item is string => typeof item === 'string') : [],
-		skins: Array.isArray(raw.skins) ? raw.skins.filter((item): item is string => typeof item === 'string') : [],
+		skins: Array.isArray(raw.skins) ? raw.skins.filter((item): item is string => typeof item === 'string') : defaults.skins,
+		selectedSkinId:
+			typeof raw.selectedSkinId === 'string' ? raw.selectedSkinId : defaults.selectedSkinId,
 	};
 };
 
@@ -126,6 +136,7 @@ export class GameProgress {
 	private static instance: GameProgress | null = null;
 
 	private state: GameProgressState;
+	private skinMigrationDirty = false;
 
 	private constructor(state: GameProgressState) {
 		this.state = state;
@@ -152,7 +163,10 @@ export class GameProgress {
 
 			const parsed = parseState(JSON.parse(raw) as unknown);
 			progress.state = parsed ?? createDefaultState();
+			progress.ensureDefaultUnlockedSkins();
 			if (!parsed) {
+				progress.save();
+			} else if (progress.consumeSkinMigrationDirty()) {
 				progress.save();
 			}
 		} catch (error) {
@@ -222,6 +236,52 @@ export class GameProgress {
 			...this.state.settings,
 			...partial,
 		};
+	}
+
+	public get selectedSkinId(): string {
+		return this.state.selectedSkinId;
+	}
+
+	public isSkinUnlocked(skinId: string): boolean {
+		return this.state.skins.includes(skinId);
+	}
+
+	public setSelectedSkinId(skinId: string): void {
+		if (!this.isSkinUnlocked(skinId)) {
+			return;
+		}
+
+		this.state.selectedSkinId = skinId;
+		this.save();
+	}
+
+	public unlockSkin(skinId: string): void {
+		if (this.isSkinUnlocked(skinId)) {
+			return;
+		}
+		this.state.skins.push(skinId);
+		this.save();
+	}
+
+	/** Ensures demo default unlocks exist; fixes stale saves with empty `skins`. */
+	private ensureDefaultUnlockedSkins(): void {
+		for (const skinId of DEFAULT_UNLOCKED_SKIN_IDS) {
+			if (!this.state.skins.includes(skinId)) {
+				this.state.skins.push(skinId);
+				this.skinMigrationDirty = true;
+			}
+		}
+
+		if (!this.isSkinUnlocked(this.state.selectedSkinId)) {
+			this.state.selectedSkinId = DEFAULT_UNLOCKED_SKIN_IDS[0] ?? 'default';
+			this.skinMigrationDirty = true;
+		}
+	}
+
+	private consumeSkinMigrationDirty(): boolean {
+		const dirty = this.skinMigrationDirty;
+		this.skinMigrationDirty = false;
+		return dirty;
 	}
 
 	public getCarouselEntries(): LevelCarouselEntry[] {

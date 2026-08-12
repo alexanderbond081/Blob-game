@@ -45,15 +45,23 @@ export class IdleBounceAnimator {
 		this.host = host;
 	}
 
-	public start(): void {
+	public start(options?: { introImmediately?: boolean }): void {
 		if (!this.host || this.running) {
 			return;
 		}
 
 		this.restY = this.host.y;
 		this.running = true;
-		this.scheduleIntro();
+		if (options?.introImmediately) {
+			this.playNudge();
+		} else {
+			this.scheduleIntro();
+		}
 		this.scheduleLoop();
+	}
+
+	public get isRunning(): boolean {
+		return this.running;
 	}
 
 	public stop(): void {

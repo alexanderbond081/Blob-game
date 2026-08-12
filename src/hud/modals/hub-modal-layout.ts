@@ -38,7 +38,7 @@ export const computeHubModalLayout = (
 
 /** Title band offset from panel center (hub modals). */
 export const hubModalTitleY = (panelHeight: number): number => {
-	return -panelHeight * 0.5 + 60;
+	return -panelHeight * 0.5 + 70;
 };
 
 export const isPortraitViewport = (viewportWidth: number, viewportHeight: number): boolean => {

@@ -5,6 +5,7 @@ import { isCarouselLevelPlayable, LevelCarouselEntry } from '../managers/game-pr
 import { SoundManager } from '../managers/sound-manager';
 import { bindDebouncedTap } from './debounced-tap';
 import { HighlightDecoration } from './highlight-decoration';
+import { playLockDeniedShake } from './lock-denied-shake';
 import { UIButton } from './ui-button';
 
 const TILE_WIDTH = 160;
@@ -200,20 +201,9 @@ class LevelTile extends Container {
 		}
 
 		const lock = this.lockSprite;
-		gsap.killTweensOf(lock);
 		// Keep the shackle fixed — translating x while rotating makes the pivot look mid-body.
 		lock.x = 0;
-		lock.rotation = 0;
-
-		const shakeAngle = 0.18;
-
-		gsap.timeline()
-			.to(lock, { rotation: -shakeAngle, duration: 0.05, ease: 'power2.out' })
-			.to(lock, { rotation: shakeAngle, duration: 0.08, ease: 'power2.inOut' })
-			.to(lock, { rotation: -shakeAngle * 0.85, duration: 0.07, ease: 'power2.inOut' })
-			.to(lock, { rotation: shakeAngle * 0.7, duration: 0.07, ease: 'power2.inOut' })
-			.to(lock, { rotation: -shakeAngle * 0.4, duration: 0.06, ease: 'power2.inOut' })
-			.to(lock, { rotation: 0, duration: 0.12, ease: 'power2.out' });
+		playLockDeniedShake(lock);
 	}
 }
 
