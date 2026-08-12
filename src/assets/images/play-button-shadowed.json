@@ -1,0 +1,14 @@
+{
+	"frames": {
+	  "play-on": { "frame": { "x": 0, "y": 0, "w": 210, "h": 210 } },
+	  "play-off": { "frame": { "x": 210, "y": 0, "w": 210, "h": 210 } }
+	},
+	"animations": {
+		"on": ["play-on"],
+		"off": ["play-off"]
+	},
+	"meta": {
+	  "image": "play-button-shadowed.webp",
+	  "scale": "1"
+	}
+  }

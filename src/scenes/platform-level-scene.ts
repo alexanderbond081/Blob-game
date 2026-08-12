@@ -5,6 +5,7 @@ import { isHazardBody } from '../entities/hazard';
 import { isLevelExitBody } from '../entities/level-portal';
 import { NineSliceTouchPad } from '../input/nine-slice-touch-pad';
 import { loadLevelData } from '../levels/level-loader';
+import { GameProgress } from '../managers/game-progress';
 import { SoundManager } from '../managers/sound-manager';
 import { PhysicsCollisionInfo } from '../physics/ground-contact';
 import { PhysicsWorld } from '../physics/physics-world';
@@ -16,6 +17,9 @@ import { Scene } from './scene';
 export type LevelExitEvent = {
 	levelId: string;
 	collected: number;
+	totalFireflies: number;
+	timeSec: number;
+	deaths: number;
 };
 
 const COLLECT_SOUNDS = [
@@ -46,6 +50,9 @@ export class PlatformLevelScene extends Scene {
 	private spawnY = 0;
 	private fallLimitY = 0;
 	private collected = 0;
+	private totalFireflies = 0;
+	private runTimeSec = 0;
+	private runDeaths = 0;
 	private hasExited = false;
 
 	public constructor(levelId: string) {
@@ -57,6 +64,11 @@ export class PlatformLevelScene extends Scene {
 		const levelData = loadLevelData(this.levelId);
 		this.spawnX = levelData.spawn.x;
 		this.spawnY = levelData.spawn.y;
+		this.totalFireflies = levelData.collectibles.filter((item) => item.type === 'firefly').length;
+		this.runTimeSec = 0;
+		this.runDeaths = 0;
+		this.collected = 0;
+		this.hasExited = false;
 		// Kill plane slightly below the level bottom so edge platforms still work.
 		this.fallLimitY = levelData.size.height + 80;
 
@@ -105,6 +117,10 @@ export class PlatformLevelScene extends Scene {
 	}
 
 	public update(deltaTime: number): void {
+		if (!this.hasExited) {
+			this.runTimeSec += Math.max(deltaTime, 0) / 60;
+		}
+
 		this.levelRoot.player.setTouchControls(this.touchPad.getControls());
 		this.physicsWorld.step(deltaTime);
 		this.levelRoot.player.update(deltaTime);
@@ -171,6 +187,7 @@ export class PlatformLevelScene extends Scene {
 		}
 
 		if (player.position.y > this.fallLimitY) {
+			this.registerDeath();
 			player.beginDeath();
 			console.info('[player] fell below level — bursting');
 		}
@@ -199,8 +216,14 @@ export class PlatformLevelScene extends Scene {
 		const payload: LevelExitEvent = {
 			levelId: this.levelId,
 			collected: this.collected,
+			totalFireflies: this.totalFireflies,
+			timeSec: this.runTimeSec,
+			deaths: this.runDeaths,
 		};
-		console.info(`[level] exit ${payload.levelId} collected=${payload.collected}`);
+		console.info(
+			`[level] exit ${payload.levelId} collected=${payload.collected}/${payload.totalFireflies} `
+			+ `time=${payload.timeSec.toFixed(1)}s deaths=${payload.deaths}`,
+		);
 		this.emit('level-exit', payload);
 	}
 
@@ -218,8 +241,15 @@ export class PlatformLevelScene extends Scene {
 			return;
 		}
 
+		this.registerDeath();
 		player.beginDeath();
 		console.info('[player] hit hazard — bursting');
+	}
+
+	private registerDeath(): void {
+		this.runDeaths += 1;
+		GameProgress.shared.recordDeath(this.levelId);
+		GameProgress.shared.save();
 	}
 
 	private handleCollectibleCollision(collision: PhysicsCollisionInfo): void {

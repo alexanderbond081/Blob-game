@@ -10,14 +10,20 @@ import { isFullscreenControlAllowed } from '../platform/platform';
 import { Scene } from '../scenes/scene';
 import { HUD } from './hud';
 import { HudModal } from './hud-modal';
+import { computeHubModalLayout } from './modals/hub-modal-layout';
+import { CustomizeModalContent } from './modals/customize-content';
 import { PauseModalContent } from './modals/pause-content';
+import { ProgressModalContent } from './modals/progress-content';
+import { LevelResultStats, ResultModalContent } from './modals/result-content';
 
 const HUD_MARGIN = 12;
 const HUD_BUTTON_SIZE = 50;
 const HUD_BUTTON_GAP = 12;
 
 const PAUSE_MODAL_WIDTH = 400;
-const PAUSE_MODAL_HEIGHT = 180;
+const PAUSE_MODAL_HEIGHT = 240;
+const RESULT_MODAL_WIDTH = 420;
+const RESULT_MODAL_HEIGHT = 320;
 
 /** Which controls the HUD exposes for the currently active screen. */
 export type HudProfile = 'menu' | 'gameplay';
@@ -34,6 +40,12 @@ export class GameHUD extends HUD {
 	private debugPanel!: DebugHudPanel;
 	private pauseModal: HudModal | null = null;
 	private pauseContent: PauseModalContent | null = null;
+	private resultModal: HudModal | null = null;
+	private resultContent: ResultModalContent | null = null;
+	private progressModal: HudModal | null = null;
+	private progressContent: ProgressModalContent | null = null;
+	private customizeModal: HudModal | null = null;
+	private customizeContent: CustomizeModalContent | null = null;
 	private isBuilt = false;
 	private profile: HudProfile = 'menu';
 
@@ -56,6 +68,9 @@ export class GameHUD extends HUD {
 		this.debugPanel = new DebugHudPanel();
 		this.addChild(this.debugPanel);
 		await this.ensurePauseModal();
+		await this.ensureResultModal();
+		await this.ensureProgressModal();
+		await this.ensureCustomizeModal();
 		this.applyProfile();
 		this.onResize();
 	}
@@ -66,8 +81,13 @@ export class GameHUD extends HUD {
 
 	public setProfile(profile: HudProfile): void {
 		this.profile = profile;
-		if (profile !== 'gameplay' && this.pauseModal?.isOpen) {
+		if (profile === 'gameplay') {
+			this.closeProgressModal();
+			this.closeCustomizeModal();
+		}
+		if (profile !== 'gameplay') {
 			this.closePauseModal();
+			this.closeResultModal();
 		}
 		this.applyProfile();
 	}
@@ -81,7 +101,10 @@ export class GameHUD extends HUD {
 	}
 
 	public isModalOpen(): boolean {
-		return this.pauseModal?.isOpen === true;
+		return this.pauseModal?.isOpen === true
+			|| this.resultModal?.isOpen === true
+			|| this.progressModal?.isOpen === true
+			|| this.customizeModal?.isOpen === true;
 	}
 
 	/** Refresh mute icons after GameProgress load/reset applied SoundManager state. */
@@ -96,16 +119,60 @@ export class GameHUD extends HUD {
 	}
 
 	/**
-	 * ESC handler: if the pause modal is open, request resume (same as Resume).
+	 * ESC handler: pause modal → resume; result modal → home (leave run, not continue).
 	 * Returns true when the key was consumed.
 	 */
 	public closeTopModal(): boolean {
-		if (!this.pauseModal?.isOpen) {
-			return false;
+		if (this.resultModal?.isOpen) {
+			this.emit('result-home');
+			return true;
 		}
 
-		this.emit('pause-resume');
-		return true;
+		if (this.pauseModal?.isOpen) {
+			this.emit('pause-resume');
+			return true;
+		}
+
+		if (this.customizeModal?.isOpen) {
+			this.closeCustomizeModal();
+			return true;
+		}
+
+		if (this.progressModal?.isOpen) {
+			this.closeProgressModal();
+			return true;
+		}
+
+		return false;
+	}
+
+	public isResultModalOpen(): boolean {
+		return this.resultModal?.isOpen === true;
+	}
+
+	/** Enter / primary accept: result → Continue, pause → Resume. */
+	public acceptPrimaryAction(): boolean {
+		if (this.resultModal?.isOpen) {
+			this.emit('result-continue');
+			return true;
+		}
+
+		if (this.pauseModal?.isOpen) {
+			this.emit('pause-resume');
+			return true;
+		}
+
+		if (this.customizeModal?.isOpen) {
+			this.closeCustomizeModal();
+			return true;
+		}
+
+		if (this.progressModal?.isOpen) {
+			this.closeProgressModal();
+			return true;
+		}
+
+		return false;
 	}
 
 	public async openPauseModal(): Promise<void> {
@@ -120,10 +187,64 @@ export class GameHUD extends HUD {
 			Scene.viewportHeight * 0.5,
 		);
 		this.pauseModal.open();
+		this.pauseContent?.startPlayIdle();
 	}
 
 	public closePauseModal(): void {
+		this.pauseContent?.stopPlayIdle();
 		this.pauseModal?.close();
+	}
+
+	public async openResultModal(stats: LevelResultStats): Promise<void> {
+		await this.ensureResultModal();
+		if (!this.resultModal || !this.resultContent || this.resultModal.isOpen) {
+			return;
+		}
+
+		this.closePauseModal();
+		this.resultContent.setStats(stats);
+		this.resultModal.adjustLayout(
+			Scene.viewportWidth,
+			Scene.viewportHeight,
+			Scene.viewportHeight * 0.5,
+		);
+		this.resultModal.open();
+		this.resultContent.startPlayIdle();
+	}
+
+	public closeResultModal(): void {
+		this.resultContent?.stopPlayIdle();
+		this.resultModal?.close();
+	}
+
+	public async openProgressModal(): Promise<void> {
+		await this.ensureProgressModal();
+		if (!this.progressModal || this.progressModal.isOpen) {
+			return;
+		}
+
+		this.closeCustomizeModal();
+		this.layoutHubModal(this.progressModal);
+		this.progressModal.open();
+	}
+
+	public closeProgressModal(): void {
+		this.progressModal?.close();
+	}
+
+	public async openCustomizeModal(): Promise<void> {
+		await this.ensureCustomizeModal();
+		if (!this.customizeModal || this.customizeModal.isOpen) {
+			return;
+		}
+
+		this.closeProgressModal();
+		this.layoutHubModal(this.customizeModal);
+		this.customizeModal.open();
+	}
+
+	public closeCustomizeModal(): void {
+		this.customizeModal?.close();
 	}
 
 	public syncFullscreenButton(isFullscreen: boolean): void {
@@ -160,6 +281,19 @@ export class GameHUD extends HUD {
 				Scene.viewportHeight * 0.5,
 			);
 		}
+		if (this.resultModal?.isOpen) {
+			this.resultModal.adjustLayout(
+				Scene.viewportWidth,
+				Scene.viewportHeight,
+				Scene.viewportHeight * 0.5,
+			);
+		}
+		if (this.progressModal?.isOpen) {
+			this.layoutHubModal(this.progressModal);
+		}
+		if (this.customizeModal?.isOpen) {
+			this.layoutHubModal(this.customizeModal);
+		}
 	}
 
 	private async ensurePauseModal(): Promise<void> {
@@ -181,6 +315,74 @@ export class GameHUD extends HUD {
 		this.pauseContent.on('resume', () => this.emit('pause-resume'));
 		this.pauseContent.on('home', () => this.emit('pause-home'));
 		this.pauseContent.on('restart', () => this.emit('pause-restart'));
+	}
+
+	private async ensureResultModal(): Promise<void> {
+		if (this.resultModal) {
+			return;
+		}
+
+		this.resultModal = await HudModal.create({
+			width: RESULT_MODAL_WIDTH,
+			height: RESULT_MODAL_HEIGHT,
+			showOkButton: false,
+			closeOnBackdropTap: false,
+			panelAlias: '9slice-panel-old',
+		});
+		this.resultContent = await ResultModalContent.create();
+		this.resultModal.setContent(this.resultContent);
+		this.modalLayer.addChild(this.resultModal);
+
+		this.resultContent.on('continue', () => this.emit('result-continue'));
+		this.resultContent.on('home', () => this.emit('result-home'));
+		this.resultContent.on('restart', () => this.emit('result-restart'));
+	}
+
+	private async ensureProgressModal(): Promise<void> {
+		if (this.progressModal) {
+			return;
+		}
+
+		const layout = computeHubModalLayout(Scene.viewportWidth, Scene.viewportHeight);
+		this.progressModal = await HudModal.create({
+			width: layout.width,
+			height: layout.height,
+			showOkButton: true,
+			closeOnBackdropTap: true,
+			panelAlias: '9slice-panel-old',
+		});
+		this.progressContent = await ProgressModalContent.create();
+		this.progressModal.setContent(this.progressContent);
+		this.modalLayer.addChild(this.progressModal);
+	}
+
+	private async ensureCustomizeModal(): Promise<void> {
+		if (this.customizeModal) {
+			return;
+		}
+
+		const layout = computeHubModalLayout(Scene.viewportWidth, Scene.viewportHeight);
+		this.customizeModal = await HudModal.create({
+			width: layout.width,
+			height: layout.height,
+			showOkButton: true,
+			closeOnBackdropTap: true,
+			panelAlias: '9slice-panel-old',
+		});
+		this.customizeContent = await CustomizeModalContent.create();
+		this.customizeModal.setContent(this.customizeContent);
+		this.modalLayer.addChild(this.customizeModal);
+	}
+
+	private layoutHubModal(modal: HudModal): void {
+		const layout = computeHubModalLayout(Scene.viewportWidth, Scene.viewportHeight);
+		modal.adjustLayout(
+			Scene.viewportWidth,
+			Scene.viewportHeight,
+			layout.centerY,
+			layout.width,
+			layout.height,
+		);
 	}
 
 	private async addFullscreenButton(): Promise<void> {

@@ -288,6 +288,6 @@ Pixi = draw yourself + pick physics package. Phaser/Defold = gameplay kit includ
 - [x] Orientation for v1 → **landscape-first** (portrait UX deferred)
 - [x] Physics for v1 → **Matter.js** (custom AABB only for death droplet FX)
 - [x] UI hub + pause loop (menu carousel, Pause Home/Resume/Restart, platform session + commercialBreak on intent to play)
-- [x] Level catalog + portal exit chain + GameProgress save (A2); result modal still open
+- [x] Level catalog + portal exit chain + GameProgress save (A2); level-clear modal (C)
 - [ ] Target Poki first vs CrazyGames Basic Launch first
-- [ ] Next-level / result modal (stage C); portal firefly threshold later
+- [ ] Progress / Customize HudModals (stage D; OK dismiss); portal firefly threshold later

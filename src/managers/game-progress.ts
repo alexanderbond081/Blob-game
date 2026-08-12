@@ -259,8 +259,9 @@ export class GameProgress {
 	 * Apply exit-run rewards: complete current, unlock next, move last-played cursor.
 	 * Returns the next scene id to start, or null if the chain ends.
 	 */
-	public applyLevelExit(levelId: string, collected: number): string | null {
+	public applyLevelExit(levelId: string, collected: number, timeSec: number): string | null {
 		this.recordRunCollected(levelId, collected);
+		this.recordRunTime(levelId, timeSec);
 		this.markLevelCompleted(levelId);
 
 		const catalogNext = getNextGameSceneId(levelId, () => true);
@@ -274,6 +275,14 @@ export class GameProgress {
 
 		this.save();
 		return catalogNext;
+	}
+
+	public recordRunTime(levelId: string, timeSec: number): void {
+		const level = this.ensureLevel(levelId);
+		const rounded = Math.max(0, timeSec);
+		if (level.bestTimeSec === null || rounded < level.bestTimeSec) {
+			level.bestTimeSec = rounded;
+		}
 	}
 
 	private ensureLevel(levelId: string): LevelProgress {

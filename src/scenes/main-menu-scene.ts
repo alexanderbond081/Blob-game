@@ -1,8 +1,8 @@
-import { gsap } from 'gsap';
 import { Assets, DestroyOptions, ParticleContainer, Sprite, Spritesheet, Texture } from 'pixi.js';
 
 import { bindDebouncedTap } from '../components/debounced-tap';
 import { HighlightDecoration } from '../components/highlight-decoration';
+import { IdleBounceAnimator } from '../components/idle-bounce-animator';
 import { LevelCarousel } from '../components/level-carousel';
 import { AnotherFly } from '../components/particle-fly';
 import { UIButton } from '../components/ui-button';
@@ -28,10 +28,6 @@ const PORTRAIT_PLAY_GAP = 250;
 const PORTRAIT_SIDE_GAP = 100;
 const PORTRAIT_SIDE_SPREAD = 110;
 
-/** Idle Play bounce while an unlocked level is selected. */
-const PLAY_IDLE_INTERVAL_SEC = 8;
-const PLAY_IDLE_HOP_PX = 22;
-
 /**
  * Menu hub: level carousel plus Play and the two meta-screen entries.
  * Emits `play-level` (scene id), `open-progress` and `open-customize`.
@@ -43,11 +39,10 @@ export class MainMenuScene extends Scene {
 	private fliesContainer!: ParticleContainer;
 	private carousel!: LevelCarousel;
 	private playButton!: UIButton;
+	private playBounce = new IdleBounceAnimator();
 	private progressButton!: UIButton;
 	private customizeButton!: UIButton;
 	private isPlayEnabled = false;
-	private playIdleDelay: gsap.core.Tween | null = null;
-	private playIdleBounce: gsap.core.Timeline | null = null;
 
 	public async init(): Promise<void> {
 		await this.addBackground();
@@ -75,7 +70,7 @@ export class MainMenuScene extends Scene {
 
 	public override destroy(options?: DestroyOptions): void {
 		window.removeEventListener('keydown', this.onKeyDown);
-		this.clearPlayIdle();
+		this.playBounce.destroy();
 		super.destroy(options);
 	}
 
@@ -187,6 +182,7 @@ export class MainMenuScene extends Scene {
 			new HighlightDecoration(0.85),
 		);
 		this.addChild(this.playButton);
+		this.playBounce.attach(this.playButton);
 
 		// Stay clickable for locked levels too — feedback is sound + lock shake.
 		bindDebouncedTap(this.playButton, () => {
@@ -238,6 +234,7 @@ export class MainMenuScene extends Scene {
 
 		this.playButton.x = centerX;
 		this.playButton.y = PLAY_BUTTON_Y;
+		this.playBounce.syncRestPosition();
 
 		this.progressButton.x = SIDE_BUTTON_MARGIN;
 		this.progressButton.y = SIDE_BUTTON_Y;
@@ -259,6 +256,7 @@ export class MainMenuScene extends Scene {
 
 		this.playButton.x = centerX;
 		this.playButton.y = carouselY + PORTRAIT_PLAY_GAP;
+		this.playBounce.syncRestPosition();
 
 		this.progressButton.x = centerX - PORTRAIT_SIDE_SPREAD;
 		this.progressButton.y = this.playButton.y + PORTRAIT_SIDE_GAP;
@@ -283,125 +281,28 @@ export class MainMenuScene extends Scene {
 		this.playButton.cursor = 'pointer';
 
 		if (enabled) {
-			this.schedulePlayIdle();
+			this.playBounce.start();
 		} else {
-			this.clearPlayIdle();
-			this.resetPlayButtonTransform();
+			this.playBounce.stop();
 		}
 	}
 
 	private requestPlay(): void {
 		const entry = this.carousel.selectedEntry;
 
-		this.clearPlayIdle();
+		this.playBounce.stop();
 
 		if (!isCarouselLevelPlayable(entry)) {
 			SoundManager.playSound('level-locked');
 			this.carousel.playSelectedLockDenied();
-			this.schedulePlayIdle();
+			if (this.isPlayEnabled) {
+				this.playBounce.start();
+			}
 			return;
 		}
 
 		SoundManager.playSound('level-start');
 		this.emit('play-level', entry.id);
-	}
-
-	private schedulePlayIdle(): void {
-		this.playIdleDelay?.kill();
-		this.playIdleDelay = null;
-
-		if (!this.isPlayEnabled || !this.playButton) {
-			return;
-		}
-
-		this.playIdleDelay = gsap.delayedCall(PLAY_IDLE_INTERVAL_SEC, () => {
-			this.runPlayIdleBounce();
-			this.schedulePlayIdle();
-		});
-	}
-
-	private clearPlayIdle(): void {
-		this.playIdleDelay?.kill();
-		this.playIdleDelay = null;
-		this.playIdleBounce?.kill();
-		this.playIdleBounce = null;
-	}
-
-	private resetPlayButtonTransform(): void {
-		if (!this.playButton) {
-			return;
-		}
-
-		gsap.killTweensOf(this.playButton);
-		this.playButton.scale.set(1);
-		this.playButton.adjustScale(1, 1);
-	}
-
-	/** Squash → hop → land → settle, twice. */
-	private runPlayIdleBounce(): void {
-		if (!this.playButton || !this.isPlayEnabled) {
-			return;
-		}
-
-		const button = this.playButton;
-		const restY = button.y;
-		const height = button.height;
-
-		this.playIdleBounce?.kill();
-		gsap.killTweensOf(button);
-		button.scale.set(1);
-		button.y = restY;
-
-		const sit = (): gsap.core.Timeline => {
-			return gsap.timeline()
-				.to(button, {
-					pixi: {
-						scaleX: 1.2, scaleY: 0.8, y: restY + height * 0.1
-					},
-					duration: 0.22,
-					ease: 'power1.out',
-				});
-		};
-
-		const hop = (): gsap.core.Timeline => {
-			return gsap.timeline()
-				.to(button, {
-					pixi: { scaleX: 0.85, scaleY: 1.15, y: restY - PLAY_IDLE_HOP_PX },
-					duration: 0.15,
-					ease: 'power2.out',
-				})
-				.to(button, {
-					pixi: { scaleX: 1.05, scaleY: 0.95, y: restY - PLAY_IDLE_HOP_PX - height * 0.025 },
-					duration: 0.07,
-					ease: 'power1.out',
-				})
-				.to(button, {
-					pixi: { scaleX: 1.1, scaleY: 0.9, y: restY + height * 0.05 },
-					duration: 0.15,
-					ease: 'power1.in',
-				})
-				.to(button, {
-					pixi: { scaleX: 1.2, scaleY: 0.8, y: restY + height * 0.1 },
-					duration: 0.07,
-					ease: 'power1.out',
-				});
-		};
-
-		const out = (): gsap.core.Timeline => {
-			return gsap.timeline()
-				.to(button, {
-					pixi: { scaleX: 1, scaleY: 1, y: restY },
-					duration: 0.6,
-					ease: 'elastic.out(1.1, 0.4)',
-				});
-		};
-
-		this.playIdleBounce = gsap.timeline()
-			.add(sit())
-			.add(hop())
-			//.add(hop(), '+=0.02')
-			.add(hop())
-			.add(out());
 	}
 
 	private readonly onKeyDown = (event: KeyboardEvent): void => {

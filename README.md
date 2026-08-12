@@ -99,15 +99,14 @@ Production builds write `dist/BUILD.txt` (version, channel, git meta). Upload th
 | A — Main menu + carousel + platform session | Done |
 | B — Pause modal (Resume / Home / Restart) | Done |
 | A2 — Portal chain + GameProgress + catalog | Done |
-| C — Win + next-level modal | Next |
-| D — Progress / Customize scenes | Later |
+| C — Level-clear modal (stats + Continue) | Done |
+| D — Progress / Customize modals | Next |
 | E — Help / rewarded teleport | Later |
 | F — Polish (movePill, etc.) | Later |
 
 ## Known gaps (not blockers for a first push)
 
-- Instant portal → next level (no result modal yet — stage C)
-- Progress / Customize buttons still no-op (scenes — stage D)
+- Progress / Customize buttons still no-op (HudModals — stage D)
 - More player kit still queued (double jump, dash, glide) — see mechanics backlog
 - Final art for sticky walls / spikes; droplet puddle polish deferred
 - Bundle is heavier than an ideal Poki first download (`bundle.js` ~1.4 MB + music) — optimize before portal submit

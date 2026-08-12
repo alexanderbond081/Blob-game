@@ -42,6 +42,10 @@ let gameSceneAssets: string = '';
 let isSwitchingScene = false;
 /** Scene catalog id of the level currently in play (for Restart). */
 let currentPlaySceneId: string | null = null;
+/** After level-clear modal: next scene to load on Continue (null → menu). */
+let pendingResultNextSceneId: string | null = null;
+/** Level that was just cleared (Restart from result modal). */
+let pendingResultLevelId: string | null = null;
 
 /** Global scene pause (ticker + input) during bootstrap/load / future UI pause. */
 let isPaused = true;
@@ -288,11 +292,22 @@ async function preload(): Promise<void> {
 async function showMainMenu(): Promise<void> {
 
 	currentPlaySceneId = null;
+	pendingResultNextSceneId = null;
+	pendingResultLevelId = null;
 	platformGameplayStop();
+	gameHUD.closeResultModal();
+	gameHUD.closeProgressModal();
+	gameHUD.closeCustomizeModal();
 
 	const menuScene = new MainMenuScene;
 	menuScene.on('play-level', (sceneId: string) => {
 		void startLevel(sceneId);
+	});
+	menuScene.on('open-progress', () => {
+		void gameHUD.openProgressModal();
+	});
+	menuScene.on('open-customize', () => {
+		void gameHUD.openCustomizeModal();
 	});
 
 	await changeScene(menuScene, 'main-menu-scene', () => {
@@ -316,6 +331,7 @@ async function startLevel(sceneId: string): Promise<void> {
 	isSwitchingScene = true;
 	isPaused = true;
 	gameHUD.closePauseModal();
+	gameHUD.closeResultModal();
 	platformGameplayStop();
 
 	try {
@@ -325,6 +341,8 @@ async function startLevel(sceneId: string): Promise<void> {
 		GameProgress.shared.save();
 		const levelScene = entry.createScene() as PlatformLevelScene;
 		levelScene.on('level-exit', (payload: LevelExitEvent) => {
+			isPaused = true;
+			platformGameplayStop();
 			void handleLevelExit(payload);
 		});
 		await changeScene(levelScene, entry.assetBundle, () => {
@@ -344,8 +362,34 @@ async function handleLevelExit(payload: LevelExitEvent): Promise<void> {
 		return;
 	}
 
-	const nextSceneId = GameProgress.shared.applyLevelExit(payload.levelId, payload.collected);
-	console.info(`[level] leave ${payload.levelId} → ${nextSceneId ?? 'main-menu'}`);
+	const nextSceneId = GameProgress.shared.applyLevelExit(
+		payload.levelId,
+		payload.collected,
+		payload.timeSec,
+	);
+	pendingResultNextSceneId = nextSceneId;
+	pendingResultLevelId = payload.levelId;
+	console.info(`[level] clear ${payload.levelId} → modal (next=${nextSceneId ?? 'main-menu'})`);
+
+	isPaused = true;
+	gameHUD.closePauseModal();
+	await gameHUD.openResultModal({
+		collected: payload.collected,
+		totalFireflies: payload.totalFireflies,
+		timeSec: payload.timeSec,
+		deaths: payload.deaths,
+	});
+}
+
+async function continueFromResult(): Promise<void> {
+	if (isSwitchingScene || !gameHUD.isModalOpen()) {
+		return;
+	}
+
+	const nextSceneId = pendingResultNextSceneId;
+	pendingResultNextSceneId = null;
+	pendingResultLevelId = null;
+	gameHUD.closeResultModal();
 
 	if (nextSceneId) {
 		await startLevel(nextSceneId);
@@ -354,7 +398,6 @@ async function handleLevelExit(payload: LevelExitEvent): Promise<void> {
 
 	isSwitchingScene = true;
 	isPaused = true;
-	gameHUD.closePauseModal();
 
 	try {
 		await showMainMenu();
@@ -362,6 +405,39 @@ async function handleLevelExit(payload: LevelExitEvent): Promise<void> {
 		isPaused = false;
 		isSwitchingScene = false;
 	}
+}
+
+async function homeFromResult(): Promise<void> {
+	if (isSwitchingScene) {
+		return;
+	}
+
+	pendingResultNextSceneId = null;
+	pendingResultLevelId = null;
+	gameHUD.closeResultModal();
+
+	isSwitchingScene = true;
+	isPaused = true;
+
+	try {
+		await showMainMenu();
+	} finally {
+		isPaused = false;
+		isSwitchingScene = false;
+	}
+}
+
+async function restartFromResult(): Promise<void> {
+	const levelId = pendingResultLevelId ?? currentPlaySceneId;
+	pendingResultNextSceneId = null;
+	pendingResultLevelId = null;
+	gameHUD.closeResultModal();
+
+	if (!levelId) {
+		return;
+	}
+
+	await startLevel(levelId);
 }
 
 const applyProgressAudioSettings = (progress: GameProgress): void => {
@@ -380,9 +456,12 @@ async function resetProgressDebug(): Promise<void> {
 	applyProgressAudioSettings(GameProgress.shared);
 	console.info('[GameProgress] reset via Alt+R');
 
+	pendingResultNextSceneId = null;
+	pendingResultLevelId = null;
 	isSwitchingScene = true;
 	isPaused = true;
 	gameHUD.closePauseModal();
+	gameHUD.closeResultModal();
 
 	try {
 		await showMainMenu();
@@ -462,6 +541,9 @@ function connectPauseControls(): void {
 	gameHUD.off('pause-resume');
 	gameHUD.off('pause-home');
 	gameHUD.off('pause-restart');
+	gameHUD.off('result-continue');
+	gameHUD.off('result-home');
+	gameHUD.off('result-restart');
 
 	gameHUD.on('request-pause', () => {
 		void openPause();
@@ -474,6 +556,15 @@ function connectPauseControls(): void {
 	});
 	gameHUD.on('pause-restart', () => {
 		void restartFromPause();
+	});
+	gameHUD.on('result-continue', () => {
+		void continueFromResult();
+	});
+	gameHUD.on('result-home', () => {
+		void homeFromResult();
+	});
+	gameHUD.on('result-restart', () => {
+		void restartFromResult();
 	});
 }
 
@@ -521,6 +612,17 @@ function onKeyDown(event: KeyboardEvent): void {
 			void openPause();
 		}
 		return;
+	}
+
+	if (event.code === 'Enter' || event.code === 'NumpadEnter') {
+		event.preventDefault();
+		if (event.repeat) {
+			return;
+		}
+
+		if (gameHUD.acceptPrimaryAction()) {
+			return;
+		}
 	}
 
 	if (event.code === 'KeyF') {

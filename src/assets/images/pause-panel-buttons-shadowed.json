@@ -1,0 +1,14 @@
+{
+	"frames": {
+	  "home-button": { "frame": { "x": 0, "y": 0, "w": 210, "h": 210 } },
+	  "restart-button": { "frame": { "x": 210, "y": 0, "w": 210, "h": 210 } }
+	},
+	"animations": {
+		"home": ["home-button"],
+		"restart": ["restart-button"]
+	},
+	"meta": {
+	  "image": "pause-panel-buttons-shadowed.webp",
+	  "scale": "1"
+	}
+  }

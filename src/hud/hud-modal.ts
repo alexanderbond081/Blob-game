@@ -1,19 +1,21 @@
 import { Assets, Container, DestroyOptions, FederatedPointerEvent, Graphics, NineSliceSprite, Texture } from 'pixi.js';
 import { gsap } from 'gsap';
 import { bindDebouncedTap } from '../components/debounced-tap';
-import { HighlightDecoration } from '../components/highlight-decoration';
-import { UIButton } from '../components/ui-button';
 import { SoundManager } from '../managers/sound-manager';
+import { createModalOkLabel } from './modals/modal-title';
 
 /** Matches the 150×150 logical paper panels (resolution 2). */
 const PANEL_SLICE = 30;
+/** 75×75 logical graydirt button (resolution 2). */
+const OK_BUTTON_SLICE = 15;
 const DEFAULT_BACKDROP_ALPHA = 0.45;
 const CONTENT_PADDING = 28;
-const OK_BUTTON_WIDTH = 96;
-const OK_BUTTON_HEIGHT = 32;
-const OK_BUTTON_BOTTOM_OFFSET = 36;
+const OK_BUTTON_WIDTH = 120;
+const OK_BUTTON_HEIGHT = 48;
+const OK_BUTTON_BOTTOM_OFFSET = 40;
 const CONTENT_BOTTOM_RESERVE = 56;
 const DEFAULT_PANEL_ALIAS = '9slice-panel-old';
+const OK_BUTTON_ALIAS = '9slice-button-graydirt';
 
 export type HudModalOptions = {
 	width: number;
@@ -27,7 +29,7 @@ export type HudModalOptions = {
 };
 
 type ReflowableContent = Container & {
-	reflow(contentWidth: number): void;
+	reflow(contentWidth: number, panelHeight?: number): void;
 };
 
 export class HudModal extends Container {
@@ -35,7 +37,7 @@ export class HudModal extends Container {
 	private readonly windowRoot: Container;
 	private readonly panel: NineSliceSprite;
 	private readonly content: Container;
-	private readonly okButton: UIButton | null;
+	private readonly okButtonRoot: Container | null;
 	private readonly modalWidth: number;
 	private readonly modalHeight: number;
 	private readonly backdropAlpha: number;
@@ -44,7 +46,11 @@ export class HudModal extends Container {
 	private isBackdropTapEnabled = false;
 	private _isOpen = false;
 
-	private constructor(panelTexture: Texture, okButtonTexture: Texture | null, options: HudModalOptions) {
+	private constructor(
+		panelTexture: Texture,
+		okButtonTexture: Texture | null,
+		options: HudModalOptions,
+	) {
 		super();
 
 		this.modalWidth = options.width;
@@ -73,20 +79,32 @@ export class HudModal extends Container {
 		this.content = new Container();
 
 		if (this.showOkButton && okButtonTexture) {
-			this.okButton = UIButton.fromTexture(
-				okButtonTexture,
-				OK_BUTTON_WIDTH,
-				OK_BUTTON_HEIGHT,
-				new HighlightDecoration(0.85),
-			);
+			const okBg = new NineSliceSprite({
+				texture: okButtonTexture,
+				leftWidth: OK_BUTTON_SLICE,
+				rightWidth: OK_BUTTON_SLICE,
+				topHeight: OK_BUTTON_SLICE,
+				bottomHeight: OK_BUTTON_SLICE,
+				width: OK_BUTTON_WIDTH,
+				height: OK_BUTTON_HEIGHT,
+			});
+			okBg.anchor.set(0.5);
+
+			const okLabel = createModalOkLabel();
+
+			this.okButtonRoot = new Container();
+			this.okButtonRoot.eventMode = 'static';
+			this.okButtonRoot.cursor = 'pointer';
+			this.okButtonRoot.addChild(okBg);
+			this.okButtonRoot.addChild(okLabel);
 		} else {
-			this.okButton = null;
+			this.okButtonRoot = null;
 		}
 
 		this.windowRoot.addChild(this.panel);
 		this.windowRoot.addChild(this.content);
-		if (this.okButton) {
-			this.windowRoot.addChild(this.okButton);
+		if (this.okButtonRoot) {
+			this.windowRoot.addChild(this.okButtonRoot);
 		}
 		this.addChild(this.backdrop);
 		this.addChild(this.windowRoot);
@@ -100,16 +118,12 @@ export class HudModal extends Container {
 		const showOk = options.showOkButton ?? true;
 		const panelTexture = await Assets.load<Texture>(panelAlias);
 
-		let okTexture: Texture | null = null;
+		let okButtonTexture: Texture | null = null;
 		if (showOk) {
-			try {
-				okTexture = await Assets.load<Texture>('button-ok');
-			} catch {
-				okTexture = Texture.WHITE;
-			}
+			okButtonTexture = await Assets.load<Texture>(OK_BUTTON_ALIAS);
 		}
 
-		return new HudModal(panelTexture, okTexture, options);
+		return new HudModal(panelTexture, okButtonTexture, options);
 	}
 
 	public get isOpen(): boolean {
@@ -157,8 +171,15 @@ export class HudModal extends Container {
 		this.open();
 	}
 
-	public adjustLayout(viewportWidth: number, viewportHeight: number, centerY: number, panelWidth?: number): void {
+	public adjustLayout(
+		viewportWidth: number,
+		viewportHeight: number,
+		centerY: number,
+		panelWidth?: number,
+		panelHeight?: number,
+	): void {
 		const width = panelWidth ?? this.modalWidth;
+		const height = panelHeight ?? this.modalHeight;
 		const contentWidth = width - CONTENT_PADDING * 2;
 
 		this.backdrop.clear()
@@ -168,19 +189,19 @@ export class HudModal extends Container {
 		this.windowRoot.x = viewportWidth / 2;
 		this.windowRoot.y = centerY;
 		this.panel.width = width;
-		this.panel.height = this.modalHeight;
+		this.panel.height = height;
 
 		const contentView = this.content.children[0] as ReflowableContent | undefined;
-		contentView?.reflow?.(contentWidth);
+		contentView?.reflow?.(contentWidth, height);
 
 		this.content.x = 0;
 		this.content.y = this.showOkButton
 			? -CONTENT_BOTTOM_RESERVE / 2
 			: 0;
 
-		if (this.okButton) {
-			this.okButton.x = 0;
-			this.okButton.y = this.modalHeight / 2 - OK_BUTTON_BOTTOM_OFFSET;
+		if (this.okButtonRoot) {
+			this.okButtonRoot.x = 0;
+			this.okButtonRoot.y = height / 2 - OK_BUTTON_BOTTOM_OFFSET;
 		}
 	}
 
@@ -203,8 +224,8 @@ export class HudModal extends Container {
 			event.stopPropagation();
 		});
 
-		if (this.okButton) {
-			bindDebouncedTap(this.okButton, () => {
+		if (this.okButtonRoot) {
+			bindDebouncedTap(this.okButtonRoot, () => {
 				this.closeWithSound();
 			});
 		}
