@@ -179,7 +179,7 @@ Old “Arcade timer on the same casual run” folds into **Speedrun** as the pos
 - Space: **small field** — camera may barely scroll or gently follow; not open-world.
 - Content reuse: many levels = **same mechanics, different layout + art dressing** (Poki-normal).
 - **Pacing:** early episodes **shorter**; after ~2–3 abilities, episodes lengthen and difficulty climbs easy → medium (see Progression).
-- Authoring: prefer **Tiled** maps (`.tmj`) so packing scenes stays visual, not hand-coded coordinates forever.
+- Authoring: **[Ogmo 3](https://ogmo-editor-3.github.io/)** entity layers (AABB platforms, spawn, portal, fireflies, spikes) exported to JSON; runtime flips Y from the level bottom. Tiled is no longer the plan.
 
 ### Background layers (parallax)
 
@@ -191,7 +191,7 @@ Old “Arcade timer on the same casual run” folds into **Speedrun** as the pos
 | Playfield | Camera follow | Ground, leaves, entities |
 | FX / glow | Screen or world space | Blob/item aura (additive / alpha sprites) |
 
-Parallax = **offset layers by camera × factor** (manual in [`ParallaxLayer`](../src/world/parallax-layer.ts); Tiled props later if we adopt it).
+Parallax = **offset layers by camera × factor** (manual in [`ParallaxLayer`](../src/world/parallax-layer.ts)).
 
 **Art / orientation policy (do not forget):** painted mid/far plates are labor-heavy (hand-placed tufts/props). Prefer **lowering `parallax`** so edges stay off-screen over inventing large bleed margins. For **portrait**, use a **separate sky** texture (mood only — need not match landscape sky); far/mid keep the same plates with retuned `p` if needed. Platforms/colliders are the source of truth for playability — bg cover is secondary. Full write-up: [`plans/poki.md`](./poki.md) → *Background art strategy*.
 
@@ -224,10 +224,10 @@ Keep the “mini-engine” thin: libraries for map + camera + physics; own code 
 | Language | **TypeScript** | Same as existing projects |
 | Renderer | **Pixi.js v8** | Sprites, containers, filters (optional glow) |
 | Bundler | **Webpack 5** (chosen) | Vite remains a fine alternative for a greenfield fork |
-| Level editor | **[Tiled](https://www.mapeditor.org/)** | Tile layers + object layers (collision, spawns, collectibles) |
-| Map loader | **[pixi-tiledmap](https://www.npmjs.com/package/pixi-tiledmap)** (v2 / Pixi 8) | Load `.tmj` / `.tmx`, render tiles, parallax helpers |
+| Level editor | **[Ogmo 3](https://ogmo-editor-3.github.io/)** | Entity rectangles + point entities; export JSON, convert Y on load |
+| Map loader | Custom Zod JSON ([`src/levels/`](../src/levels/)) | `platforms` / `hazards` / `collectibles` / spawn / exit — no tilemap runtime |
 | Camera | **[pixi-viewport](https://github.com/pixijs-userland/pixi-viewport)** *or* ~15-line follow | Center on blob, clamp to level bounds |
-| Physics | **[Matter.js](https://brm.io/matter-js/)** *or* kinematic AABB + gravity | Static colliders from Tiled objects; blob as controlled body — **do not write a physics engine** |
+| Physics | **[Matter.js](https://brm.io/matter-js/)** *or* kinematic AABB + gravity | Static colliders from Ogmo rectangles; blob as controlled body — **do not write a physics engine** |
 | Animation / juice | **GSAP** (known) + simple sprite states | Jump squash, collect pop, leaf sway |
 | Glow / mystique | Bright sprites + alpha / optional Pixi blur/glow filter | Dim world `ColorMatrix` or dark overlay — **no Light2D** |
 | Audio | **@pixi/sound** or Howler | SFX + music; optional Speedrun / ending cues later |
@@ -253,12 +253,12 @@ app.stage
       ├─ BG far (sky, mountains)      parallax ~0–0.2
       ├─ BG mid (clouds, far trees)   parallax ~0.3–0.5
       ├─ BG near (bushes, lake)       parallax ~0.6–0.8
-      ├─ Playfield (Tiled tiles)
+      ├─ Playfield (Ogmo / JSON colliders)
       ├─ Entities (blob, fireflies, hazards)
       └─ Glow FX (additive sprites / filters)
 ```
 
-Collision shapes and entity spawns come from Tiled **object layers**, not from guessing pixels.
+Collision shapes and entity spawns come from Ogmo **entity layers**, not from guessing pixels.
 
 ---
 
@@ -269,7 +269,7 @@ Collision shapes and entity spawns come from Tiled **object layers**, not from g
 - Post-campaign modes (Speedrun / Puzzle / Survival) before campaign ships  
 - 50 levels before first playable vertical slice  
 - Online leaderboards on day one  
-- Godot feature-parity — use **Tiled + Matter + viewport** as the substitute toolkit  
+- Godot feature-parity — use **Ogmo + Matter + viewport** as the substitute toolkit  
 
 ---
 
@@ -291,7 +291,7 @@ Collision shapes and entity spawns come from Tiled **object layers**, not from g
 
 ## Prototype status (vertical slice)
 
-Shipped in-repo (not full MVP): one JSON level (`forest-01`), Matter player with many moves already prototyped (cling, crouch/hide, spikes + death droplets, fireflies), dual parallax, keyboard + touch, portal SDK adapters (ads not wired). **Not yet:** episode gating (start as walk-only), pollen relics, exit portal that opens with collect count, hub meta UI, gold fireflies, crowns, lifetime scores, NG+, origin/ending beats. Levels are Zod-validated JSON for now; **Tiled** still the preferred long-term authoring path above.
+Shipped in-repo (not full MVP): meadow JSON levels authored in Ogmo (`meadow-01`, `meadow-02`), Matter player (cling, crouch/hide + crouch jump, spikes + death droplets), fireflies that fill portal rim slots and open the door/vortex, dual parallax, keyboard + touch, hub UI (Progress / Customize / pause / clear), portal SDK adapters. **Not yet:** blob fly-in into the open portal (deferred), episode gating (start as walk-only), pollen relics, gold fireflies, crowns, NG+, origin/ending beats, moving enemies. Runtime stays Zod-validated JSON; Ogmo is the layout editor.
 
 ---
 
@@ -301,7 +301,8 @@ A smaller milestone than the MVP above: a build worth publishing on itch.io and 
 
 **Demo done when:**
 
-- [ ] Portal opens on a firefly threshold, with door art and a satisfying entry sequence  
+- [x] Portal opens on a firefly threshold, with door / vortex art  
+- [ ] Portal entry animation before the result modal (**deferred**)  
 - [ ] Moving enemies exist (beetle / spider / wasp on fixed paths) and share the death pipeline  
 - [ ] 10 levels with a readable difficulty curve  
 - [ ] Touch controls are genuinely playable on a phone (gesture-first, no on-screen buttons)  
@@ -320,6 +321,7 @@ Scope differences from the MVP: 10 levels instead of 15–20, no pollen-relic ep
 - [x] Stickiness → **Matter** static labels (`sticky-wall`) + cling controller (not pure kinematic world)  
 - [x] Bundler → **Webpack 5**  
 - [x] Level clear → **fairy portal** after firefly threshold (not collect-all)  
+- [x] Level authoring → **Ogmo 3** entity layers → Zod JSON (Y flipped on load); Tiled not used  
 - [x] Meta progression → **episodes unlock abilities** via **inanimate pollen relics**; hub shows icons + totals  
 - [x] Replays keep earned abilities; full clear → **Play from start** with full kit (NG+); relics re-collectable  
 - [x] Level 1: wake as crawl-only → on-screen **bouncing dewdrop** → **jump**; early episodes **shorter**, stretch after 2–3 abilities  
@@ -329,7 +331,6 @@ Scope differences from the MVP: 10 levels instead of 15–20, no pollen-relic ep
 - [ ] Do gold fireflies count toward the portal threshold, or optional only?  
 - [ ] Portal destination: always next level vs hub with free level select  
 - [ ] Launch target first: itch / CrazyGames Basic / Poki submission  
-- [ ] When to adopt Tiled (`.tmj`) vs keep hand-authored JSON  
 
 ---
 

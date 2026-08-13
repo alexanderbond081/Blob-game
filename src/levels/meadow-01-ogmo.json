@@ -1,0 +1,41 @@
+{
+  "ogmoVersion": "3.4.0",
+  "width": 1500,
+  "height": 1500,
+  "offsetX": 0,
+  "offsetY": 0,
+  "layers": [
+    {
+      "name": "platforms",
+      "_eid": "57334173",
+      "offsetX": 0,
+      "offsetY": 0,
+      "gridCellWidth": 10,
+      "gridCellHeight": 10,
+      "gridCellsX": 150,
+      "gridCellsY": 150,
+      "entities": [
+        {"name": "wall", "id": 0, "_eid": "57390486", "x": 60, "y": 0, "width": 30, "height": 1460},
+        {"name": "wall", "id": 1, "_eid": "57390486", "x": 1310, "y": 650, "width": 30, "height": 810},
+        {"name": "ground", "id": 2, "_eid": "57405180", "x": 0, "y": 1460, "width": 1500, "height": 50},
+        {"name": "leaf", "id": 3, "_eid": "57377904", "x": 100, "y": 410, "width": 100, "height": 30},
+        {"name": "leaf", "id": 4, "_eid": "57377904", "x": 100, "y": 700, "width": 120, "height": 30},
+        {"name": "leaf", "id": 5, "_eid": "57377904", "x": 100, "y": 960, "width": 140, "height": 30},
+        {"name": "leaf", "id": 6, "_eid": "57377904", "x": 100, "y": 110, "width": 80, "height": 30},
+        {"name": "leaf", "id": 7, "_eid": "57377904", "x": -20, "y": 280, "width": 60, "height": 30},
+        {"name": "leaf", "id": 8, "_eid": "57377904", "x": -30, "y": 570, "width": 60, "height": 30},
+        {"name": "leaf", "id": 9, "_eid": "57377904", "x": -20, "y": 850, "width": 60, "height": 30},
+        {"name": "leaf", "id": 10, "_eid": "57377904", "x": -20, "y": 1110, "width": 60, "height": 30},
+        {"name": "ground", "id": 11, "_eid": "57405180", "x": 560, "y": 1380, "width": 90, "height": 70},
+        {"name": "firefly", "id": 12, "_eid": "57574758", "x": 930, "y": 1400},
+        {"name": "leaf", "id": 13, "_eid": "57377904", "x": 100, "y": 1220, "width": 180, "height": 30},
+        {"name": "portal", "id": 14, "_eid": "57607701", "x": 1190, "y": 1370},
+        {"name": "leaf", "id": 15, "_eid": "57377904", "x": 1170, "y": 990, "width": 120, "height": 40},
+        {"name": "leaf", "id": 16, "_eid": "57377904", "x": 1360, "y": 1180, "width": 120, "height": 30},
+        {"name": "leaf", "id": 17, "_eid": "57377904", "x": 1360, "y": 780, "width": 120, "height": 30},
+        {"name": "spikes", "id": 18, "_eid": "57417469", "x": 1270, "y": 590, "width": 110, "height": 60},
+        {"name": "blob", "id": 19, "_eid": "57583892", "x": 250, "y": 800}
+      ]
+    }
+  ]
+}

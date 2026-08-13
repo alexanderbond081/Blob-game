@@ -290,6 +290,7 @@ Pixi = draw yourself + pick physics package. Phaser/Defold = gameplay kit includ
 - [x] UI hub + pause loop (menu carousel, Pause Home/Resume/Restart, platform session + commercialBreak on intent to play)
 - [x] Level catalog + portal exit chain + GameProgress save (A2); level-clear modal (C)
 - [x] Progress / Customize HudModals (stage D; OK dismiss) + skins catalog applied in-level
+- [x] Portal unlock by firefly rim slots + door / vortex art (stage E #1). Blob fly-in animation deferred
 - [x] Portrait / rotate support → **stage F** (Poki accepts landscape-only; camera + HUD + hub modals rework is too costly for the demo)
 - [x] Rewarded help → **stage F**; shape still open (flight vs teleport to portal)
 - [ ] Target Poki first vs CrazyGames Basic Launch first
@@ -305,10 +306,10 @@ Ordered by dependency: anything that changes level rules lands before the levels
 
 | # | Task | Depends on / notes |
 |---|------|--------------------|
-| 1 | Portal unlock by fireflies + door art | Gate rule is part of every level's design |
-| 2 | Portal entry animation + SFX before the result modal | Independent, can run in parallel |
+| 1 | Portal unlock by fireflies + door art | **Done.** Locked until `exit.slots` fireflies dock on the rim; door tweens out, vortex spins. Extra flies fade into the centre |
+| 2 | Portal entry animation + SFX before the result modal | Enter SFX (`portal-enter`) is in. **Blob fly-in / suck-in animation deferred** — result modal still fires on overlap |
 | 3 | Enemies: moving hazards (beetle / spider / wasp), fixed paths | New `enemies[]`-style schema entry; blocks level authoring |
-| 4 | 10 levels, progressive difficulty | After 1 and 3 |
+| 4 | 10 levels, progressive difficulty | After 3. Authoring is **Ogmo 3** entity layers → runtime JSON (Y flipped on load). Two meadow layouts in-repo so far |
 | 5 | Touch controls rework | Current invisible 9-slice pad is a stopgap and not playable enough. Gesture-first, no on-screen buttons. Likely shape: thumbstick spawned under the finger + tap-to-jump zone; pure swipes read badly with wall cling |
 | 6 | Hints for existing mechanics only | After the mechanic set is frozen |
 | 7 | Demo outro screen after the last level | "Thanks for playing the demo, wishlist the full version…" |

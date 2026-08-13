@@ -2,7 +2,7 @@
 
 Casual HTML5 platformer: a glowing blob jumps across leaves and collects fireflies. Short Poki-style levels, landscape **960×540**.
 
-**Status:** playable vertical slice / portfolio prototype — main menu with level carousel, one JSON level, sticky walls, hazards/death, crouch/hide, collectibles, pause → Home / Resume / Restart. Not yet submitted to portals.
+**Status:** playable vertical slice / portfolio prototype — main menu with level carousel, Ogmo-authored meadow levels, sticky walls, hazards/death, crouch/hide + crouch jump, fireflies that fill the portal, pause → Home / Resume / Restart. Not yet submitted to portals.
 
 Built with **Pixi.js v8**, **Matter.js**, **TypeScript**, **Webpack 5**.
 
@@ -44,12 +44,13 @@ The 9-slice touch pad is a stopgap so the game can be tried on a phone at all; i
 - **Sticky walls** (`label: "sticky-wall"`): air cling, slow slide, peel-off stretch, wall-jump
 - **Hazards** (`hazards[]`, e.g. `type: "spikes"`): solid kill volumes
 - **Death:** shared kill path (hazard / fall) → optional `burst` anim → droplet splash → pause → respawn (empty burst frame OK; no forced hide of last frame)
-- **Crouch / hide:** hold ↓ / `S` / bottom-center; blend-in squat + alpha; collider half-height; release → micro-hop; jump from crouch skips squat wind-up
-- Fireflies: bob animation, pickup SFX, respawn after a few seconds
+- **Crouch / hide:** hold ↓ / `S` / bottom-center; blend-in squat + alpha; collider half-height; release → micro-hop; jump from any crouch skips squat wind-up, uses `CROUCH_JUMP_VELOCITY` and a lower-pitched jump SFX
+- **Portal gate:** starts locked; fireflies home to rim slots (`exit.slots`); door tweens out and a vortex spins when full; overlap then clears the level. Blob fly-in / suck-in animation is deferred
+- Fireflies: wander around their point, pickup wind SFX, then fly to a portal slot (or fade into the vortex if the rim is already full)
 - Top icon HUD: fullscreen (non-Poki), pause (gameplay), separate music / SFX mute
 - Platform SDK bridge: `gameLoadingFinished`, `gameplayStart` / `Stop`, `commercialBreak` / rewarded hooks ([`src/platform/platform.ts`](src/platform/platform.ts))
 
-Level data: JSON + Zod ([`src/levels/`](src/levels/)) — `platforms`, `hazards`, `collectibles`, spawn, size, backgrounds, exit portal.
+Level data: JSON + Zod ([`src/levels/`](src/levels/)) — `platforms`, `hazards`, `collectibles`, spawn, size, backgrounds, exit portal. Layouts are blocked in **[Ogmo 3](https://ogmo-editor-3.github.io/)** (`*-ogmo.json`); Y is flipped on load (`authorY` from the level bottom).
 
 ## Goals
 
@@ -85,11 +86,11 @@ Production builds write `dist/BUILD.txt` (version, channel, git meta). Upload th
 |------|------|
 | `src/scenes/` | Loading, main menu, platform level |
 | `src/components/` | Level carousel and shared UI bits |
-| `src/entities/` | Player, collectibles, hazards |
+| `src/entities/` | Player, fireflies, portal, hazards |
 | `src/fx/` | Death droplet pool and other short-lived VFX |
 | `src/physics/` | Matter world, static bodies, ground / wall contact |
 | `src/world/` | Camera, parallax, level root |
-| `src/levels/` | Zod schema + JSON levels (`forest-01`) |
+| `src/levels/` | Zod schema + JSON levels (`meadow-01` / `meadow-02`) + Ogmo sources |
 | `src/input/` | Shared controls + 9-slice touch pad |
 | `src/hud/` | Icon HUD + modals (pause, result, Progress, Customize) |
 | `src/managers/` | Scenes catalog, skins catalog, GameProgress, sound |
@@ -115,8 +116,8 @@ Goal: a build good enough to publish on itch.io and send to Poki for publishing 
 
 | # | Task | Notes |
 |---|------|-------|
-| 1 | Portal unlock by fireflies + door art | Gate rule drives every level's design — do first |
-| 2 | Portal entry animation + SFX before the result modal | Self-contained, can run in parallel |
+| 1 | Portal unlock by fireflies + door art | **Done.** Locked until `exit.slots` fireflies dock on the rim; door opens to a spinning vortex |
+| 2 | Portal entry animation + SFX before the result modal | Enter SFX is in; **blob fly-in animation deferred**. Result modal still fires on overlap |
 | 3 | Enemies: moving hazards (beetle / spider / wasp) on fixed paths | New level-schema object; needed before authoring levels |
 | 4 | 10 levels with a progressive difficulty curve | Only after 1 and 3 |
 | 5 | Touch controls rework | Current 9-slice pad is a stopgap — full replacement, gesture-first, no on-screen buttons |
@@ -127,6 +128,7 @@ Goal: a build good enough to publish on itch.io and send to Poki for publishing 
 ## Known gaps (not blockers for a first push)
 
 - Touch input is a placeholder (invisible 9-slice pad) — being replaced in stage E
+- Portal entry (blob suck-in) animation before the result modal — deferred
 - More player kit still queued (double jump / flight, dash, glide) — see mechanics backlog
 - Final art for sticky walls / spikes; per-skin droplet assets deferred (catalog field ready)
 - Bundle is heavier than an ideal Poki first download (`bundle.js` ~1.4 MB + music) — optimize before portal submit
@@ -142,7 +144,7 @@ You may view the source for portfolio / learning; reuse of code or assets needs 
 | File | Contents |
 |------|----------|
 | [`plans/poki-2d-platformer-concept.md`](./plans/poki-2d-platformer-concept.md) | Game concept, scope, stack |
-| [`plans/player-mechanics-backlog.md`](./plans/player-mechanics-backlog.md) | Player mechanics backlog (cling / death / crouch done; double jump, dash, glide queued) |
+| [`plans/player-mechanics-backlog.md`](./plans/player-mechanics-backlog.md) | Player mechanics backlog (cling / death / crouch + crouch jump done; double jump, dash, glide queued) |
 | [`plans/poki.md`](./plans/poki.md) | Poki / CrazyGames technical notes |
 
 ## Author

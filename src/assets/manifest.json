@@ -56,6 +56,26 @@
 				{
 					"alias": "firefly-collect3",
 					"src": "assets/sounds/chime-A6.ogg"
+				},
+				{
+					"alias": "firefly-wind",
+					"src": "assets/sounds/wind-blow.ogg"
+				},
+				{
+					"alias": "firefly-suck",
+					"src": "assets/sounds/suck-in.ogg"
+				},
+				{
+					"alias": "firefly-all-done",
+					"src": "assets/sounds/all-done.ogg"
+				},
+				{
+					"alias": "portal-ready",
+					"src": "assets/sounds/portal-ready.ogg"
+				},
+				{
+					"alias": "portal-enter",
+					"src": "assets/sounds/blip-blip-portal.ogg"
 				}
 			]
 		},
@@ -256,6 +276,14 @@
 				{
 					"alias": "portal",
 					"src": "assets/images/portal-brass-oval.webp",
+					"data": {
+						"resolution": 2,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "vortex",
+					"src": "assets/images/portal-vortex.webp",
 					"data": {
 						"resolution": 2,
 						"scaleMode": "linear"

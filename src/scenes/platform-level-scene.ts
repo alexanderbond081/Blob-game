@@ -1,6 +1,7 @@
 import { Container } from 'pixi.js';
 
 import { isCollectibleBody, isPlayerBody } from '../entities/collectible';
+import { FireflyCollectible } from '../entities/firefly-collectible';
 import { isHazardBody } from '../entities/hazard';
 import { isLevelExitBody } from '../entities/level-portal';
 import { NineSliceTouchPad } from '../input/nine-slice-touch-pad';
@@ -21,22 +22,6 @@ export type LevelExitEvent = {
 	timeSec: number;
 	deaths: number;
 };
-
-const COLLECT_SOUNDS = [
-	'firefly-collect1',
-	'firefly-collect2',
-	'firefly-collect3'
-] as const;
-
-const TONE_FACTORS = [
-	Math.pow(2, 2 / 12) / 2,
-	Math.pow(2, 4 / 12) / 2,
-	Math.pow(2, 5 / 12) / 2,
-	Math.pow(2, 7 / 12) / 2,
-	Math.pow(2, 9 / 12) / 2,
-	Math.pow(2, 10 / 12) / 2,
-	Math.pow(2, 12 / 12) / 2,
-] as const;
 
 export class PlatformLevelScene extends Scene {
 	private readonly levelId: string;
@@ -125,6 +110,7 @@ export class PlatformLevelScene extends Scene {
 		this.physicsWorld.step(deltaTime);
 		this.levelRoot.player.update(deltaTime);
 		this.levelRoot.droplets.update(deltaTime);
+		this.levelRoot.portal.update(deltaTime);
 		for (const collectible of this.levelRoot.collectibles) {
 			collectible.update(deltaTime);
 		}
@@ -213,6 +199,7 @@ export class PlatformLevelScene extends Scene {
 
 		this.hasExited = true;
 		portal.setState('entered');
+		SoundManager.playSound('portal-enter');
 		const payload: LevelExitEvent = {
 			levelId: this.levelId,
 			collected: this.collected,
@@ -272,10 +259,14 @@ export class PlatformLevelScene extends Scene {
 		}
 
 		collectible.collect(this.physicsWorld);
-		const snd_indx = Math.floor((this.collected % 21) / 7);
-		const tone_indx = this.collected % 7;
-		SoundManager.playSound(COLLECT_SOUNDS[snd_indx], 2, { speed: TONE_FACTORS[tone_indx] }); //Math.floor(Math.random() * 10)
+
+		if (!(collectible instanceof FireflyCollectible)) {
+			return;
+		}
+
+		SoundManager.playSound('firefly-wind', 3);
 		this.collected++;
+		collectible.deliverToPortal(this.levelRoot.portal, this.collected === this.totalFireflies);
 		console.info(`collected ${this.collected} fireflies`);
 	}
 }

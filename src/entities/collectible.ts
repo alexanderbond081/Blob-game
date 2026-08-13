@@ -1,115 +1,149 @@
 import { Bodies, Body } from 'matter-js';
-import { Assets, Container, Sprite, Texture } from 'pixi.js';
+import { Assets, Container, ParticleContainer, Sprite, Texture } from 'pixi.js';
 
-import { PhysicsBody } from '../physics/physics-body';
-import { PhysicsWorld } from '../physics/physics-world';
 import { LevelCollectible } from '../levels/level-schema';
+import { PhysicsWorld } from '../physics/physics-world';
 
-const COLLECTIBLE_RADIUS = 40;
+/** Sensor radius and rendered size shared by every collectible type. */
+export const COLLECTIBLE_RADIUS = 40;
 const BOB_PERIOD_SEC = 2;
 const BOB_AMPLITUDE = 8;
 const FRAME_HZ = 60;
-/** Seconds before a collected firefly reappears. */
-const RESPAWN_DELAY_SEC = 20;
 
-export type CollectibleCollectedHandler = (collectible: Collectible) => void;
+/**
+ * Level layers a collectible can attach its visual to: the regular sprite tree
+ * or the shared firefly particle batch. Each type uses one of them.
+ */
+export type CollectibleLayers = {
+	sprites: Container;
+	flies: ParticleContainer;
+};
 
-export class Collectible extends PhysicsBody {
+/**
+ * Pickup base: owns the static sensor body and the collected flag.
+ * Visuals and collect feedback belong to the subclass, because fireflies
+ * (portal fuel) and other pickups follow different rules.
+ */
+export abstract class Collectible {
+	public readonly body: Body;
 	public readonly collectibleId: string;
 	public readonly collectibleType: string;
 	public collected = false;
 
-	private readonly baseX: number;
-	private readonly baseY: number;
-	private readonly bobPhase: number;
-	private bobTime = 0;
-	private respawnSecondsLeft = 0;
-	private world: PhysicsWorld | null = null;
-	private parentLayer: Container | null = null;
+	protected readonly baseX: number;
+	protected readonly baseY: number;
 
-	public constructor(data: LevelCollectible) {
-		const body = Bodies.circle(data.x, data.y, COLLECTIBLE_RADIUS, {
+	protected constructor(data: LevelCollectible, sensorRadius: number = COLLECTIBLE_RADIUS) {
+		this.body = Bodies.circle(data.x, data.y, sensorRadius, {
 			isStatic: true,
 			isSensor: true,
 			label: 'collectible',
 		});
 
-		const display = new Sprite(Texture.EMPTY);
-		display.anchor.set(0.5);
-		display.eventMode = 'none';
-		super(body, display);
-
 		this.collectibleId = data.id;
 		this.collectibleType = data.type;
 		this.baseX = data.x;
 		this.baseY = data.y;
-		this.bobPhase = Collectible.hashPhase(data.id);
-		void this.loadTexture(data.type);
 	}
 
-	public override addToWorld(world: PhysicsWorld, parent: Container): void {
-		this.world = world;
-		this.parentLayer = parent;
-		super.addToWorld(world, parent);
-		this.syncFromBody();
-	}
+	public abstract addToLevel(world: PhysicsWorld, layers: CollectibleLayers): void;
 
-	public update(deltaTime: number): void {
-		const dtSec = Math.max(deltaTime, 0) / FRAME_HZ;
+	public abstract removeFromLevel(world: PhysicsWorld): void;
 
-		if (this.collected) {
-			this.respawnSecondsLeft -= dtSec;
-			if (this.respawnSecondsLeft <= 0) {
-				this.respawn();
-			}
-			return;
-		}
+	public abstract update(deltaTime: number): void;
 
-		this.bobTime += dtSec;
-		const offsetY = Math.sin((this.bobTime * Math.PI * 2) / BOB_PERIOD_SEC + this.bobPhase) * BOB_AMPLITUDE;
-		this.display.position.set(this.baseX, this.baseY + offsetY);
-	}
-
+	/** Drops the sensor so the pickup cannot fire twice; visuals are up to the subclass. */
 	public collect(world: PhysicsWorld): void {
 		if (this.collected) {
 			return;
 		}
 
 		this.collected = true;
-		this.respawnSecondsLeft = RESPAWN_DELAY_SEC;
-		this.world = world;
-		this.removeFromWorld(world);
-		this.display.visible = false;
+		world.removeBody(this.body);
 	}
 
-	private respawn(): void {
-		if (!this.world || !this.parentLayer) {
-			return;
-		}
-
-		this.collected = false;
-		this.respawnSecondsLeft = 0;
-		this.display.visible = true;
-		this.addToWorld(this.world, this.parentLayer);
-		this.display.position.set(this.baseX, this.baseY);
+	/** Shared textures are owned by Assets, so only subclasses with own nodes override this. */
+	public destroy(): void {
+		return;
 	}
 
-	private async loadTexture(type: string): Promise<void> {
-		const alias = type === 'firefly' ? 'firefly' : 'firefly';
-		const texture = await Assets.load(alias);
-		this.display.scale.set(1);
-		(this.display as Sprite).texture = texture;
-		const sprite = this.display as Sprite;
-		const scale = (COLLECTIBLE_RADIUS * 2) / Math.max(sprite.texture.width, sprite.texture.height);
-		sprite.scale.set(scale);
+	protected static toSeconds(deltaTime: number): number {
+		return Math.max(deltaTime, 0) / FRAME_HZ;
 	}
 
-	private static hashPhase(id: string): number {
+	protected static hashPhase(id: string): number {
 		let hash = 0;
 		for (let i = 0; i < id.length; i += 1) {
 			hash = (hash * 31 + id.charCodeAt(i)) | 0;
 		}
 		return (Math.abs(hash) % 1000) / 1000 * Math.PI * 2;
+	}
+}
+
+/**
+ * Default pickup: a bobbing sprite that disappears when taken.
+ * Used by every type except fireflies (see `FireflyCollectible`).
+ */
+export class SpriteCollectible extends Collectible {
+	private readonly sprite: Sprite;
+	private readonly bobPhase: number;
+	private bobTime = 0;
+
+	public constructor(data: LevelCollectible) {
+		super(data);
+
+		this.sprite = new Sprite(Texture.EMPTY);
+		this.sprite.anchor.set(0.5);
+		this.sprite.eventMode = 'none';
+		this.sprite.position.set(this.baseX, this.baseY);
+		this.bobPhase = Collectible.hashPhase(data.id);
+		void this.loadTexture(data.type);
+	}
+
+	public override addToLevel(world: PhysicsWorld, layers: CollectibleLayers): void {
+		world.addBody(this.body);
+		layers.sprites.addChild(this.sprite);
+	}
+
+	public override removeFromLevel(world: PhysicsWorld): void {
+		if (!this.collected) {
+			world.removeBody(this.body);
+		}
+
+		this.sprite.removeFromParent();
+	}
+
+	public override update(deltaTime: number): void {
+		if (this.collected) {
+			return;
+		}
+
+		this.bobTime += Collectible.toSeconds(deltaTime);
+		const offsetY = Math.sin((this.bobTime * Math.PI * 2) / BOB_PERIOD_SEC + this.bobPhase) * BOB_AMPLITUDE;
+		this.sprite.position.set(this.baseX, this.baseY + offsetY);
+	}
+
+	public override collect(world: PhysicsWorld): void {
+		if (this.collected) {
+			return;
+		}
+
+		super.collect(world);
+		this.sprite.visible = false;
+	}
+
+	public override destroy(): void {
+		this.sprite.destroy();
+	}
+
+	private async loadTexture(alias: string): Promise<void> {
+		try {
+			const texture = await Assets.load<Texture>(alias);
+			this.sprite.texture = texture;
+			this.sprite.scale.set((COLLECTIBLE_RADIUS * 2) / Math.max(texture.width, texture.height));
+		} catch {
+			console.warn(`[collectible] no texture for type "${alias}"`);
+		}
 	}
 }
 

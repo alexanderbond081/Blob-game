@@ -1,6 +1,7 @@
-import { Container } from 'pixi.js';
+import { Container, ParticleContainer } from 'pixi.js';
 
-import { Collectible } from '../entities/collectible';
+import { Collectible, SpriteCollectible } from '../entities/collectible';
+import { FireflyCollectible } from '../entities/firefly-collectible';
 import { Hazard } from '../entities/hazard';
 import { LevelPortal } from '../entities/level-portal';
 import { Player } from '../entities/player';
@@ -18,10 +19,17 @@ export class LevelRoot extends Container {
 	public readonly staticBodies: StaticBody[] = [];
 	public readonly hazards: Hazard[] = [];
 	public readonly droplets: BlobDropletPool;
+	/** Every firefly in one batch; added above the portal so collected ones read on top. */
+	public readonly flies: ParticleContainer;
 
 	public constructor(levelData: LevelData, physicsWorld: PhysicsWorld) {
 		super();
 		this.eventMode = 'none';
+
+		// Position every frame; color is for the mild slot-shade tint (and later fades).
+		this.flies = new ParticleContainer({
+			dynamicProperties: { position: true, rotation: false, vertex: false, color: true, uvs: false },
+		});
 
 		for (const platform of levelData.platforms) {
 			const staticBody = new StaticBody({
@@ -42,14 +50,17 @@ export class LevelRoot extends Container {
 		}
 
 		for (const collectibleData of levelData.collectibles) {
-			const collectible = new Collectible(collectibleData);
-			collectible.addToWorld(physicsWorld, this);
+			const collectible = collectibleData.type === 'firefly'
+				? new FireflyCollectible(collectibleData)
+				: new SpriteCollectible(collectibleData);
+			collectible.addToLevel(physicsWorld, { sprites: this, flies: this.flies });
 			this.collectibles.push(collectible);
 		}
 
 		// Portal under the player so the blob draws on top.
 		this.portal = new LevelPortal(levelData.exit);
 		this.portal.addToWorld(physicsWorld, this);
+		this.addChild(this.flies);
 
 		const skin = resolveSkin(GameProgress.shared.selectedSkinId);
 		this.player = new Player(levelData.spawn.x, levelData.spawn.y, skin.blobSheetAlias);
@@ -83,12 +94,11 @@ export class LevelRoot extends Container {
 		this.hazards.length = 0;
 
 		for (const collectible of this.collectibles) {
-			if (!collectible.collected) {
-				collectible.removeFromWorld(physicsWorld);
-			}
+			collectible.removeFromLevel(physicsWorld);
 			collectible.destroy();
 		}
 		this.collectibles.length = 0;
+		this.flies.destroy();
 
 		this.portal.removeFromWorld(physicsWorld);
 		this.portal.destroy();

@@ -1,9 +1,11 @@
 import { levelSchema, LevelData } from './level-schema';
 import meadow01 from './levels/meadow-01.json';
+import meadow02 from './levels/meadow-02.json';
 import testlevel from './levels/testlevel-00.json';
 
 const LEVEL_REGISTRY: Record<string, unknown> = {
 	'meadow-01': meadow01,
+	'meadow-02': meadow02,
 	'testlevel-00': testlevel,
 };
 

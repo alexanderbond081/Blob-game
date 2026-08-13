@@ -26,6 +26,13 @@ export const gameSceneCatalog: GameSceneCatalogEntry[] = [
 		createScene: () => new PlatformLevelScene('meadow-01'),
 	},
 	{
+		id: 'meadow-02',
+		title: 'Meadow',
+		assetBundle: 'meadow-scene',
+		locationIcon: 'meadow',
+		createScene: () => new PlatformLevelScene('meadow-02'),
+	},
+	{
 		id: 'testlevel-00',
 		title: 'Forest',
 		// JSON currently shares meadow backgrounds; swap back to test-scene when those art assets return.
