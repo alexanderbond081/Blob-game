@@ -17,19 +17,21 @@ import { PlayerState, resolvePlayerState } from './player-state';
 import { SoundManager } from '../managers/sound-manager';
 
 export const PLAYER_RADIUS = 30;
-const MOVE_SPEED_X = 6;
+const MOVE_SPEED_X = 5;
 const LANDING_VELOCITY_THRESHOLD = 2;
-const JUMP_VELOCITY = -15;
+const JUMP_VELOCITY = -12;
+/** Ground jump from hide crouch (any crouchBlend above the state threshold). */
+const CROUCH_JUMP_VELOCITY = -14;
 /** Max |vy| allowed to start a sticky cling (half of jump speed; stays independent if jump changes). */
 const STICKY_CLING_MAX_SPEED_Y = Math.abs(JUMP_VELOCITY) * 0.8;
 /** Slow slide while clinging (px per physics frame). */
 const STICKY_SLIDE_SPEED_Y = 0.05;
 /** Small push into the wall so Matter keeps the contact while clinging. */
 const STICKY_HOLD_SPEED_X = 0.8;
-/** Wall jump vertical impulse = 2/3 of a normal jump. */
-const WALL_JUMP_VELOCITY_Y = JUMP_VELOCITY * (4 / 5);
+/** Wall jump vertical impulse = 4/5 of a normal jump. */
+const WALL_JUMP_VELOCITY_Y = -10;
 /** Frames to force horizontal move-speed away from the wall after a wall jump. */
-const WALL_JUMP_HORIZONTAL_FRAMES = 12;
+const WALL_JUMP_HORIZONTAL_FRAMES = 8;
 /** Stretch away from the wall before peel-off when pressing move-away. */
 const CLING_PEEL_FRAMES = 8;
 /** Jump wind-up frames before the jump impulse is applied */
@@ -638,12 +640,12 @@ export class Player extends PhysicsBody {
 
 	/**
 	 * Ground jump. From hide crouch the blob is already compressed — skip the
-	 * squat wind-up and stand up into the launch instead.
+	 * squat wind-up and launch with CROUCH_JUMP_VELOCITY.
 	 */
 	private startGroundJump(speedX: number): void {
 		if (this.crouchBlend > CROUCH_STATE_BLEND) {
 			this.clearHideCrouch();
-			this.launchJump(speedX);
+			this.launchJump(speedX, CROUCH_JUMP_VELOCITY, Math.random() * 0.1 + 0.7);
 			return;
 		}
 
@@ -660,15 +662,15 @@ export class Player extends PhysicsBody {
 		this.jelly.anticipateWallJump();
 	}
 
-	private launchJump(speedX: number): void {
+	private launchJump(speedX: number, velocityY = JUMP_VELOCITY, soundSpeed = Math.random() * 0.3 + 1): void {
 		this.jumpCrouchFramesLeft = 0;
 		this.jumpBufferFrames = 0;
 		Body.setVelocity(this.body, {
 			x: speedX,
-			y: JUMP_VELOCITY,
+			y: velocityY,
 		});
 		this.groundContacts.clear();
-		SoundManager.playSound('blob-jump', 1, { speed: Math.random() * 0.4 + 0.8 });
+		SoundManager.playSound('blob-jump', 1, { speed: soundSpeed });
 	}
 
 	/** Micro-hop out of hide crouch — leave/land jelly provides the settle wobble. */
