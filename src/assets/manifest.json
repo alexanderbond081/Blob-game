@@ -42,6 +42,10 @@
 					"src": "assets/sounds/drop1.wav"
 				},
 				{
+					"alias": "blob-wobble",
+					"src": "assets/sounds/wobble.ogg"
+				},
+				{
 					"alias": "hit-a-button",
 					"src": "assets/sounds/hit-a-button.ogg"
 				},
