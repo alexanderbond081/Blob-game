@@ -4,7 +4,7 @@ import { isCollectibleBody, isPlayerBody } from '../entities/collectible';
 import { FireflyCollectible } from '../entities/firefly-collectible';
 import { isHazardBody } from '../entities/hazard';
 import { isLevelExitBody } from '../entities/level-portal';
-import { NineSliceTouchPad } from '../input/nine-slice-touch-pad';
+import { GestureTouchLayer } from '../input/gesture-touch-layer';
 import { loadLevelData } from '../levels/level-loader';
 import { GameProgress } from '../managers/game-progress';
 import { SoundManager } from '../managers/sound-manager';
@@ -27,7 +27,7 @@ export class PlatformLevelScene extends Scene {
 	private readonly levelId: string;
 	private readonly physicsWorld = new PhysicsWorld();
 	private readonly worldRoot = new Container();
-	private touchPad!: NineSliceTouchPad;
+	private touchLayer!: GestureTouchLayer;
 	private parallaxLayers: ParallaxLayer[] = [];
 	private camera!: GameCamera;
 	private levelRoot!: LevelRoot;
@@ -82,14 +82,11 @@ export class PlatformLevelScene extends Scene {
 		this.worldRoot.addChild(this.levelRoot);
 		this.centerCameraOnPlayer();
 
-		this.touchPad = new NineSliceTouchPad({
+		this.touchLayer = new GestureTouchLayer({
 			width: this.designWidth,
 			height: this.designHeight,
-			edgeInset: 10,
-			columnWeights: [1, 1.35, 1],
-			rowWeights: [0.2, 2, 1],
 		});
-		this.addChild(this.touchPad);
+		this.addChild(this.touchLayer);
 
 		this.physicsWorld.onCollisionStart((collision) => {
 			this.handleCollectibleCollision(collision);
@@ -106,8 +103,13 @@ export class PlatformLevelScene extends Scene {
 			this.runTimeSec += Math.max(deltaTime, 0) / 60;
 		}
 
-		this.levelRoot.player.setTouchControls(this.touchPad.getControls());
+		this.levelRoot.player.setTouchControls(this.touchLayer.getControls());
 		this.physicsWorld.step(deltaTime);
+		this.touchLayer.notePlayerState({
+			clinging: this.levelRoot.player.isClinging,
+			dying: this.levelRoot.player.isDying,
+			onGround: this.levelRoot.player.isOnGround(),
+		});
 		this.levelRoot.player.update(deltaTime);
 		this.levelRoot.droplets.update(deltaTime);
 		this.levelRoot.portal.update(deltaTime);
@@ -134,7 +136,7 @@ export class PlatformLevelScene extends Scene {
 			this.levelRoot.destroyLevel(this.physicsWorld);
 		}
 		this.physicsWorld.destroy();
-		this.touchPad?.destroy({ children: true });
+		this.touchLayer?.destroy({ children: true });
 		super.destroy(options);
 	}
 

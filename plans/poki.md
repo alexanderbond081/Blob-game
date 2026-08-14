@@ -310,10 +310,23 @@ Ordered by dependency: anything that changes level rules lands before the levels
 | 2 | Portal entry animation + SFX before the result modal | Enter SFX (`portal-enter`) is in. **Blob fly-in / suck-in animation deferred** — result modal still fires on overlap |
 | 3 | Enemies: moving hazards (beetle / spider / wasp), fixed paths | New `enemies[]`-style schema entry; blocks level authoring |
 | 4 | 10 levels, progressive difficulty | After 3. Authoring is **Ogmo 3** entity layers → runtime JSON (Y flipped on load). Two meadow layouts in-repo so far |
-| 5 | Touch controls rework | Current invisible 9-slice pad is a stopgap and not playable enough. Gesture-first, no on-screen buttons. Likely shape: thumbstick spawned under the finger + tap-to-jump zone; pure swipes read badly with wall cling |
+| 5 | Touch controls rework | **Done (playable).** Gesture-first; comfortable on phone after settle / flick-on-up / no false jump-run. Jump / crouch swipes; jump side-speed lasts until landing or cling. Horizontal swipe deferred until dash (then: on release + speed threshold, no run latch). Slow drag is live analog. Tap, 0.5 s hold, or any gameplay key cancels. Full jump height from 45° up; ~33° deadzone. Top HUD band (~72 px) **intentionally** ends the stroke (chrome / pause). Flick vs slow-swipe distances tuned. Remaining polish: [Touch follow-ups](#touch-follow-ups) |
 | 6 | Hints for existing mechanics only | After the mechanic set is frozen |
 | 7 | Demo outro screen after the last level | "Thanks for playing the demo, wishlist the full version…" |
 | 8 | Poki submission prerequisites | `gameLoadingFinished`, no external links, incognito / no-`localStorage` path, first-download size, 60 FPS on mid-range mobile |
+
+### Touch follow-ups (E5 polish, not blockers)
+
+Playable as-is; leftover event / edge-case holes:
+
+1. **`pointerup` capture race.** Window `pointerup` (capture) runs before Pixi, so `finishStroke` often never sees the up position. A down→up flick with no `pointermove` can still drop. Make the window listener bubble-only fallback, or drop it.
+2. **`touchend` id mismatch.** `Touch.identifier` is compared to `pointerId`; on some Android they differ, so this backup path is dead.
+3. **`pointercancel` vs `touchcancel`.** Pointer cancel may commit the swipe; touch cancel aborts. Align them.
+4. **End-pause flick.** A flick that sits still ~40 ms before lift can be classified as a fat-finger tap.
+5. **Pause / blur.** The layer stays live; a jump already committed can fire after returning to the tab. Clear or freeze gestures on pause and `visibilitychange` / `blur`.
+6. **Failed takeoff.** If a committed jump never leaves the ground (ceiling), `jumpCommitted` can leave a ground run. Clear the latch if still grounded after wind-up.
+
+Second finger is ignored on purpose (one-gesture control). Dead `isPrimary` branch in `onPointerDown` can go when #1/#2 are cleaned up.
 
 Balancing note: gating design is still open. Flight may replace a plain double jump as the unlockable move, with the remaining mechanics available from the start.
 

@@ -1,7 +1,7 @@
 import { Bodies, Body, Engine, Events } from 'matter-js';
 import { AnimatedSprite, Assets, Spritesheet, Texture } from 'pixi.js';
 
-import { createEmptyPlayerControls, PlayerControls } from '../input/player-controls';
+import { axisDirection, createEmptyPlayerControls, PlayerControls } from '../input/player-controls';
 import {
 	getPlatformBody,
 	getWallContactSide,
@@ -38,6 +38,8 @@ const CLING_PEEL_FRAMES = 8;
 const JUMP_CROUCH_FRAMES = 5;
 /** Remember jump press in air so a near-landing tap still jumps */
 const JUMP_BUFFER_FRAMES = 5;
+/** Touch crouch-jump grace after leaving hide (~200 ms at 60 Hz). */
+const CROUCH_JUMP_BUFFER_FRAMES = 12;
 /** Hold-to-hide crouch: blend-in duration (seconds). Exit is a tiny hop. */
 const CROUCH_BLEND_SEC = 0.1;
 /** Sprite alpha at full hide crouch. */
@@ -72,7 +74,13 @@ export class Player extends PhysicsBody {
 	/** Vertical velocity before the physics step resolves collisions (useful for landing SFX / fall damage). */
 	private preStepVelocityY = 0;
 	private jumpHeld = false;
+	/** Analog jump strength captured at press / updated while charging (keyboard = 1). */
+	private jumpAxis = 1;
 	private jumpCrouchFramesLeft = 0;
+	/** True while a ground jump squat is held (including waiting for swipe commit). */
+	private jumpWindupActive = false;
+	/** Once the jump is locked in, wind-up must launch (keyboard / committed swipe). */
+	private jumpWindupLocked = false;
 	private wallCrouchFramesLeft = 0;
 	private clingPeelFramesLeft = 0;
 	private jumpBufferFrames = 0;
@@ -82,6 +90,8 @@ export class Player extends PhysicsBody {
 	private clingSide: WallSide | null = null;
 	/** Hide crouch blend 0…1 (visual + collider). */
 	private crouchBlend = 0;
+	/** Extra frames where a locked-in jump still counts as a crouch-jump. */
+	private crouchJumpBufferFrames = 0;
 	/** Current Matter body scaleY relative to spawn circle (1 = full). */
 	private colliderScaleY = 1;
 	private dying = false;
@@ -122,6 +132,13 @@ export class Player extends PhysicsBody {
 	private clearKeysDown(): void {
 		this.keysDown.clear();
 		this.jumpHeld = false;
+		this.jumpBufferFrames = 0;
+		if (this.jumpWindupActive) {
+			this.jumpWindupActive = false;
+			this.jumpWindupLocked = false;
+			this.jumpCrouchFramesLeft = 0;
+			this.jumpAxis = 1;
+		}
 	}
 
 	private readonly onBeforeUpdate = (): void => {
@@ -170,7 +187,7 @@ export class Player extends PhysicsBody {
 		void this.loadSpritesheet();
 	}
 
-	/** Merge invisible touch pad / future on-screen buttons with keyboard. */
+	/** Merge gesture / future gamepad axes with keyboard. */
 	public setTouchControls(controls: PlayerControls): void {
 		this.touchControls = controls;
 	}
@@ -239,10 +256,13 @@ export class Player extends PhysicsBody {
 		this.clinging = false;
 		this.clingSide = null;
 		this.jumpCrouchFramesLeft = 0;
+		this.jumpWindupActive = false;
+		this.jumpWindupLocked = false;
 		this.wallCrouchFramesLeft = 0;
 		this.clingPeelFramesLeft = 0;
 		this.jumpBufferFrames = 0;
 		this.wallJumpFramesLeft = 0;
+		this.crouchJumpBufferFrames = 0;
 		this.resetCrouchPose();
 		this.groundContacts.clear();
 		this.stickyWallContacts.clear();
@@ -315,6 +335,10 @@ export class Player extends PhysicsBody {
 		return this.crouchBlend >= 1;
 	}
 
+	public get isClinging(): boolean {
+		return this.clinging;
+	}
+
 	/** Snap back to a point and clear motion / death state. */
 	public respawnAt(x: number, y: number): void {
 		this.sprite.onComplete = undefined;
@@ -329,11 +353,16 @@ export class Player extends PhysicsBody {
 		this.wasOnGround = true;
 		this.preStepVelocityY = 0;
 		this.jumpCrouchFramesLeft = 0;
+		this.jumpWindupActive = false;
+		this.jumpWindupLocked = false;
 		this.wallCrouchFramesLeft = 0;
 		this.clingPeelFramesLeft = 0;
 		this.jumpBufferFrames = 0;
 		this.wallJumpFramesLeft = 0;
 		this.wallJumpDirection = 0;
+		this.jumpHeld = false;
+		this.jumpAxis = 1;
+		this.crouchJumpBufferFrames = 0;
 		this.clinging = false;
 		this.clingSide = null;
 		this.resetCrouchPose();
@@ -382,66 +411,69 @@ export class Player extends PhysicsBody {
 	}
 
 	private applyInput(): void {
-		const moveLeft =
-			this.keysDown.has('ArrowLeft')
-			|| this.keysDown.has('KeyA')
-			|| this.touchControls.moveLeft;
-		const moveRight =
-			this.keysDown.has('ArrowRight')
-			|| this.keysDown.has('KeyD')
-			|| this.touchControls.moveRight;
-		const jumpDown =
+		const keyLeft = this.keysDown.has('ArrowLeft') || this.keysDown.has('KeyA');
+		const keyRight = this.keysDown.has('ArrowRight') || this.keysDown.has('KeyD');
+		const keyJump =
 			this.keysDown.has('Space')
 			|| this.keysDown.has('ArrowUp')
-			|| this.keysDown.has('KeyW')
-			|| this.touchControls.jump;
-		const crouchHeld =
-			this.keysDown.has('ArrowDown')
-			|| this.keysDown.has('KeyS')
-			|| this.touchControls.crouch;
-		const jumpPressed = jumpDown && !this.jumpHeld;
-		this.jumpHeld = jumpDown;
-		const onGround = this.isOnGround();
+			|| this.keysDown.has('KeyW');
+		const keyCrouch = this.keysDown.has('ArrowDown') || this.keysDown.has('KeyS');
 
-		let moveDirection = 0;
-		if (moveLeft) {
-			moveDirection -= 1;
+		let moveX = this.touchControls.moveX;
+		if (keyLeft && !keyRight) {
+			moveX = -1;
+		} else if (keyRight && !keyLeft) {
+			moveX = 1;
+		} else if (keyLeft && keyRight) {
+			moveX = 0;
 		}
-		if (moveRight) {
-			moveDirection += 1;
-		}
+
+		const jumpAmount = keyJump ? 1 : this.touchControls.jump;
+		const crouchHeld = keyCrouch || this.touchControls.crouch;
+		const jumpPressed = jumpAmount > 0 && !this.jumpHeld;
+		this.jumpHeld = jumpAmount > 0;
+		const onGround = this.isOnGround();
+		this.tickCrouchJumpBuffer();
+		const moveDirection = axisDirection(moveX);
+		const jumpLockedIn = keyJump || this.touchControls.jumpCommitted;
 
 		if (this.clinging) {
-			this.applyClingInput(moveDirection, jumpPressed, onGround);
+			this.applyClingInput(moveX, jumpPressed, jumpAmount, onGround);
 			return;
 		}
 
 		// Hold crouch on ground: stand still (no crawl in Poki). Facing still follows input.
-		const hideStanding = onGround && crouchHeld && this.jumpCrouchFramesLeft <= 0;
+		const hideStanding = onGround && crouchHeld && !this.jumpWindupActive;
 		if (hideStanding) {
-			if (moveLeft && !moveRight) {
+			if (moveDirection < 0) {
 				this.facingRight = false;
-			} else if (moveRight && !moveLeft) {
+			} else if (moveDirection > 0) {
 				this.facingRight = true;
 			}
-			moveDirection = 0;
+			moveX = 0;
 		} else if (moveDirection !== 0) {
 			this.facingRight = moveDirection > 0;
 		}
 
-		const speedX = this.resolveHorizontalSpeed(moveDirection);
+		const speedX = this.resolveHorizontalSpeed(moveX);
 		this.airVelocityX = speedX;
 
 		if (jumpPressed) {
-			if (onGround && this.jumpCrouchFramesLeft <= 0) {
-				this.startGroundJump(speedX);
+			this.jumpAxis = jumpAmount;
+			if (onGround && !this.jumpWindupActive) {
+				this.startGroundJump(speedX, jumpLockedIn);
 			} else if (!onGround) {
 				this.jumpBufferFrames = JUMP_BUFFER_FRAMES;
 			}
-		} else if (!crouchHeld && this.crouchBlend > 0 && this.jumpCrouchFramesLeft <= 0) {
-			// Release crouch: tiny hop instead of blend-out stand-up (jump path clears crouch itself).
+		} else if (jumpAmount > 0 && this.jumpWindupActive) {
+			this.jumpAxis = jumpAmount;
+		} else if (!crouchHeld && this.crouchBlend > 0 && !this.jumpWindupActive) {
 			if (onGround && this.crouchBlend > CROUCH_STATE_BLEND) {
-				this.launchCrouchStandHop();
+				if (moveDirection !== 0) {
+					this.clearHideCrouch();
+				} else {
+					this.launchCrouchStandHop();
+				}
 			} else {
 				this.clearHideCrouch();
 			}
@@ -450,30 +482,50 @@ export class Player extends PhysicsBody {
 		if (this.jumpBufferFrames > 0) {
 			this.jumpBufferFrames -= 1;
 
-			if (onGround && this.jumpCrouchFramesLeft <= 0) {
+			if (onGround && !this.jumpWindupActive) {
 				this.jumpBufferFrames = 0;
-				this.startGroundJump(speedX);
+				this.startGroundJump(speedX, true);
 			}
 		}
 
-		if (this.jumpCrouchFramesLeft > 0) {
-			this.jumpCrouchFramesLeft -= 1;
-
-			// Left the platform during wind-up — commit the jump immediately
-			// instead of canceling (avoids walking off an edge during crouch).
-			if (!onGround) {
-				this.launchJump(speedX);
-				return;
+		if (this.jumpWindupActive) {
+			if (jumpLockedIn) {
+				this.jumpWindupLocked = true;
 			}
 
-			if (this.jumpCrouchFramesLeft <= 0) {
-				this.launchJump(speedX);
-				return;
+			const abortCharge = onGround
+				&& !this.jumpWindupLocked
+				&& jumpAmount <= 0
+				&& this.touchControls.cancelJumpOnRelease;
+			if (abortCharge) {
+				this.jumpWindupActive = false;
+				this.jumpWindupLocked = false;
+				this.jumpCrouchFramesLeft = 0;
+				this.jumpAxis = 1;
+				this.clearHideCrouch();
+			} else {
+				if (this.jumpWindupLocked && this.canCrouchJump()) {
+					this.launchFromHideCrouch(speedX);
+					return;
+				}
+
+				if (this.jumpCrouchFramesLeft > 0) {
+					this.jumpCrouchFramesLeft -= 1;
+				}
+
+				if (!onGround || (this.jumpWindupLocked && this.jumpCrouchFramesLeft <= 0)) {
+					if (this.canCrouchJump()) {
+						this.launchFromHideCrouch(speedX);
+					} else {
+						this.launchJump(speedX, JUMP_VELOCITY * this.jumpAxis);
+					}
+					return;
+				}
 			}
 		}
 
 		if (!onGround) {
-			this.tryStartCling(moveDirection);
+			this.tryStartCling(moveX);
 		}
 
 		if (this.clinging) {
@@ -487,11 +539,23 @@ export class Player extends PhysicsBody {
 		});
 	}
 
-	private applyClingInput(moveDirection: number, jumpPressed: boolean, onGround: boolean): void {
+	private applyClingInput(
+		moveX: number,
+		jumpPressed: boolean,
+		jumpAmount: number,
+		onGround: boolean,
+	): void {
+		let moveDirection = axisDirection(moveX);
+		const towardWall = this.clingSide === 'left' ? -1 : 1;
+		// Horizontal swipe into the wall is ignored; climb uses an upward swipe.
+		if (!jumpPressed && this.wallCrouchFramesLeft <= 0 && moveDirection === towardWall) {
+			moveDirection = 0;
+		}
+
 		if (onGround) {
 			this.endCling();
 			Body.setVelocity(this.body, {
-				x: moveDirection * MOVE_SPEED_X,
+				x: moveX * MOVE_SPEED_X,
 				y: this.body.velocity.y,
 			});
 			return;
@@ -500,7 +564,7 @@ export class Player extends PhysicsBody {
 		if (!this.hasActiveClingContact()) {
 			this.endCling();
 			Body.setVelocity(this.body, {
-				x: moveDirection * MOVE_SPEED_X,
+				x: moveX * MOVE_SPEED_X,
 				y: this.body.velocity.y,
 			});
 			return;
@@ -511,6 +575,7 @@ export class Player extends PhysicsBody {
 
 		// Jump wins over peel / move-away (fixes same-frame move stealing the jump).
 		if (jumpPressed && this.wallCrouchFramesLeft <= 0) {
+			this.jumpAxis = jumpAmount;
 			this.clingPeelFramesLeft = 0;
 			this.beginWallJumpCrouch();
 		}
@@ -543,7 +608,7 @@ export class Player extends PhysicsBody {
 			if (this.clingPeelFramesLeft <= 0) {
 				this.endCling();
 				Body.setVelocity(this.body, {
-					x: moveDirection * MOVE_SPEED_X,
+					x: moveX * MOVE_SPEED_X,
 					y: this.body.velocity.y,
 				});
 				return;
@@ -555,8 +620,8 @@ export class Player extends PhysicsBody {
 		this.applyClingVelocity();
 	}
 
-	private tryStartCling(moveDirection: number): void {
-		if (this.jumpCrouchFramesLeft > 0 || this.wallJumpFramesLeft > 0) {
+	private tryStartCling(moveX: number): void {
+		if (this.jumpCrouchFramesLeft > 0 || this.jumpWindupActive || this.wallJumpFramesLeft > 0) {
 			return;
 		}
 
@@ -564,7 +629,7 @@ export class Player extends PhysicsBody {
 			return;
 		}
 
-		const contact = this.findClingableContact(moveDirection);
+		const contact = this.findClingableContact(moveX);
 		if (!contact) {
 			return;
 		}
@@ -574,12 +639,15 @@ export class Player extends PhysicsBody {
 		this.facingRight = contact.side === 'left';
 		this.jumpBufferFrames = 0;
 		this.jumpCrouchFramesLeft = 0;
+		this.jumpWindupActive = false;
+		this.jumpWindupLocked = false;
 		this.clearHideCrouch();
 		SoundManager.playSound('blob-stick', 1, { speed: Math.random() * 0.2 + 0.9 });
 		//void SoundManager.playSound('blob-land', 1, { speed: Math.random() * 0.2 + 1.8 });
 	}
 
-	private findClingableContact(moveDirection: number): StickyWallContact | null {
+	private findClingableContact(moveX: number): StickyWallContact | null {
+		const moveDirection = axisDirection(moveX);
 		for (const contact of this.stickyWallContacts.values()) {
 			const towardWall = contact.side === 'left' ? -1 : 1;
 			if (moveDirection === towardWall && this.isStickyWallClingHeightOk(contact.body)) {
@@ -642,14 +710,26 @@ export class Player extends PhysicsBody {
 	 * Ground jump. From hide crouch the blob is already compressed — skip the
 	 * squat wind-up and launch with CROUCH_JUMP_VELOCITY.
 	 */
-	private startGroundJump(speedX: number): void {
-		if (this.crouchBlend > CROUCH_STATE_BLEND) {
-			this.clearHideCrouch();
-			this.launchJump(speedX, CROUCH_JUMP_VELOCITY, Math.random() * 0.1 + 0.7);
+	private startGroundJump(speedX: number, lockedIn: boolean): void {
+		if (lockedIn && this.canCrouchJump()) {
+			this.launchFromHideCrouch(speedX);
+			return;
+		}
+
+		this.jumpWindupActive = true;
+		this.jumpWindupLocked = lockedIn;
+		if (this.canCrouchJump()) {
+			// Already compressed — wait for swipe commit, don't start a second squat.
 			return;
 		}
 
 		this.beginJumpCrouch();
+	}
+
+	private launchFromHideCrouch(speedX: number): void {
+		this.crouchJumpBufferFrames = 0;
+		this.clearHideCrouch();
+		this.launchJump(speedX, CROUCH_JUMP_VELOCITY * this.jumpAxis, Math.random() * 0.1 + 0.7);
 	}
 
 	private beginJumpCrouch(): void {
@@ -664,6 +744,8 @@ export class Player extends PhysicsBody {
 
 	private launchJump(speedX: number, velocityY = JUMP_VELOCITY, soundSpeed = Math.random() * 0.3 + 1): void {
 		this.jumpCrouchFramesLeft = 0;
+		this.jumpWindupActive = false;
+		this.jumpWindupLocked = false;
 		this.jumpBufferFrames = 0;
 		Body.setVelocity(this.body, {
 			x: speedX,
@@ -681,6 +763,22 @@ export class Player extends PhysicsBody {
 			y: CROUCH_STAND_HOP_VELOCITY,
 		});
 		this.groundContacts.clear();
+		// SoundManager.playSound('blob-wobble'); //!! find better sound - too annoying
+	}
+
+	private canCrouchJump(): boolean {
+		return this.crouchBlend > CROUCH_STATE_BLEND || this.crouchJumpBufferFrames > 0;
+	}
+
+	private tickCrouchJumpBuffer(): void {
+		if (this.crouchBlend > CROUCH_STATE_BLEND) {
+			this.crouchJumpBufferFrames = CROUCH_JUMP_BUFFER_FRAMES;
+			return;
+		}
+
+		if (this.crouchJumpBufferFrames > 0) {
+			this.crouchJumpBufferFrames -= 1;
+		}
 	}
 
 	private isCrouchHeld(): boolean {
@@ -712,7 +810,7 @@ export class Player extends PhysicsBody {
 		const onGround = this.isOnGround();
 		const wantCrouch = onGround
 			&& !this.clinging
-			&& this.jumpCrouchFramesLeft <= 0
+			&& !this.jumpWindupActive
 			&& this.isCrouchHeld();
 
 		// Blend in only — release is a stand hop from applyInput, not a blend-out.
@@ -761,18 +859,18 @@ export class Player extends PhysicsBody {
 		this.endCling(false);
 		Body.setVelocity(this.body, {
 			x: awayDirection * MOVE_SPEED_X,
-			y: WALL_JUMP_VELOCITY_Y,
+			y: WALL_JUMP_VELOCITY_Y * this.jumpAxis,
 		});
 		SoundManager.playSound('blob-jump', 1, { speed: Math.random() * 0.4 + 0.8 });
 	}
 
-	private resolveHorizontalSpeed(moveDirection: number): number {
+	private resolveHorizontalSpeed(moveX: number): number {
 		if (this.wallJumpFramesLeft > 0) {
 			this.wallJumpFramesLeft -= 1;
 			return this.wallJumpDirection * MOVE_SPEED_X;
 		}
 
-		return moveDirection * MOVE_SPEED_X;
+		return moveX * MOVE_SPEED_X;
 	}
 
 	private updateState(): void {
@@ -825,7 +923,7 @@ export class Player extends PhysicsBody {
 			velocityX: this.body.velocity.x,
 			velocityY: this.body.velocity.y,
 			onGround: this.isOnGround(),
-			jumpCrouching: this.jumpCrouchFramesLeft > 0,
+			jumpCrouching: this.jumpWindupActive && this.crouchBlend <= CROUCH_STATE_BLEND,
 			crouchBlend: this.crouchBlend,
 			clinging: this.clinging,
 			wallSide: this.clingSide,
@@ -902,7 +1000,7 @@ export class Player extends PhysicsBody {
 		this.currentVisual = 'burst';
 	}
 
-	private isOnGround(): boolean {
+	public isOnGround(): boolean {
 		return this.groundContacts.size > 0;
 	}
 

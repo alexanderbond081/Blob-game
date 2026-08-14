@@ -17,11 +17,12 @@ Open `http://localhost:3000`.
 
 ### Controls
 
-| Action | Keyboard | Touch / UI |
-|--------|----------|------------|
-| Move | `A` / `D` or ← → | Bottom-left / bottom-right of invisible 9-slice pad |
-| Jump | `Space` / `W` / ↑ | Mid-left / mid-right (also moves) |
-| Crouch / hide | `S` / ↓ | Bottom-center of 9-slice pad |
+| Action | Keyboard | Touch |
+|--------|----------|-------|
+| Move | `A` / `D` or ← → | Drag slowly left / right; stops when the finger stops |
+| Jump | `Space` / `W` / ↑ | Swipe up; 45° = full height and full run (same as keys); steeper eases to vertical; stops on landing |
+| Crouch / hide | `S` / ↓ | Swipe down (latches); tap, hold-cancel, or any key to stand |
+| Cancel last action | — | Tap, still press ~0.5 s, or any gameplay key |
 | Pause | `Esc` | Pause button (gameplay HUD, right cluster) |
 | Resume / Home / Restart | `Esc` resumes | Pause modal buttons |
 | Fullscreen | `F` | Top-left HUD button (hidden on Poki builds) |
@@ -30,7 +31,7 @@ Open `http://localhost:3000`.
 
 Stuck keys / touch after OS UI (notification shade, tab blur) are cleared on focus loss.
 
-The 9-slice touch pad is a stopgap so the game can be tried on a phone at all; it gets replaced by a gesture-first scheme in stage E.
+Touch is gesture-first (no on-screen buttons). Horizontal swipes are ignored until dash. Jump sector starts ~33° above ±X; height is full from 45° up. Climbing a sticky wall is an upward swipe along the wall. A swipe into the top HUD band ends the stroke (intentional).
 
 ## What’s in this build
 
@@ -44,7 +45,7 @@ The 9-slice touch pad is a stopgap so the game can be tried on a phone at all; i
 - **Sticky walls** (`label: "sticky-wall"`): air cling, slow slide, peel-off stretch, wall-jump
 - **Hazards** (`hazards[]`, e.g. `type: "spikes"`): solid kill volumes
 - **Death:** shared kill path (hazard / fall) → optional `burst` anim → droplet splash → pause → respawn (empty burst frame OK; no forced hide of last frame)
-- **Crouch / hide:** hold ↓ / `S` / bottom-center; blend-in squat + alpha; collider half-height; release → micro-hop; jump from any crouch skips squat wind-up, uses `CROUCH_JUMP_VELOCITY` and a lower-pitched jump SFX
+- **Crouch / hide:** hold ↓ / `S` / down swipe; blend-in squat + alpha; collider half-height; release → micro-hop; jump from any crouch skips squat wind-up, uses `CROUCH_JUMP_VELOCITY` and a lower-pitched jump SFX
 - **Portal gate:** starts locked; fireflies home to rim slots (`exit.slots`); door tweens out and a vortex spins when full; overlap then clears the level. Blob fly-in / suck-in animation is deferred
 - Fireflies: wander around their point, pickup wind SFX, then fly to a portal slot (or fade into the vortex if the rim is already full)
 - Top icon HUD: fullscreen (non-Poki), pause (gameplay), separate music / SFX mute
@@ -91,7 +92,7 @@ Production builds write `dist/BUILD.txt` (version, channel, git meta). Upload th
 | `src/physics/` | Matter world, static bodies, ground / wall contact |
 | `src/world/` | Camera, parallax, level root |
 | `src/levels/` | Zod schema + JSON levels (`meadow-01` / `meadow-02`) + Ogmo sources |
-| `src/input/` | Shared controls + 9-slice touch pad |
+| `src/input/` | Shared analog controls + gesture touch layer |
 | `src/hud/` | Icon HUD + modals (pause, result, Progress, Customize) |
 | `src/managers/` | Scenes catalog, skins catalog, GameProgress, sound |
 | `src/platform/` | Poki / CrazyGames / no-op adapters |
@@ -120,14 +121,14 @@ Goal: a build good enough to publish on itch.io and send to Poki for publishing 
 | 2 | Portal entry animation + SFX before the result modal | Enter SFX is in; **blob fly-in animation deferred**. Result modal still fires on overlap |
 | 3 | Enemies: moving hazards (beetle / spider / wasp) on fixed paths | New level-schema object; needed before authoring levels |
 | 4 | 10 levels with a progressive difficulty curve | Only after 1 and 3 |
-| 5 | Touch controls rework | Current 9-slice pad is a stopgap — full replacement, gesture-first, no on-screen buttons |
+| 5 | Touch controls rework | **Done (playable).** Gesture layer: settle + flick-on-up, jump/crouch swipes, analog axes from angle, tap / 0.5 s / key cancel. Horizontal swipe deferred until dash. Remaining event-order polish in [`plans/poki.md`](./plans/poki.md) → Touch follow-ups |
 | 6 | Hints for the mechanics that already exist | Needs the final mechanic set |
 | 7 | Demo outro screen after the last level | "Thanks for playing the demo…" |
 | 8 | Poki submission prerequisites | Requirements checklist, first-download size, 60 FPS on mid-range mobile, no-`localStorage` (incognito) path |
 
 ## Known gaps (not blockers for a first push)
 
-- Touch input is a placeholder (invisible 9-slice pad) — being replaced in stage E
+- Touch follow-ups (not blockers): `pointerup` capture race vs Pixi up position; `touchend` identifier vs `pointerId`; `pointercancel` vs `touchcancel`; flick that pauses before lift; pause/blur leaving a committed jump; failed takeoff leaving a ground run — see [`plans/poki.md`](./plans/poki.md)
 - Portal entry (blob suck-in) animation before the result modal — deferred
 - More player kit still queued (double jump / flight, dash, glide) — see mechanics backlog
 - Final art for sticky walls / spikes; per-skin droplet assets deferred (catalog field ready)
