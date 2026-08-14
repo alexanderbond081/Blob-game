@@ -71,7 +71,7 @@
 				},
 				{
 					"alias": "firefly-all-done",
-					"src": "assets/sounds/all-done.ogg"
+					"src": "assets/sounds/all-done-lowending.ogg"
 				},
 				{
 					"alias": "portal-ready",

@@ -525,7 +525,7 @@ export class Player extends PhysicsBody {
 		}
 
 		if (!onGround) {
-			this.tryStartCling(moveX);
+			this.tryStartCling();
 		}
 
 		if (this.clinging) {
@@ -620,7 +620,7 @@ export class Player extends PhysicsBody {
 		this.applyClingVelocity();
 	}
 
-	private tryStartCling(moveX: number): void {
+	private tryStartCling(): void {
 		if (this.jumpCrouchFramesLeft > 0 || this.jumpWindupActive || this.wallJumpFramesLeft > 0) {
 			return;
 		}
@@ -629,7 +629,7 @@ export class Player extends PhysicsBody {
 			return;
 		}
 
-		const contact = this.findClingableContact(moveX);
+		const contact = this.findClingableContact();
 		if (!contact) {
 			return;
 		}
@@ -646,11 +646,9 @@ export class Player extends PhysicsBody {
 		//void SoundManager.playSound('blob-land', 1, { speed: Math.random() * 0.2 + 1.8 });
 	}
 
-	private findClingableContact(moveX: number): StickyWallContact | null {
-		const moveDirection = axisDirection(moveX);
+	private findClingableContact(): StickyWallContact | null {
 		for (const contact of this.stickyWallContacts.values()) {
-			const towardWall = contact.side === 'left' ? -1 : 1;
-			if (moveDirection === towardWall && this.isStickyWallClingHeightOk(contact.body)) {
+			if (this.isStickyWallClingHeightOk(contact.body)) {
 				return contact;
 			}
 		}

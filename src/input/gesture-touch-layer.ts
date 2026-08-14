@@ -174,7 +174,7 @@ export class GestureTouchLayer extends Container {
 
 	/**
 	 * Clears latched jump-run on cling / landing, and everything on death.
-	 * Call after the physics step so the inward swipe can still trigger cling.
+	 * Call after the physics step so cling can start from contact this frame.
 	 */
 	public notePlayerState(feedback: GesturePlayerFeedback): void {
 		if (feedback.dying) {
