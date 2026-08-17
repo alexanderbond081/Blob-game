@@ -1,0 +1,42 @@
+{
+  "ogmoVersion": "3.4.0",
+  "width": 1500,
+  "height": 1500,
+  "offsetX": 0,
+  "offsetY": 0,
+  "layers": [
+    {
+      "name": "platforms",
+      "_eid": "57334173",
+      "offsetX": 0,
+      "offsetY": 0,
+      "gridCellWidth": 10,
+      "gridCellHeight": 10,
+      "gridCellsX": 150,
+      "gridCellsY": 150,
+      "entities": [
+        {"name": "ground", "id": 0, "_eid": "57405180", "x": -20, "y": 1450, "width": 1540, "height": 60},
+        {"name": "wall", "id": 1, "_eid": "57390486", "x": 1510, "y": 10, "width": 30, "height": 1500},
+        {"name": "blob", "id": 16, "_eid": "57583892", "x": 760, "y": 640},
+        {"name": "ground", "id": 17, "_eid": "57405180", "x": 710, "y": 760, "width": 100, "height": 530},
+        {"name": "wall", "id": 18, "_eid": "57390486", "x": -40, "y": 10, "width": 30, "height": 1500},
+        {"name": "firefly", "id": 20, "_eid": "57574758", "x": 760, "y": 1400},
+        {"name": "firefly", "id": 23, "_eid": "57574758", "x": 650, "y": 790},
+        {"name": "firefly", "id": 24, "_eid": "57574758", "x": 100, "y": 1290},
+        {"name": "portal", "id": 25, "_eid": "57607701", "x": 910, "y": 1120},
+        {"name": "wall", "id": 27, "_eid": "57390486", "x": 710, "y": 1290, "width": 100, "height": 60},
+        {"name": "leaf", "id": 29, "_eid": "57377904", "x": 600, "y": 880, "width": 110, "height": 30},
+        {"name": "leaf", "id": 30, "_eid": "57377904", "x": 480, "y": 1000, "width": 100, "height": 30},
+        {"name": "leaf", "id": 31, "_eid": "57377904", "x": 360, "y": 1120, "width": 100, "height": 30},
+        {"name": "leaf", "id": 32, "_eid": "57377904", "x": 240, "y": 1240, "width": 100, "height": 30},
+        {"name": "ground", "id": 33, "_eid": "57405180", "x": -10, "y": 1350, "width": 250, "height": 100},
+        {"name": "wall", "id": 35, "_eid": "57390486", "x": 1400, "y": 1010, "width": 30, "height": 440},
+        {"name": "leaf", "id": 36, "_eid": "57377904", "x": 1210, "y": 1300, "width": 190, "height": 30},
+        {"name": "firefly", "id": 37, "_eid": "57574758", "x": 1330, "y": 1240},
+        {"name": "leaf", "id": 38, "_eid": "57377904", "x": 810, "y": 1220, "width": 200, "height": 30},
+        {"name": "sticky", "id": 39, "_eid": "57409953", "x": 1320, "y": 720, "width": 180, "height": 290},
+        {"name": "leaf", "id": 40, "_eid": "57377904", "x": 1430, "y": 1160, "width": 80, "height": 30}
+      ]
+    }
+  ]
+}

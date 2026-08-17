@@ -1,0 +1,39 @@
+{
+  "ogmoVersion": "3.4.0",
+  "width": 1500,
+  "height": 1500,
+  "offsetX": 0,
+  "offsetY": 0,
+  "layers": [
+    {
+      "name": "platforms",
+      "_eid": "57334173",
+      "offsetX": 0,
+      "offsetY": 0,
+      "gridCellWidth": 10,
+      "gridCellHeight": 10,
+      "gridCellsX": 150,
+      "gridCellsY": 150,
+      "entities": [
+        {"name": "ground", "id": 0, "_eid": "57405180", "x": -20, "y": 1450, "width": 1540, "height": 60},
+        {"name": "wall", "id": 1, "_eid": "57390486", "x": 1510, "y": 10, "width": 30, "height": 1500},
+        {"name": "blob", "id": 16, "_eid": "57583892", "x": 110, "y": 1030},
+        {"name": "wall", "id": 18, "_eid": "57390486", "x": -40, "y": 10, "width": 30, "height": 1500},
+        {"name": "firefly", "id": 20, "_eid": "57574758", "x": 820, "y": 1390},
+        {"name": "firefly", "id": 23, "_eid": "57574758", "x": 530, "y": 1050},
+        {"name": "firefly", "id": 24, "_eid": "57574758", "x": 100, "y": 1260},
+        {"name": "portal", "id": 25, "_eid": "57607701", "x": 950, "y": 850},
+        {"name": "leaf", "id": 29, "_eid": "57377904", "x": 1240, "y": 1320, "width": 200, "height": 30},
+        {"name": "leaf", "id": 31, "_eid": "57377904", "x": 430, "y": 1120, "width": 200, "height": 30},
+        {"name": "leaf", "id": 32, "_eid": "57377904", "x": -10, "y": 1160, "width": 230, "height": 30},
+        {"name": "wall", "id": 35, "_eid": "57390486", "x": 930, "y": 1010, "width": 30, "height": 440},
+        {"name": "leaf", "id": 36, "_eid": "57377904", "x": 960, "y": 1180, "width": 200, "height": 30},
+        {"name": "firefly", "id": 37, "_eid": "57574758", "x": 1060, "y": 1100},
+        {"name": "leaf", "id": 38, "_eid": "57377904", "x": 730, "y": 1270, "width": 200, "height": 30},
+        {"name": "sticky", "id": 39, "_eid": "57409953", "x": 810, "y": 950, "width": 270, "height": 60},
+        {"name": "firefly", "id": 41, "_eid": "57574758", "x": 1340, "y": 1260},
+        {"name": "ground", "id": 42, "_eid": "57405180", "x": 20, "y": 1330, "width": 150, "height": 120}
+      ]
+    }
+  ]
+}

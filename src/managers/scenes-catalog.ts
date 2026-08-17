@@ -33,6 +33,20 @@ export const gameSceneCatalog: GameSceneCatalogEntry[] = [
 		createScene: () => new PlatformLevelScene('meadow-02'),
 	},
 	{
+		id: 'meadow-03',
+		title: 'Meadow',
+		assetBundle: 'meadow-scene',
+		locationIcon: 'meadow',
+		createScene: () => new PlatformLevelScene('meadow-03'),
+	},
+	{
+		id: 'meadow-04',
+		title: 'Meadow',
+		assetBundle: 'meadow-scene',
+		locationIcon: 'meadow',
+		createScene: () => new PlatformLevelScene('meadow-04'),
+	},
+	{
 		id: 'meadow-13',
 		title: 'Meadow',
 		assetBundle: 'meadow-scene',
