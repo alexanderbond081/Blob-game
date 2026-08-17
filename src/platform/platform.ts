@@ -255,16 +255,29 @@ const endAdBreak = (): void => {
 };
 
 /**
- * Window blur alone is deliberately ignored: the game keeps running while its
- * window stays visible but unfocused (multi-monitor / Poki iframe focus).
+ * Recompute the `hidden` reason from the live document.
+ * Does not touch HUD Pause (`isPaused` in index.ts) — a Pause modal still holds
+ * the game after wake. Window blur is ignored (multi-monitor / Poki iframe).
+ *
+ * Phones after a long background often skip `visibilitychange` and only fire
+ * `pageshow` / `focus` / first pointer — those must re-sync or the ticker
+ * stays skipped while HUD taps still work.
  */
+export const syncPageVisibility = (): void => {
+	setPauseReason('hidden', document.visibilityState === 'hidden');
+};
+
 const bindVisibilityPause = (): void => {
-	const syncVisibility = (): void => {
-		setPauseReason('hidden', document.visibilityState === 'hidden');
+	const onPageFreeze = (): void => {
+		setPauseReason('hidden', true);
 	};
 
-	document.addEventListener('visibilitychange', syncVisibility);
-	syncVisibility();
+	document.addEventListener('visibilitychange', syncPageVisibility);
+	window.addEventListener('pageshow', syncPageVisibility);
+	window.addEventListener('focus', syncPageVisibility);
+	document.addEventListener('freeze', onPageFreeze);
+	document.addEventListener('resume', syncPageVisibility);
+	syncPageVisibility();
 };
 
 const setPauseReason = (reason: PlatformPauseReason, active: boolean): void => {

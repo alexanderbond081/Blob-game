@@ -11,7 +11,7 @@ import { findGameScene } from './managers/scenes-catalog';
 import { GameProgress } from './managers/game-progress';
 import { LevelExitEvent, PlatformLevelScene } from './scenes/platform-level-scene';
 import { logBuildInfo } from './version';
-import { initPlatform, platformCommercialBreak, platformGameplayStart, platformGameplayStop, platformLoadingFinished, setPlatformHooks } from './platform/platform';
+import { initPlatform, platformCommercialBreak, platformGameplayStart, platformGameplayStop, platformLoadingFinished, setPlatformHooks, syncPageVisibility } from './platform/platform';
 
 import './global-delay';
 import { GameHUD } from './hud/game-hud';
@@ -136,6 +136,7 @@ const bindPlatformPause = (): void => {
 		onResume: () => {
 			isPlatformPaused = false;
 			gsap.globalTimeline.resume();
+			gsap.ticker.wake();
 		},
 	});
 };
@@ -152,6 +153,21 @@ const suppressBrowserTouchChrome = (canvas: HTMLCanvasElement): void => {
 	// passive: false is required for preventDefault to cancel iOS long-press.
 	canvas.addEventListener('touchstart', prevent, { passive: false });
 	canvas.addEventListener('touchmove', prevent, { passive: false });
+};
+
+/**
+ * If Chrome/Safari dropped `visibilitychange` after a long freeze, the first
+ * tap still reaches HUD. Re-sync `hidden` only — HUD Pause stays if it was open.
+ */
+const bindPlatformWakeOnInput = (canvas: HTMLCanvasElement): void => {
+	const wakeIfVisible = (): void => {
+		if (document.visibilityState === 'visible') {
+			syncPageVisibility();
+		}
+	};
+
+	canvas.addEventListener('pointerdown', wakeIfVisible, { capture: true, passive: true });
+	canvas.addEventListener('touchstart', wakeIfVisible, { capture: true, passive: true });
 };
 
 
@@ -181,6 +197,7 @@ async function initGame(): Promise<void> {
 	setGameDelayPaused(isGamePaused);
 	document.body.appendChild(app.canvas);
 	suppressBrowserTouchChrome(app.canvas);
+	bindPlatformWakeOnInput(app.canvas);
 	applyStageScale();
 
 	viewMask.rect(0, 0, gameWidth, gameHeight).fill(0xffffff);

@@ -293,6 +293,7 @@ Pixi = draw yourself + pick physics package. Phaser/Defold = gameplay kit includ
 - [x] Portal unlock by firefly rim slots + door / vortex art (stage E #1). Blob fly-in animation deferred
 - [x] Portrait / rotate support → **stage F** (Poki accepts landscape-only; camera + HUD + hub modals rework is too costly for the demo)
 - [x] Rewarded help → **stage F**; shape still open (flight vs teleport to portal)
+- [x] Mobile background freeze: sync platform `hidden` on `pageshow` / `focus` / first pointer / Page Lifecycle freeze-resume, not only `visibilitychange`. Does **not** clear HUD Pause (`isPaused`)
 - [ ] Target Poki first vs CrazyGames Basic Launch first
 - [ ] Firefly economy beyond the portal gate (currency for skins?) — affects 100 % completion rewards
 

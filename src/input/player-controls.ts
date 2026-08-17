@@ -5,7 +5,7 @@ export type PlayerControls = {
 	/** Jump axis this frame, 0 = idle, 1 = full jump. Impulse, not a hold-to-cut. */
 	jump: number;
 	crouch: boolean;
-	/** True after a swipe actually commits; charge-only must not launch the jump. */
+	/** True after a swipe actually commits; the jump axis must not launch without this. */
 	jumpCommitted: boolean;
 	/**
 	 * Touch-only: releasing jump during ground wind-up cancels the squat.

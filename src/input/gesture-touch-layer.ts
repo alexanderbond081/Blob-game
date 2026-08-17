@@ -40,8 +40,6 @@ const HORIZONTAL_DEADZONE_DEG = 33;
 const SWIPE_DISTANCE_PX = 90;
 /** Slow post-settle swipes need this; short flicks use distance only. */
 const SWIPE_SPEED_PX_PER_SEC = 380;
-/** Start jump wind-up after the contact has settled. */
-const JUMP_CHARGE_DISTANCE_PX = 50;
 /**
  * Follow the contact until it is still (fat-finger centroid jump) or this
  * timer elapses. Distance for a swipe is measured after that, not from raw down.
@@ -60,6 +58,8 @@ const HOLD_CANCEL_MS = 500;
 /** Finger speed that maps to moveX = ±1 during a slow drag. */
 const DRAG_FULL_SPEED_PX_PER_SEC = 360;
 const DRAG_MIN_SPEED_PX_PER_SEC = 40;
+/** Drop live analog if no real movement arrived — off-screen drag keeps the pointer down. */
+const LIVE_MOVE_STALE_MS = 100;
 const MAX_SAMPLES = 48;
 const DEFAULT_HUD_TOP_RELEASE_Y = 72;
 /** Elevation from ±X at which jump height matches a full keyboard jump. */
@@ -72,12 +72,6 @@ const TOUCH_JUMP_BOOST = 1.05;
 
 const HORIZONTAL_DEADZONE_RAD = (HORIZONTAL_DEADZONE_DEG * Math.PI) / 180;
 const FULL_JUMP_ELEVATION_RAD = (FULL_JUMP_ELEVATION_DEG * Math.PI) / 180;
-
-const JUMP_KEY_CODES = new Set([
-	'ArrowUp',
-	'KeyW',
-	'Space',
-]);
 
 const GAMEPLAY_KEY_CODES = new Set([
 	'ArrowLeft',
@@ -96,7 +90,7 @@ const GAMEPLAY_KEY_CODES = new Set([
  *
  * Swipe up jumps (moveX from the angle lasts until a surface); swipe down
  * latches crouch. Horizontal swipe is off until dash. Slow left/right drag
- * is live analog and dies on lift. Tap, a still press (≥ 0.5 s), or any
+ * is live analog and dies when the finger is still or lifts. Tap, a still press (≥ 0.5 s), or any
  * gameplay key clears latches. Jump flicks also commit on pointer-up so a
  * short stroke is not dropped; fat-finger contact jumps are treated as taps.
  */
@@ -146,9 +140,10 @@ export class GestureTouchLayer extends Container {
 		this.on('pointerupoutside', this.onPointerUp);
 		this.on('pointercancel', this.onPointerUp);
 
-		window.addEventListener('pointerup', this.onGlobalPointerEnd, true);
-		window.addEventListener('pointercancel', this.onGlobalPointerEnd, true);
-		window.addEventListener('touchend', this.onGlobalTouchEnd, true);
+		// Bubble only: capture would finish the stroke before Pixi can store the
+		// release point, so a down→up flick with no move would measure as 0 px.
+		window.addEventListener('pointerup', this.onGlobalPointerEnd);
+		window.addEventListener('pointercancel', this.onGlobalPointerEnd);
 		window.addEventListener('touchcancel', this.onGlobalTouchInterrupt, true);
 		window.addEventListener('keydown', this.onKeyDown);
 		window.addEventListener('blur', this.onWindowBlur);
@@ -157,6 +152,7 @@ export class GestureTouchLayer extends Container {
 
 	public getControls(): PlayerControls {
 		this.refreshHoldCancel();
+		this.refreshLiveMove();
 		if (this.liveMoveX !== 0 && !this.jumpGestureActive && this.jumpCharge <= 0) {
 			this.latchedCrouch = false;
 		}
@@ -165,7 +161,7 @@ export class GestureTouchLayer extends Container {
 		this.controls.jump = this.jumpCharge;
 		this.controls.crouch = this.latchedCrouch;
 		this.controls.jumpCommitted = this.jumpCommitted;
-		this.controls.cancelJumpOnRelease = this.windupCancel || (this.jumpCharge > 0 && !this.jumpCommitted);
+		this.controls.cancelJumpOnRelease = this.windupCancel;
 		if (this.activePointerId === null && this.jumpCharge <= 0) {
 			this.windupCancel = false;
 		}
@@ -223,9 +219,8 @@ export class GestureTouchLayer extends Container {
 		this.off('pointerupoutside', this.onPointerUp);
 		this.off('pointercancel', this.onPointerUp);
 
-		window.removeEventListener('pointerup', this.onGlobalPointerEnd, true);
-		window.removeEventListener('pointercancel', this.onGlobalPointerEnd, true);
-		window.removeEventListener('touchend', this.onGlobalTouchEnd, true);
+		window.removeEventListener('pointerup', this.onGlobalPointerEnd);
+		window.removeEventListener('pointercancel', this.onGlobalPointerEnd);
 		window.removeEventListener('touchcancel', this.onGlobalTouchInterrupt, true);
 		window.removeEventListener('keydown', this.onKeyDown);
 		window.removeEventListener('blur', this.onWindowBlur);
@@ -293,6 +288,9 @@ export class GestureTouchLayer extends Container {
 		}
 
 		this.trackMove(local.x, local.y, performance.now());
+		if (this.isOutsidePlayfield(local.x, local.y)) {
+			this.liveMoveX = 0;
+		}
 	};
 
 	private readonly onPointerUp = (event: FederatedPointerEvent): void => {
@@ -317,19 +315,6 @@ export class GestureTouchLayer extends Container {
 		this.finishStroke(performance.now(), false);
 	};
 
-	private readonly onGlobalTouchEnd = (event: TouchEvent): void => {
-		if (this.activePointerId === null) {
-			return;
-		}
-
-		for (let i = 0; i < event.changedTouches.length; i += 1) {
-			if (event.changedTouches[i].identifier === this.activePointerId) {
-				this.finishStroke(performance.now(), false);
-				return;
-			}
-		}
-	};
-
 	private readonly onGlobalTouchInterrupt = (): void => {
 		this.endStroke();
 	};
@@ -343,15 +328,11 @@ export class GestureTouchLayer extends Container {
 			return;
 		}
 
-		const hadTouchCharge = this.jumpCharge > 0 && !this.jumpCommitted;
 		this.latchedMoveX = 0;
 		this.latchedCrouch = false;
 		this.liveMoveX = 0;
 		this.jumpCharge = 0;
 		this.jumpCommitted = false;
-		if (hadTouchCharge && !JUMP_KEY_CODES.has(event.code)) {
-			this.windupCancel = true;
-		}
 	};
 
 	private readonly onVisibilityChange = (): void => {
@@ -391,21 +372,7 @@ export class GestureTouchLayer extends Container {
 		const stroke = this.measureFrom(this.originX, this.originY, this.originTime, x, y, now);
 		const kind = classifySwipe(stroke.angle);
 		const jumpStroke = kind === 'jump';
-		this.jumpGestureActive = jumpStroke || this.jumpCharge > 0;
-
-		if (
-			jumpStroke
-			&& stroke.distance >= JUMP_CHARGE_DISTANCE_PX
-			&& (stroke.durationMs <= FLICK_MAX_DURATION_MS || stroke.speed >= SWIPE_SPEED_PX_PER_SEC)
-		) {
-			this.jumpCharge = jumpAxisFromAngle(stroke.angle);
-		} else if (!this.jumpCommitted && !jumpStroke) {
-			if (this.jumpCharge > 0) {
-				this.windupCancel = true;
-				this.latchedCrouch = false;
-			}
-			this.jumpCharge = 0;
-		}
+		this.jumpGestureActive = jumpStroke;
 
 		if (this.tryCommitStroke(stroke)) {
 			this.liveMoveX = 0;
@@ -542,6 +509,16 @@ export class GestureTouchLayer extends Container {
 		return tailDist < TAP_MAX_DISTANCE_PX && totalDist >= SETTLE_RADIUS_PX * 0.5;
 	}
 
+	private refreshLiveMove(): void {
+		if (this.activePointerId === null || this.liveMoveX === 0) {
+			return;
+		}
+
+		if (performance.now() - this.lastMoveTime >= LIVE_MOVE_STALE_MS) {
+			this.liveMoveX = 0;
+		}
+	}
+
 	private refreshHoldCancel(): void {
 		if (this.activePointerId === null || this.strokeConsumed) {
 			return;
@@ -573,6 +550,10 @@ export class GestureTouchLayer extends Container {
 
 	private isInHudReleaseBand(localY: number): boolean {
 		return localY < this.hudTopReleaseY;
+	}
+
+	private isOutsidePlayfield(localX: number, localY: number): boolean {
+		return localX < 0 || localX > this.viewWidth || localY > this.viewHeight;
 	}
 
 	private pushSample(x: number, y: number, time: number): void {
@@ -653,7 +634,7 @@ export class GestureTouchLayer extends Container {
 		this.jumpGestureActive = false;
 		this.originLocked = false;
 		// Keep a committed jump until takeoff so a fast lift still launches.
-		// latchedMoveX stays until a surface; uncommitted charge must not.
+		// latchedMoveX stays until a surface; an unfinished swipe must not.
 		if (!this.jumpCommitted) {
 			this.jumpCharge = 0;
 		}
