@@ -111,6 +111,8 @@ export class PlayerJelly {
 	private wallJellyVelocity = 0;
 	private wasOnGround = true;
 	private wasClinging = false;
+	/** Walk-off from crouch: keep the squash in the spring, don't stretch like a jump. */
+	private skipNextLeaveGroundImpulse = false;
 
 	/** Wind-up squash right before the jump launches. */
 	public anticipateJump(): void {
@@ -133,14 +135,26 @@ export class PlayerJelly {
 		this.hangSkewVelocity += WALL_CLING_IMPULSE * 0.55;
 	}
 
+	/** Dump hide-crouch squash into the spring so fall unfurl wobbles instead of popping. */
+	public absorbHideCrouchIntoFall(crouchBlend: number): void {
+		const blend = Math.max(0, Math.min(1, crouchBlend));
+		const hideSquash = (1 - CROUCH_HIDE_SCALE_Y) * blend;
+		this.jelly = Math.max(-MAX_JELLY, this.jelly - hideSquash);
+		this.skipNextLeaveGroundImpulse = true;
+	}
+
 	public update(input: JellyMotionInput): JellyPose {
 		const dt = Math.max(input.deltaTime, 0);
 		const dtSec = dt / FRAME_HZ;
 		this.time += dt;
 
 		if (!input.onGround && this.wasOnGround && !input.clinging) {
-			// Leave ground: kick into a tall stretch so the spring can ring in air.
-			this.jellyVelocity += JUMP_IMPULSE;
+			if (this.skipNextLeaveGroundImpulse) {
+				this.skipNextLeaveGroundImpulse = false;
+			} else {
+				// Leave ground: kick into a tall stretch so the spring can ring in air.
+				this.jellyVelocity += JUMP_IMPULSE;
+			}
 		}
 
 		if (input.onGround && !this.wasOnGround) {

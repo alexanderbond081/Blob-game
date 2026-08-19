@@ -30,6 +30,25 @@ type StrokeMeasure = {
 	durationMs: number;
 };
 
+type Stroke = {
+	pointerId: number;
+	downX: number;
+	downY: number;
+	downTime: number;
+	originX: number;
+	originY: number;
+	originTime: number;
+	originLocked: boolean;
+	lastX: number;
+	lastY: number;
+	lastTime: number;
+	lastMoveTime: number;
+	consumed: boolean;
+	liveMoveX: number;
+	jumpGestureActive: boolean;
+	samples: StrokeSample[];
+};
+
 /** Degrees from ±X that are not a jump / crouch. Tune by feel. */
 const HORIZONTAL_DEADZONE_DEG = 33;
 /**
@@ -37,9 +56,9 @@ const HORIZONTAL_DEADZONE_DEG = 33;
  * When it returns: commit on pointer-up (not mid-stroke), require a speed
  * threshold as well as distance, and do not latch run.
  */
-const SWIPE_DISTANCE_PX = 90;
+const SWIPE_DISTANCE_PX = 80;
 /** Slow post-settle swipes need this; short flicks use distance only. */
-const SWIPE_SPEED_PX_PER_SEC = 380;
+const SWIPE_SPEED_PX_PER_SEC = 350;
 /**
  * Follow the contact until it is still (fat-finger centroid jump) or this
  * timer elapses. Distance for a swipe is measured after that, not from raw down.
@@ -61,6 +80,7 @@ const DRAG_MIN_SPEED_PX_PER_SEC = 40;
 /** Drop live analog if no real movement arrived — off-screen drag keeps the pointer down. */
 const LIVE_MOVE_STALE_MS = 100;
 const MAX_SAMPLES = 48;
+const MAX_STROKES = 2;
 const DEFAULT_HUD_TOP_RELEASE_Y = 72;
 /** Elevation from ±X at which jump height matches a full keyboard jump. */
 const FULL_JUMP_ELEVATION_DEG = 45;
@@ -88,39 +108,30 @@ const GAMEPLAY_KEY_CODES = new Set([
 /**
  * Full-screen gesture layer. Direction only — no on-screen buttons.
  *
+ * Two concurrent strokes. A third contact evicts the stillest (else oldest)
+ * slot without treating it as a tap — a resting thumb on the bezel must not
+ * block jump / run. Live analog uses the most recently moving drag; jump and
+ * crouch commit from either finger. Latches are player state, not per-finger.
+ *
  * Swipe up jumps (moveX from the angle lasts until a surface); swipe down
  * latches crouch. Horizontal swipe is off until dash. Slow left/right drag
- * is live analog and dies when the finger is still or lifts. Tap, a still press (≥ 0.5 s), or any
- * gameplay key clears latches. Jump flicks also commit on pointer-up so a
- * short stroke is not dropped; fat-finger contact jumps are treated as taps.
+ * is live analog and dies when the finger is still or lifts. Tap, a still press
+ * (≥ 0.5 s), or any gameplay key clears latches when that contact is alone.
+ * Jump flicks also commit on pointer-up so a short stroke is not dropped;
+ * fat-finger contact jumps are treated as taps.
  */
 export class GestureTouchLayer extends Container {
 	private readonly viewWidth: number;
 	private readonly viewHeight: number;
 	private readonly hudTopReleaseY: number;
-	private readonly samples: StrokeSample[] = [];
+	private readonly strokes: Stroke[] = [];
 	private readonly controls: PlayerControls = createEmptyPlayerControls();
 
-	private activePointerId: number | null = null;
-	private downX = 0;
-	private downY = 0;
-	private downTime = 0;
-	private originX = 0;
-	private originY = 0;
-	private originTime = 0;
-	private originLocked = false;
-	private lastX = 0;
-	private lastY = 0;
-	private lastTime = 0;
-	private lastMoveTime = 0;
-	private strokeConsumed = false;
 	private latchedMoveX = 0;
 	private latchedCrouch = false;
-	private liveMoveX = 0;
 	private jumpCharge = 0;
 	private jumpCommitted = false;
 	private windupCancel = false;
-	private jumpGestureActive = false;
 	private wasClinging = false;
 	private wasOnGround = false;
 
@@ -152,17 +163,17 @@ export class GestureTouchLayer extends Container {
 
 	public getControls(): PlayerControls {
 		this.refreshHoldCancel();
-		this.refreshLiveMove();
-		if (this.liveMoveX !== 0 && !this.jumpGestureActive && this.jumpCharge <= 0) {
+		const liveMoveX = this.resolveLiveMoveX();
+		if (liveMoveX !== 0 && this.jumpCharge <= 0) {
 			this.latchedCrouch = false;
 		}
 
-		this.controls.moveX = this.liveMoveX !== 0 ? this.liveMoveX : this.latchedMoveX;
+		this.controls.moveX = liveMoveX !== 0 ? liveMoveX : this.latchedMoveX;
 		this.controls.jump = this.jumpCharge;
 		this.controls.crouch = this.latchedCrouch;
 		this.controls.jumpCommitted = this.jumpCommitted;
 		this.controls.cancelJumpOnRelease = this.windupCancel;
-		if (this.activePointerId === null && this.jumpCharge <= 0) {
+		if (this.strokes.length === 0 && this.jumpCharge <= 0) {
 			this.windupCancel = false;
 		}
 		return { ...this.controls };
@@ -175,7 +186,7 @@ export class GestureTouchLayer extends Container {
 	public notePlayerState(feedback: GesturePlayerFeedback): void {
 		if (feedback.dying) {
 			this.clearLatches();
-			this.endStroke();
+			this.dropAllStrokes();
 			this.wasClinging = feedback.clinging;
 			this.wasOnGround = feedback.onGround;
 			return;
@@ -201,7 +212,7 @@ export class GestureTouchLayer extends Container {
 		// the ground (cancelled wind-up, lost capture) must not keep walking.
 		if (
 			feedback.onGround
-			&& this.activePointerId === null
+			&& this.strokes.length === 0
 			&& !this.jumpCommitted
 			&& this.jumpCharge <= 0
 		) {
@@ -226,101 +237,83 @@ export class GestureTouchLayer extends Container {
 		window.removeEventListener('blur', this.onWindowBlur);
 		document.removeEventListener('visibilitychange', this.onVisibilityChange);
 
-		this.endStroke();
+		this.dropAllStrokes();
 		super.destroy(options);
 	}
 
 	private readonly onPointerDown = (event: FederatedPointerEvent): void => {
 		event.preventDefault();
 
-		if (this.activePointerId !== null && this.activePointerId !== event.pointerId) {
+		if (this.findStroke(event.pointerId)) {
 			return;
-		}
-
-		if (
-			event.isPrimary
-			&& this.activePointerId !== null
-			&& this.activePointerId !== event.pointerId
-		) {
-			this.endStroke();
 		}
 
 		const local = event.getLocalPosition(this);
 		if (this.isInHudReleaseBand(local.y)) {
 			return;
+		}
+
+		const hadMovingStroke = this.strokes.some((stroke) => !this.isStrokeStill(stroke));
+		if (this.strokes.length >= MAX_STROKES) {
+			this.dropStroke(this.pickEvictionStroke());
 		}
 
 		this.tryCapturePointer(event);
-		this.activePointerId = event.pointerId;
-		this.downX = local.x;
-		this.downY = local.y;
-		this.downTime = performance.now();
-		this.originX = local.x;
-		this.originY = local.y;
-		this.originTime = this.downTime;
-		this.originLocked = false;
-		this.lastX = local.x;
-		this.lastY = local.y;
-		this.lastTime = this.downTime;
-		this.lastMoveTime = this.downTime;
-		this.strokeConsumed = false;
-		this.jumpCharge = 0;
-		this.jumpCommitted = false;
-		this.windupCancel = false;
-		this.jumpGestureActive = false;
-		this.liveMoveX = 0;
-		if (this.wasOnGround) {
+		const now = performance.now();
+		this.strokes.push(createStroke(event.pointerId, local.x, local.y, now));
+		if (this.wasOnGround && !hadMovingStroke) {
 			this.latchedMoveX = 0;
 		}
-		this.samples.length = 0;
-		this.pushSample(local.x, local.y, this.downTime);
 	};
 
 	private readonly onPointerMove = (event: FederatedPointerEvent): void => {
-		if (event.pointerId !== this.activePointerId) {
+		const stroke = this.findStroke(event.pointerId);
+		if (!stroke) {
 			return;
 		}
 
 		const local = event.getLocalPosition(this);
 		if (this.isInHudReleaseBand(local.y)) {
-			this.finishStroke(performance.now(), true);
+			this.finishStroke(stroke, performance.now(), true);
 			return;
 		}
 
-		this.trackMove(local.x, local.y, performance.now());
+		this.trackMove(stroke, local.x, local.y, performance.now());
 		if (this.isOutsidePlayfield(local.x, local.y)) {
-			this.liveMoveX = 0;
+			stroke.liveMoveX = 0;
 		}
 	};
 
 	private readonly onPointerUp = (event: FederatedPointerEvent): void => {
-		if (event.pointerId !== this.activePointerId) {
+		const stroke = this.findStroke(event.pointerId);
+		if (!stroke) {
 			return;
 		}
 
 		const local = event.getLocalPosition(this);
 		const now = performance.now();
-		this.lastX = local.x;
-		this.lastY = local.y;
-		this.lastTime = now;
-		this.pushSample(local.x, local.y, now);
-		this.finishStroke(now, this.isInHudReleaseBand(local.y));
+		stroke.lastX = local.x;
+		stroke.lastY = local.y;
+		stroke.lastTime = now;
+		this.pushSample(stroke, local.x, local.y, now);
+		this.finishStroke(stroke, now, this.isInHudReleaseBand(local.y));
 	};
 
 	private readonly onGlobalPointerEnd = (event: PointerEvent): void => {
-		if (event.pointerId !== this.activePointerId) {
+		const stroke = this.findStroke(event.pointerId);
+		if (!stroke) {
 			return;
 		}
 
-		this.finishStroke(performance.now(), false);
+		this.finishStroke(stroke, performance.now(), false);
 	};
 
 	private readonly onGlobalTouchInterrupt = (): void => {
-		this.endStroke();
+		this.dropAllStrokes();
 	};
 
 	private readonly onWindowBlur = (): void => {
-		this.endStroke();
+		this.dropAllStrokes();
 	};
 
 	private readonly onKeyDown = (event: KeyboardEvent): void => {
@@ -330,68 +323,76 @@ export class GestureTouchLayer extends Container {
 
 		this.latchedMoveX = 0;
 		this.latchedCrouch = false;
-		this.liveMoveX = 0;
 		this.jumpCharge = 0;
 		this.jumpCommitted = false;
+		for (const stroke of this.strokes) {
+			stroke.liveMoveX = 0;
+		}
 	};
 
 	private readonly onVisibilityChange = (): void => {
 		if (document.visibilityState === 'hidden') {
-			this.endStroke();
+			this.dropAllStrokes();
 		}
 	};
 
-	private trackMove(x: number, y: number, now: number): void {
-		const dtSec = Math.max(now - this.lastTime, MIN_SPEED_DT_MS) / 1000;
-		const velX = (x - this.lastX) / dtSec;
-		const velY = (y - this.lastY) / dtSec;
+	private trackMove(stroke: Stroke, x: number, y: number, now: number): void {
+		const dtSec = Math.max(now - stroke.lastTime, MIN_SPEED_DT_MS) / 1000;
+		const velX = (x - stroke.lastX) / dtSec;
+		const velY = (y - stroke.lastY) / dtSec;
 		const speed = Math.hypot(velX, velY);
 
-		this.lastX = x;
-		this.lastY = y;
-		this.lastTime = now;
+		stroke.lastX = x;
+		stroke.lastY = y;
+		stroke.lastTime = now;
 		if (speed >= DRAG_MIN_SPEED_PX_PER_SEC) {
-			this.lastMoveTime = now;
+			stroke.lastMoveTime = now;
 		}
 
-		this.pushSample(x, y, now);
+		this.pushSample(stroke, x, y, now);
 
-		if (this.strokeConsumed) {
-			this.liveMoveX = 0;
+		if (stroke.consumed) {
+			stroke.liveMoveX = 0;
 			return;
 		}
 
-		if (!this.originLocked && this.absorbSettle(x, y, now, speed)) {
-			this.liveMoveX = 0;
-			this.jumpGestureActive = false;
+		if (!stroke.originLocked && this.absorbSettle(stroke, x, y, now, speed)) {
+			stroke.liveMoveX = 0;
+			stroke.jumpGestureActive = false;
 			return;
 		}
 
-		this.originLocked = true;
+		stroke.originLocked = true;
 
-		const stroke = this.measureFrom(this.originX, this.originY, this.originTime, x, y, now);
-		const kind = classifySwipe(stroke.angle);
-		const jumpStroke = kind === 'jump';
-		this.jumpGestureActive = jumpStroke;
+		const measure = this.measureFrom(
+			stroke.originX,
+			stroke.originY,
+			stroke.originTime,
+			x,
+			y,
+			now,
+		);
+		const jumpStroke = classifySwipe(measure.angle) === 'jump';
+		stroke.jumpGestureActive = jumpStroke;
 
-		if (this.tryCommitStroke(stroke)) {
-			this.liveMoveX = 0;
+		if (this.tryCommitStroke(stroke, measure)) {
+			stroke.liveMoveX = 0;
 			return;
 		}
 
-		this.liveMoveX = jumpStroke ? 0 : this.resolveSlowDrag(velX, velY, speed);
+		stroke.liveMoveX = jumpStroke ? 0 : this.resolveSlowDrag(velX, velY, speed);
 	}
 
 	/**
 	 * Chase the contact while it is still (absorbs the fat-finger centroid jump).
 	 * Lock once it quiets, or after SETTLE_MS so a long drag can start.
 	 */
-	private absorbSettle(x: number, y: number, now: number, speed: number): boolean {
-		this.originX = x;
-		this.originY = y;
-		this.originTime = now;
+	private absorbSettle(stroke: Stroke, x: number, y: number, now: number, speed: number): boolean {
+		stroke.originX = x;
+		stroke.originY = y;
+		stroke.originTime = now;
 
-		const elapsed = now - this.downTime;
+		const elapsed = now - stroke.downTime;
 		const isStill = speed < SETTLE_SPEED_PX_PER_SEC;
 		if (elapsed >= SETTLE_MS || (elapsed >= SETTLE_MIN_MS && isStill)) {
 			return false;
@@ -400,11 +401,11 @@ export class GestureTouchLayer extends Container {
 		return true;
 	}
 
-	private commitSwipe(angle: number): void {
-		const kind = classifySwipe(angle);
-		this.strokeConsumed = true;
-		this.liveMoveX = 0;
+	private commitSwipe(stroke: Stroke, angle: number): void {
+		stroke.consumed = true;
+		stroke.liveMoveX = 0;
 
+		const kind = classifySwipe(angle);
 		if (kind === 'crouch') {
 			this.windupCancel = this.jumpCharge > 0;
 			this.latchedCrouch = true;
@@ -421,51 +422,62 @@ export class GestureTouchLayer extends Container {
 		this.windupCancel = false;
 	}
 
-	private finishStroke(now: number, fromHudBand: boolean): void {
-		if (this.activePointerId === null) {
+	private finishStroke(stroke: Stroke, now: number, fromHudBand: boolean): void {
+		if (!this.findStroke(stroke.pointerId)) {
 			return;
 		}
 
-		if (!this.strokeConsumed) {
-			this.recognizeStrokeEnd(now, fromHudBand);
+		if (!stroke.consumed) {
+			this.recognizeStrokeEnd(stroke, now, fromHudBand);
 		}
 
-		this.endStroke();
+		this.dropStroke(stroke);
+		if (!this.jumpCommitted) {
+			this.jumpCharge = 0;
+		}
 	}
 
-	private recognizeStrokeEnd(now: number, fromHudBand: boolean): void {
-		if (this.isFatFingerTap(now)) {
-			this.clearLatches();
+	private recognizeStrokeEnd(stroke: Stroke, now: number, fromHudBand: boolean): void {
+		const soleContact = this.strokes.length === 1;
+
+		if (this.isFatFingerTap(stroke, now)) {
+			if (soleContact) {
+				this.clearLatches();
+			}
 			return;
 		}
 
 		const fromOrigin = this.measureFrom(
-			this.originX,
-			this.originY,
-			this.originTime,
-			this.lastX,
-			this.lastY,
+			stroke.originX,
+			stroke.originY,
+			stroke.originTime,
+			stroke.lastX,
+			stroke.lastY,
 			now,
 		);
 		const fromDown = this.measureFrom(
-			this.downX,
-			this.downY,
-			this.downTime,
-			this.lastX,
-			this.lastY,
+			stroke.downX,
+			stroke.downY,
+			stroke.downTime,
+			stroke.lastX,
+			stroke.lastY,
 			now,
 		);
 
-		if (this.tryCommitStroke(fromOrigin)) {
+		if (this.tryCommitStroke(stroke, fromOrigin)) {
 			return;
 		}
 
-		if (fromDown.durationMs <= FLICK_MAX_DURATION_MS && this.tryCommitStroke(fromDown)) {
+		if (fromDown.durationMs <= FLICK_MAX_DURATION_MS && this.tryCommitStroke(stroke, fromDown)) {
 			return;
 		}
 
-		const distance = this.originLocked ? fromOrigin.distance : fromDown.distance;
-		const duration = this.originLocked ? fromOrigin.durationMs : fromDown.durationMs;
+		if (!soleContact) {
+			return;
+		}
+
+		const distance = stroke.originLocked ? fromOrigin.distance : fromDown.distance;
+		const duration = stroke.originLocked ? fromOrigin.durationMs : fromDown.durationMs;
 		if (distance < TAP_MAX_DISTANCE_PX && !fromHudBand && duration <= TAP_MAX_DURATION_MS) {
 			this.clearLatches();
 			return;
@@ -478,61 +490,79 @@ export class GestureTouchLayer extends Container {
 		}
 	}
 
-	private tryCommitStroke(stroke: StrokeMeasure): boolean {
-		if (classifySwipe(stroke.angle) === 'horizontal') {
+	private tryCommitStroke(stroke: Stroke, measure: StrokeMeasure): boolean {
+		if (classifySwipe(measure.angle) === 'horizontal') {
 			return false;
 		}
 
-		const flick = stroke.durationMs <= FLICK_MAX_DURATION_MS;
+		const flick = measure.durationMs <= FLICK_MAX_DURATION_MS;
 		if (flick) {
-			if (stroke.distance < FLICK_DISTANCE_PX) {
+			if (measure.distance < FLICK_DISTANCE_PX) {
 				return false;
 			}
-		} else if (stroke.distance < SWIPE_DISTANCE_PX || stroke.speed < SWIPE_SPEED_PX_PER_SEC) {
+		} else if (measure.distance < SWIPE_DISTANCE_PX || measure.speed < SWIPE_SPEED_PX_PER_SEC) {
 			return false;
 		}
 
-		this.commitSwipe(stroke.angle);
+		this.commitSwipe(stroke, measure.angle);
 		return true;
 	}
 
 	/** Centroid jumped, then the finger sat still — that is a tap, not a swipe. */
-	private isFatFingerTap(now: number): boolean {
-		const duration = now - this.downTime;
+	private isFatFingerTap(stroke: Stroke, now: number): boolean {
+		const duration = now - stroke.downTime;
 		if (duration <= SETTLE_MS) {
 			return false;
 		}
 
-		const tail = this.sampleAtOrBefore(now - SETTLE_MS);
-		const tailDist = Math.hypot(this.lastX - tail.x, this.lastY - tail.y);
-		const totalDist = Math.hypot(this.lastX - this.downX, this.lastY - this.downY);
+		const tail = this.sampleAtOrBefore(stroke, now - SETTLE_MS);
+		const tailDist = Math.hypot(stroke.lastX - tail.x, stroke.lastY - tail.y);
+		const totalDist = Math.hypot(stroke.lastX - stroke.downX, stroke.lastY - stroke.downY);
 		return tailDist < TAP_MAX_DISTANCE_PX && totalDist >= SETTLE_RADIUS_PX * 0.5;
 	}
 
-	private refreshLiveMove(): void {
-		if (this.activePointerId === null || this.liveMoveX === 0) {
-			return;
+	private resolveLiveMoveX(): number {
+		const now = performance.now();
+		let best: Stroke | null = null;
+		for (const stroke of this.strokes) {
+			if (stroke.liveMoveX !== 0 && now - stroke.lastMoveTime >= LIVE_MOVE_STALE_MS) {
+				stroke.liveMoveX = 0;
+			}
+
+			if (stroke.liveMoveX === 0) {
+				continue;
+			}
+
+			if (!best || stroke.lastMoveTime > best.lastMoveTime) {
+				best = stroke;
+			}
 		}
 
-		if (performance.now() - this.lastMoveTime >= LIVE_MOVE_STALE_MS) {
-			this.liveMoveX = 0;
-		}
+		return best?.liveMoveX ?? 0;
 	}
 
 	private refreshHoldCancel(): void {
-		if (this.activePointerId === null || this.strokeConsumed) {
-			return;
-		}
-
 		const now = performance.now();
-		const distance = Math.hypot(this.lastX - this.originX, this.lastY - this.originY);
-		if (distance >= TAP_MAX_DISTANCE_PX) {
-			return;
-		}
+		const soleContact = this.strokes.length === 1;
+		for (const stroke of this.strokes) {
+			if (stroke.consumed) {
+				continue;
+			}
 
-		if (now - this.originTime >= HOLD_CANCEL_MS && now - this.lastMoveTime >= HOLD_CANCEL_MS) {
-			this.clearLatches();
-			this.strokeConsumed = true;
+			const distance = Math.hypot(stroke.lastX - stroke.originX, stroke.lastY - stroke.originY);
+			if (distance >= TAP_MAX_DISTANCE_PX) {
+				continue;
+			}
+
+			if (now - stroke.originTime < HOLD_CANCEL_MS || now - stroke.lastMoveTime < HOLD_CANCEL_MS) {
+				continue;
+			}
+
+			stroke.consumed = true;
+			stroke.liveMoveX = 0;
+			if (soleContact) {
+				this.clearLatches();
+			}
 		}
 	}
 
@@ -556,10 +586,49 @@ export class GestureTouchLayer extends Container {
 		return localX < 0 || localX > this.viewWidth || localY > this.viewHeight;
 	}
 
-	private pushSample(x: number, y: number, time: number): void {
-		this.samples.push({ x, y, time });
-		while (this.samples.length > MAX_SAMPLES) {
-			this.samples.shift();
+	private isStrokeStill(stroke: Stroke): boolean {
+		if (stroke.consumed) {
+			return true;
+		}
+
+		const distance = Math.hypot(stroke.lastX - stroke.originX, stroke.lastY - stroke.originY);
+		return distance < TAP_MAX_DISTANCE_PX;
+	}
+
+	private pickEvictionStroke(): Stroke {
+		let stillest: Stroke | null = null;
+		for (const stroke of this.strokes) {
+			if (!this.isStrokeStill(stroke)) {
+				continue;
+			}
+
+			if (!stillest || stroke.downTime < stillest.downTime) {
+				stillest = stroke;
+			}
+		}
+
+		if (stillest) {
+			return stillest;
+		}
+
+		let oldest = this.strokes[0];
+		for (const stroke of this.strokes) {
+			if (stroke.downTime < oldest.downTime) {
+				oldest = stroke;
+			}
+		}
+
+		return oldest;
+	}
+
+	private findStroke(pointerId: number): Stroke | undefined {
+		return this.strokes.find((stroke) => stroke.pointerId === pointerId);
+	}
+
+	private pushSample(stroke: Stroke, x: number, y: number, time: number): void {
+		stroke.samples.push({ x, y, time });
+		while (stroke.samples.length > MAX_SAMPLES) {
+			stroke.samples.shift();
 		}
 	}
 
@@ -584,13 +653,13 @@ export class GestureTouchLayer extends Container {
 		};
 	}
 
-	private sampleAtOrBefore(time: number): StrokeSample {
-		let best: StrokeSample = this.samples[0] ?? {
-			x: this.downX,
-			y: this.downY,
-			time: this.downTime,
+	private sampleAtOrBefore(stroke: Stroke, time: number): StrokeSample {
+		let best: StrokeSample = stroke.samples[0] ?? {
+			x: stroke.downX,
+			y: stroke.downY,
+			time: stroke.downTime,
 		};
-		for (const sample of this.samples) {
+		for (const sample of stroke.samples) {
 			if (sample.time > time) {
 				break;
 			}
@@ -623,23 +692,45 @@ export class GestureTouchLayer extends Container {
 		this.jumpCharge = 0;
 		this.jumpCommitted = false;
 		this.windupCancel = true;
-		this.liveMoveX = 0;
+		for (const stroke of this.strokes) {
+			stroke.liveMoveX = 0;
+		}
 	}
 
-	private endStroke(): void {
-		this.activePointerId = null;
-		this.samples.length = 0;
-		this.liveMoveX = 0;
-		this.strokeConsumed = false;
-		this.jumpGestureActive = false;
-		this.originLocked = false;
-		// Keep a committed jump until takeoff so a fast lift still launches.
-		// latchedMoveX stays until a surface; an unfinished swipe must not.
+	/** Remove a slot without recognizing it — eviction must not count as a tap. */
+	private dropStroke(stroke: Stroke): void {
+		const index = this.strokes.indexOf(stroke);
+		if (index >= 0) {
+			this.strokes.splice(index, 1);
+		}
+	}
+
+	private dropAllStrokes(): void {
+		this.strokes.length = 0;
 		if (!this.jumpCommitted) {
 			this.jumpCharge = 0;
 		}
 	}
 }
+
+const createStroke = (pointerId: number, x: number, y: number, now: number): Stroke => ({
+	pointerId,
+	downX: x,
+	downY: y,
+	downTime: now,
+	originX: x,
+	originY: y,
+	originTime: now,
+	originLocked: false,
+	lastX: x,
+	lastY: y,
+	lastTime: now,
+	lastMoveTime: now,
+	consumed: false,
+	liveMoveX: 0,
+	jumpGestureActive: false,
+	samples: [{ x, y, time: now }],
+});
 
 const classifySwipe = (angle: number): SwipeKind => {
 	const absAngle = Math.abs(angle);
@@ -656,7 +747,6 @@ const swipeElevation = (angle: number): number => {
 };
 
 const jumpAxisFromAngle = (angle: number): number => {
-
 	const elevation = swipeElevation(angle);
 	if (elevation >= FULL_JUMP_ELEVATION_RAD) {
 		return TOUCH_JUMP_BOOST;

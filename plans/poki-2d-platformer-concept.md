@@ -306,7 +306,7 @@ A smaller milestone than the MVP above: a build worth publishing on itch.io and 
 - [ ] Moving enemies exist (beetle / spider / wasp on fixed paths) and share the death pipeline  
 - [ ] 10 levels with a readable difficulty curve  
 - [x] Touch controls are genuinely playable on a phone (gesture-first, no on-screen buttons). Event-order polish still open — [`poki.md`](./poki.md) Touch follow-ups  
-- [ ] Hints teach the mechanics that ship in the demo  
+- [ ] Hints teach the mechanics that ship in the demo — spec [`e6-level-hints.md`](./e6-level-hints.md)  
 - [ ] Outro screen after the last level points at the full version  
 - [ ] Poki submission prerequisites pass (see [`poki.md`](./poki.md))  
 

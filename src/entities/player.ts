@@ -18,6 +18,8 @@ import { SoundManager } from '../managers/sound-manager';
 
 export const PLAYER_RADIUS = 30;
 const MOVE_SPEED_X = 5;
+/** Walk speed while uncrouching. Stand-up only — dash must not use this. */
+const CROUCH_MOVE_SPEED_X = 3;
 const LANDING_VELOCITY_THRESHOLD = 2;
 const JUMP_VELOCITY = -12;
 /** Ground jump from hide crouch (any crouchBlend above the state threshold). */
@@ -38,8 +40,12 @@ const CLING_PEEL_FRAMES = 8;
 const JUMP_CROUCH_FRAMES = 5;
 /** Remember jump press in air so a near-landing tap still jumps */
 const JUMP_BUFFER_FRAMES = 5;
-/** Touch crouch-jump grace after leaving hide (~200 ms at 60 Hz). */
-const CROUCH_JUMP_BUFFER_FRAMES = 12;
+/** Crouch-jump grace after releasing hide (~300 ms at 60 Hz). */
+const CROUCH_JUMP_BUFFER_FRAMES = 22;
+/** Slow stand-up start before the hop — visual cue that a crouch-jump is still available. */
+const CROUCH_STAND_WINDUP_FRAMES = 16;
+/** Crouch blend remaining at the end of stand windup (then hop unfurls). */
+const CROUCH_STAND_WINDUP_END_RATIO = 0.78;
 /** Hold-to-hide crouch: blend-in duration (seconds). Exit is a tiny hop. */
 const CROUCH_BLEND_SEC = 0.1;
 /** Sprite alpha at full hide crouch. */
@@ -92,6 +98,9 @@ export class Player extends PhysicsBody {
 	private crouchBlend = 0;
 	/** Extra frames where a locked-in jump still counts as a crouch-jump. */
 	private crouchJumpBufferFrames = 0;
+	/** Frames left in the slow stand-up start after releasing crouch. */
+	private crouchStandWindupFramesLeft = 0;
+	private crouchStandWindupStartBlend = 1;
 	/** Current Matter body scaleY relative to spawn circle (1 = full). */
 	private colliderScaleY = 1;
 	private dying = false;
@@ -462,21 +471,30 @@ export class Player extends PhysicsBody {
 			this.jumpAxis = jumpAmount;
 			if (onGround && !this.jumpWindupActive) {
 				this.startGroundJump(speedX, jumpLockedIn);
+			} else if (
+				!onGround
+				&& jumpLockedIn
+				&& this.canCrouchJump()
+				&& !this.jumpWindupActive
+			) {
+				// Stand-hop is airborne; 5-frame jump buffer expires before landing.
+				this.launchFromHideCrouch(speedX);
+				return;
 			} else if (!onGround) {
 				this.jumpBufferFrames = JUMP_BUFFER_FRAMES;
 			}
 		} else if (jumpAmount > 0 && this.jumpWindupActive) {
 			this.jumpAxis = jumpAmount;
+		} else if (!onGround && this.crouchBlend > 0 && !this.jumpWindupActive) {
+			this.releaseCrouchIntoFall();
 		} else if (!crouchHeld && this.crouchBlend > 0 && !this.jumpWindupActive) {
-			if (onGround && this.crouchBlend > CROUCH_STATE_BLEND) {
-				if (moveDirection !== 0) {
-					this.clearHideCrouch();
-				} else {
-					this.launchCrouchStandHop();
-				}
+			if (this.crouchBlend > CROUCH_STATE_BLEND) {
+				this.tickCrouchStandWindup();
 			} else {
 				this.clearHideCrouch();
 			}
+		} else if (crouchHeld) {
+			this.crouchStandWindupFramesLeft = 0;
 		}
 
 		if (this.jumpBufferFrames > 0) {
@@ -764,18 +782,48 @@ export class Player extends PhysicsBody {
 		// SoundManager.playSound('blob-wobble'); //!! find better sound - too annoying
 	}
 
+	/** Lost the floor while crouched — unfurl immediately, no stand delay / hop. */
+	private releaseCrouchIntoFall(): void {
+		this.jelly.absorbHideCrouchIntoFall(this.crouchBlend);
+		this.clearHideCrouch();
+	}
+
 	private canCrouchJump(): boolean {
 		return this.crouchBlend > CROUCH_STATE_BLEND || this.crouchJumpBufferFrames > 0;
 	}
 
 	private tickCrouchJumpBuffer(): void {
-		if (this.crouchBlend > CROUCH_STATE_BLEND) {
+		if (this.isCrouchHeld() && this.crouchBlend > CROUCH_STATE_BLEND) {
 			this.crouchJumpBufferFrames = CROUCH_JUMP_BUFFER_FRAMES;
 			return;
 		}
 
 		if (this.crouchJumpBufferFrames > 0) {
 			this.crouchJumpBufferFrames -= 1;
+		}
+	}
+
+	/**
+	 * Ease-in uncrouch for a few frames, then the existing stand hop.
+	 * Keeps the blob visibly crouched so a follow-up jump still reads as a crouch-jump.
+	 */
+	private tickCrouchStandWindup(): void {
+		if (this.crouchStandWindupFramesLeft <= 0) {
+			this.crouchStandWindupFramesLeft = CROUCH_STAND_WINDUP_FRAMES;
+			this.crouchStandWindupStartBlend = this.crouchBlend;
+			this.crouchJumpBufferFrames = CROUCH_JUMP_BUFFER_FRAMES;
+		}
+
+		this.crouchStandWindupFramesLeft -= 1;
+		const duration = CROUCH_STAND_WINDUP_FRAMES;
+		const t = 1 - this.crouchStandWindupFramesLeft / duration;
+		const eased = t * t;
+		const endBlend = this.crouchStandWindupStartBlend * CROUCH_STAND_WINDUP_END_RATIO;
+		this.crouchBlend = this.crouchStandWindupStartBlend
+			+ (endBlend - this.crouchStandWindupStartBlend) * eased;
+
+		if (this.crouchStandWindupFramesLeft <= 0) {
+			this.launchCrouchStandHop();
 		}
 	}
 
@@ -787,12 +835,14 @@ export class Player extends PhysicsBody {
 
 	/** Snap hide crouch off (jump / cling) and expand collider immediately. */
 	private clearHideCrouch(): void {
+		this.crouchStandWindupFramesLeft = 0;
 		this.crouchBlend = 0;
 		this.syncCrouchCollider();
 	}
 
 	/** Full reset for death / respawn — restore circle without planting shift. */
 	private resetCrouchPose(): void {
+		this.crouchStandWindupFramesLeft = 0;
 		this.crouchBlend = 0;
 		if (Math.abs(this.colliderScaleY - 1) < 1e-6) {
 			this.colliderScaleY = 1;
@@ -868,7 +918,18 @@ export class Player extends PhysicsBody {
 			return this.wallJumpDirection * MOVE_SPEED_X;
 		}
 
+		// Future dash should return before this — stand-up crawl is not dash.
+		if (this.isStandingFromCrouch()) {
+			return moveX * CROUCH_MOVE_SPEED_X;
+		}
+
 		return moveX * MOVE_SPEED_X;
+	}
+
+	/** True during the uncrouch windup/hop window (held crouch still stands still). */
+	private isStandingFromCrouch(): boolean {
+		return this.crouchStandWindupFramesLeft > 0
+			|| (!this.isCrouchHeld() && this.crouchBlend > CROUCH_STATE_BLEND);
 	}
 
 	private updateState(): void {
@@ -927,7 +988,7 @@ export class Player extends PhysicsBody {
 			wallSide: this.clingSide,
 			wallCrouching: this.wallCrouchFramesLeft > 0,
 			wallPeeling: this.clingPeelFramesLeft > 0,
-			moveSpeedX: MOVE_SPEED_X,
+			moveSpeedX: this.isStandingFromCrouch() ? CROUCH_MOVE_SPEED_X : MOVE_SPEED_X,
 			halfHeight: PLAYER_RADIUS,
 			colliderScaleY: this.colliderScaleY,
 			deltaTime,

@@ -45,7 +45,7 @@ Touch is gesture-first (no on-screen buttons). Horizontal swipes are ignored unt
 - **Sticky walls** (`label: "sticky-wall"`): air cling, slow slide, peel-off stretch, wall-jump
 - **Hazards** (`hazards[]`, e.g. `type: "spikes"`): solid kill volumes
 - **Death:** shared kill path (hazard / fall) → optional `burst` anim → droplet splash → pause → respawn (empty burst frame OK; no forced hide of last frame)
-- **Crouch / hide:** hold ↓ / `S` / down swipe; blend-in squat + alpha; collider half-height; release → micro-hop; jump from any crouch skips squat wind-up, uses `CROUCH_JUMP_VELOCITY` and a lower-pitched jump SFX
+- **Crouch / hide:** hold ↓ / `S` / down swipe; blend-in squat + alpha; collider half-height; release → 12-frame ease-in then micro-hop; crouch-jump grace 18 frames; jump from any crouch skips squat wind-up, uses `CROUCH_JUMP_VELOCITY` and a lower-pitched jump SFX
 - **Portal gate:** starts locked; fireflies home to rim slots (`exit.slots`); door tweens out and a vortex spins when full; overlap then clears the level. Blob fly-in / suck-in animation is deferred
 - Fireflies: wander around their point, pickup wind SFX, then fly to a portal slot (or fade into the vortex if the rim is already full)
 - Top icon HUD: fullscreen (non-Poki), pause (gameplay), separate music / SFX mute
@@ -122,7 +122,7 @@ Goal: a build good enough to publish on itch.io and send to Poki for publishing 
 | 3 | Enemies: moving hazards (beetle / spider / wasp) on fixed paths | New level-schema object; needed before authoring levels |
 | 4 | 10 levels with a progressive difficulty curve | Only after 1 and 3 |
 | 5 | Touch controls rework | **Done (playable).** Gesture layer: settle + flick-on-up, jump/crouch swipes, analog axes from angle, tap / 0.5 s / key cancel. Horizontal swipe deferred until dash. Remaining event-order polish in [`plans/poki.md`](./plans/poki.md) → Touch follow-ups |
-| 6 | Hints for the mechanics that already exist | Needs the final mechanic set |
+| 6 | Hints for the mechanics that already exist | Plan: [`plans/e6-level-hints.md`](./plans/e6-level-hints.md) — world posters, no input lock |
 | 7 | Demo outro screen after the last level | "Thanks for playing the demo…" |
 | 8 | Poki submission prerequisites | Requirements checklist, first-download size, 60 FPS on mid-range mobile, no-`localStorage` (incognito) path |
 
@@ -146,6 +146,7 @@ You may view the source for portfolio / learning; reuse of code or assets needs 
 |------|----------|
 | [`plans/poki-2d-platformer-concept.md`](./plans/poki-2d-platformer-concept.md) | Game concept, scope, stack |
 | [`plans/player-mechanics-backlog.md`](./plans/player-mechanics-backlog.md) | Player mechanics backlog (cling / death / crouch + crouch jump done; double jump, dash, glide queued) |
+| [`plans/e6-level-hints.md`](./plans/e6-level-hints.md) | Stage E6: in-level control hints (authoring + playback) |
 | [`plans/poki.md`](./plans/poki.md) | Poki / CrazyGames technical notes |
 
 ## Author
