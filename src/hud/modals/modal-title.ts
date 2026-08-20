@@ -1,14 +1,16 @@
 import { Text, TextStyle } from 'pixi.js';
 
-/** Dark-brown cartoon italic used on pause / result modal titles. */
+/** Dark-brown italic titles on pause / result / hub modals. */
 export const MODAL_TITLE_FILL = 0x4a2c14;
 
-/** Light cream label on graydirt OK buttons. */
-export const MODAL_OK_LABEL_FILL = 0xe8dcc8;
+/** Dark brown on graydirt OK buttons — cream washed out on phones. */
+export const MODAL_OK_LABEL_FILL = 0x4a2c14;
+
+const MODAL_TITLE_FONT = 'Arial, Helvetica, sans-serif';
 
 const createModalTitleStyle = (fontSize: number): TextStyle => {
 	return new TextStyle({
-		fontFamily: '"Comic Sans MS", "Chalkboard SE", "Marker Felt", cursive',
+		fontFamily: MODAL_TITLE_FONT,
 		fontSize,
 		fontStyle: 'italic',
 		fontWeight: 'bold',
@@ -20,12 +22,12 @@ const createModalTitleStyle = (fontSize: number): TextStyle => {
 
 const createModalOkLabelStyle = (): TextStyle => {
 	return new TextStyle({
-		fontFamily: '"Comic Sans MS", "Chalkboard SE", "Marker Felt", cursive',
+		fontFamily: MODAL_TITLE_FONT,
 		fontSize: 26,
 		fontWeight: 'bold',
 		fill: MODAL_OK_LABEL_FILL,
 		align: 'center',
-		stroke: { color: 0x5c4a32, width: 2, join: 'round' },
+		stroke: { color: 0xf5e6c8, width: 3, join: 'round' },
 	});
 };
 

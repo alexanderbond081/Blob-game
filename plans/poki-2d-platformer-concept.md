@@ -307,7 +307,7 @@ A smaller milestone than the MVP above: a build worth publishing on itch.io and 
 - [ ] 10 levels with a readable difficulty curve  
 - [x] Touch controls are genuinely playable on a phone (gesture-first, no on-screen buttons). Event-order polish still open — [`poki.md`](./poki.md) Touch follow-ups  
 - [ ] Hints teach the mechanics that ship in the demo — spec [`e6-level-hints.md`](./e6-level-hints.md)  
-- [ ] Outro screen after the last level points at the full version  
+- [x] Outro screen after the last level points at the full version — result modal `demoComplete` (Home / Restart). Celebratory SFX/VFX deferred  
 - [ ] Poki submission prerequisites pass (see [`poki.md`](./poki.md))  
 
 Scope differences from the MVP: 10 levels instead of 15–20, no pollen-relic episode gating (most of the kit is available from the start; **flight** is the candidate for the single unlockable / rewarded move), no NG+, no gold fireflies or crowns, no hub meta beyond Progress / Customize. Portrait support, rewarded help and the wider content pass move to stage F.

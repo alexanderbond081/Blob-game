@@ -122,12 +122,13 @@ Goal: a build good enough to publish on itch.io and send to Poki for publishing 
 | 3 | Enemies: moving hazards (beetle / spider / wasp) on fixed paths | New level-schema object; needed before authoring levels |
 | 4 | 10 levels with a progressive difficulty curve | Only after 1 and 3 |
 | 5 | Touch controls rework | **Done (playable).** Gesture layer: settle + flick-on-up, jump/crouch swipes, analog axes from angle, tap / 0.5 s / key cancel. Horizontal swipe deferred until dash. Remaining event-order polish in [`plans/poki.md`](./plans/poki.md) → Touch follow-ups |
-| 6 | Hints for the mechanics that already exist | **In progress.** World posters (move/jump on meadow-01/03; crouch-jump in code). Plan: [`plans/e6-level-hints.md`](./plans/e6-level-hints.md) |
-| 7 | Demo outro screen after the last level | "Thanks for playing the demo…" |
+| 6 | Hints for the mechanics that already exist | **Playback done** (move / jump / crouch / crouch-jump). Place on levels while authoring. Plan: [`plans/e6-level-hints.md`](./plans/e6-level-hints.md) |
+| 7 | Demo outro screen after the last level | **Done (UI).** Result modal `demoComplete` when no next level. Celebratory SFX/VFX deferred |
 | 8 | Poki submission prerequisites | Requirements checklist, first-download size, 60 FPS on mid-range mobile, no-`localStorage` (incognito) path |
 
 ## Known gaps (not blockers for a first push)
 
+- Demo-complete celebration polish: music/SFX + VFX (sparks, glowing pollen, happy blob, fairies — TBD) on the last-level result modal
 - Touch follow-ups (not blockers): `pointerup` capture race vs Pixi up position; `touchend` identifier vs `pointerId`; `pointercancel` vs `touchcancel`; flick that pauses before lift; pause/blur leaving a committed jump; failed takeoff leaving a ground run — see [`plans/poki.md`](./plans/poki.md)
 - Portal entry (blob suck-in) animation before the result modal — deferred
 - More player kit still queued (double jump / flight, dash, glide) — see mechanics backlog

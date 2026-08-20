@@ -14,7 +14,7 @@ import { computeHubModalLayout } from './modals/hub-modal-layout';
 import { CustomizeModalContent } from './modals/customize-content';
 import { PauseModalContent } from './modals/pause-content';
 import { ProgressModalContent } from './modals/progress-content';
-import { LevelResultStats, ResultModalContent } from './modals/result-content';
+import { LevelResultStats, ResultModalContent, ResultModalPresentation } from './modals/result-content';
 
 const HUD_MARGIN = 12;
 const HUD_BUTTON_SIZE = 50;
@@ -24,6 +24,8 @@ const PAUSE_MODAL_WIDTH = 400;
 const PAUSE_MODAL_HEIGHT = 240;
 const RESULT_MODAL_WIDTH = 420;
 const RESULT_MODAL_HEIGHT = 320;
+const DEMO_RESULT_MODAL_WIDTH = 460;
+const DEMO_RESULT_MODAL_HEIGHT = 360;
 
 /** Which controls the HUD exposes for the currently active screen. */
 export type HudProfile = 'menu' | 'gameplay';
@@ -150,10 +152,10 @@ export class GameHUD extends HUD {
 		return this.resultModal?.isOpen === true;
 	}
 
-	/** Enter / primary accept: result → Continue, pause → Resume. */
+	/** Enter / primary accept: result → Continue (or Home on demo complete), pause → Resume. */
 	public acceptPrimaryAction(): boolean {
 		if (this.resultModal?.isOpen) {
-			this.emit('result-continue');
+			this.emit(this.resultContent?.isDemoComplete ? 'result-home' : 'result-continue');
 			return true;
 		}
 
@@ -195,7 +197,10 @@ export class GameHUD extends HUD {
 		this.pauseModal?.close();
 	}
 
-	public async openResultModal(stats: LevelResultStats): Promise<void> {
+	public async openResultModal(
+		stats: LevelResultStats,
+		presentation: ResultModalPresentation = {},
+	): Promise<void> {
 		await this.ensureResultModal();
 		if (!this.resultModal || !this.resultContent || this.resultModal.isOpen) {
 			return;
@@ -203,10 +208,15 @@ export class GameHUD extends HUD {
 
 		this.closePauseModal();
 		this.resultContent.setStats(stats);
+		this.resultContent.setPresentation(presentation);
+		const panelWidth = presentation.demoComplete ? DEMO_RESULT_MODAL_WIDTH : RESULT_MODAL_WIDTH;
+		const panelHeight = presentation.demoComplete ? DEMO_RESULT_MODAL_HEIGHT : RESULT_MODAL_HEIGHT;
 		this.resultModal.adjustLayout(
 			Scene.viewportWidth,
 			Scene.viewportHeight,
 			Scene.viewportHeight * 0.5,
+			panelWidth,
+			panelHeight,
 		);
 		this.resultModal.open();
 		this.resultContent.startPlayIdle();
@@ -285,10 +295,13 @@ export class GameHUD extends HUD {
 			);
 		}
 		if (this.resultModal?.isOpen) {
+			const demoComplete = this.resultContent?.isDemoComplete === true;
 			this.resultModal.adjustLayout(
 				Scene.viewportWidth,
 				Scene.viewportHeight,
 				Scene.viewportHeight * 0.5,
+				demoComplete ? DEMO_RESULT_MODAL_WIDTH : RESULT_MODAL_WIDTH,
+				demoComplete ? DEMO_RESULT_MODAL_HEIGHT : RESULT_MODAL_HEIGHT,
 			);
 		}
 		if (this.progressModal?.isOpen) {

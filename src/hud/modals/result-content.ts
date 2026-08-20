@@ -10,9 +10,15 @@ import { createModalTitle, formatRunTime } from './modal-title';
 const SIDE_BUTTON_SIZE = 75;
 const CONTINUE_BUTTON_SIZE = 100;
 const BUTTON_GAP = 36;
+const DEMO_SIDE_GAP = 48;
 const BUTTONS_Y = 72;
 const TITLE_Y = -118;
-const STATS_Y = -28;
+/** Demo panel is 40px taller; spend that on title/subtitle gaps, not empty space under the buttons. */
+const DEMO_TITLE_Y = -118;
+const DEMO_SUBTITLE_Y = -70;
+const STATS_Y = -38;
+const DEMO_STATS_Y = 6;
+const DEMO_BUTTONS_Y = 100;
 const STAT_LINE_GAP = 28;
 const STAT_FILL = 0x4a2c14;
 
@@ -21,6 +27,11 @@ export type LevelResultStats = {
 	totalFireflies: number;
 	timeSec: number;
 	deaths: number;
+};
+
+export type ResultModalPresentation = {
+	/** Last catalog level cleared — celebratory copy, no Continue. */
+	demoComplete?: boolean;
 };
 
 const createStatStyle = (): TextStyle => {
@@ -34,12 +45,26 @@ const createStatStyle = (): TextStyle => {
 	});
 };
 
+const createSubtitleStyle = (): TextStyle => {
+	return new TextStyle({
+		fontFamily: 'Arial, Helvetica, sans-serif',
+		fontSize: 22,
+		fontStyle: 'italic',
+		fontWeight: 'bold',
+		fill: STAT_FILL,
+		align: 'center',
+		stroke: { color: 0xf5e6c8, width: 3, join: 'round' },
+	});
+};
+
 /**
  * Level-clear modal: title + run stats + Home | Continue (Play) | Restart.
- * Same button art as pause. Emits `continue`, `home`, `restart`.
+ * Demo-complete: larger title + thanks line, Home | Restart only.
+ * Emits `continue`, `home`, `restart`.
  */
 export class ResultModalContent extends Container {
 	private title!: Text;
+	private subtitle!: Text;
 	private firefliesText!: Text;
 	private timeText!: Text;
 	private deathsText!: Text;
@@ -47,6 +72,7 @@ export class ResultModalContent extends Container {
 	private continueButton!: UIButton;
 	private restartButton!: UIButton;
 	private readonly playBounce = new IdleBounceAnimator(5, 22, 0.05);
+	private demoComplete = false;
 
 	private constructor() {
 		super();
@@ -58,13 +84,42 @@ export class ResultModalContent extends Container {
 		return content;
 	}
 
+	public get isDemoComplete(): boolean {
+		return this.demoComplete;
+	}
+
 	public setStats(stats: LevelResultStats): void {
 		this.firefliesText.text = `Fireflies  ${stats.collected} / ${stats.totalFireflies}`;
 		this.timeText.text = `Time  ${formatRunTime(stats.timeSec)}`;
 		this.deathsText.text = `Deaths  ${stats.deaths}`;
 	}
 
+	public setPresentation(presentation: ResultModalPresentation = {}): void {
+		this.demoComplete = presentation.demoComplete === true;
+
+		if (this.demoComplete) {
+			this.title.text = 'Demo complete!';
+			this.title.style.fontSize = 40;
+			this.subtitle.visible = true;
+			this.continueButton.visible = false;
+			this.continueButton.eventMode = 'none';
+		} else {
+			this.title.text = 'Clear!';
+			this.title.style.fontSize = 44;
+			this.subtitle.visible = false;
+			this.continueButton.visible = true;
+			this.continueButton.eventMode = 'static';
+		}
+
+		this.layout();
+	}
+
 	public startPlayIdle(): void {
+		if (this.demoComplete) {
+			this.playBounce.stop();
+			return;
+		}
+
 		this.playBounce.syncRestPosition();
 		this.playBounce.start();
 	}
@@ -75,7 +130,9 @@ export class ResultModalContent extends Container {
 
 	public reflow(_contentWidth: number): void {
 		this.layout();
-		this.playBounce.syncRestPosition();
+		if (!this.demoComplete) {
+			this.playBounce.syncRestPosition();
+		}
 	}
 
 	public override destroy(options?: DestroyOptions): void {
@@ -90,6 +147,17 @@ export class ResultModalContent extends Container {
 
 		this.title = createModalTitle('Clear!', 44);
 		this.addChild(this.title);
+
+		this.subtitle = new Text({
+			text: 'Thanks for playing!',
+			style: createSubtitleStyle(),
+			resolution: 2,
+			roundPixels: true,
+		});
+		this.subtitle.anchor.set(0.5);
+		this.subtitle.eventMode = 'none';
+		this.subtitle.visible = false;
+		this.addChild(this.subtitle);
 
 		this.firefliesText = new Text({ text: 'Fireflies  0 / 0', style: statStyle, resolution: 2, roundPixels: true });
 		this.timeText = new Text({ text: 'Time  0:00', style: statStyle, resolution: 2, roundPixels: true });
@@ -138,24 +206,37 @@ export class ResultModalContent extends Container {
 	}
 
 	private layout(): void {
+		const statsY = this.demoComplete ? DEMO_STATS_Y : STATS_Y;
+
 		this.title.x = 0;
-		this.title.y = TITLE_Y;
+		this.title.y = this.demoComplete ? DEMO_TITLE_Y : TITLE_Y;
+
+		this.subtitle.x = 0;
+		this.subtitle.y = DEMO_SUBTITLE_Y;
 
 		this.firefliesText.x = 0;
-		this.firefliesText.y = STATS_Y - STAT_LINE_GAP;
+		this.firefliesText.y = statsY - STAT_LINE_GAP;
 		this.timeText.x = 0;
-		this.timeText.y = STATS_Y;
+		this.timeText.y = statsY;
 		this.deathsText.x = 0;
-		this.deathsText.y = STATS_Y + STAT_LINE_GAP;
+		this.deathsText.y = statsY + STAT_LINE_GAP;
 
-		this.continueButton.x = 0;
+		this.homeButton.y = this.demoComplete ? DEMO_BUTTONS_Y : BUTTONS_Y;
+		this.restartButton.y = this.demoComplete ? DEMO_BUTTONS_Y : BUTTONS_Y;
 		this.continueButton.y = BUTTONS_Y;
 
+		if (this.demoComplete) {
+			const halfGap = DEMO_SIDE_GAP / 2 + SIDE_BUTTON_SIZE / 2;
+			this.homeButton.x = -halfGap;
+			this.restartButton.x = halfGap;
+			this.continueButton.x = 0;
+			return;
+		}
+
+		this.continueButton.x = 0;
 		const sideOffset = CONTINUE_BUTTON_SIZE / 2 + BUTTON_GAP + SIDE_BUTTON_SIZE / 2;
 		this.homeButton.x = -sideOffset;
-		this.homeButton.y = BUTTONS_Y;
 		this.restartButton.x = sideOffset;
-		this.restartButton.y = BUTTONS_Y;
 	}
 
 	private bindAction(button: UIButton, eventName: 'home' | 'continue' | 'restart'): void {

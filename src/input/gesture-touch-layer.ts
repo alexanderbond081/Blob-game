@@ -52,11 +52,10 @@ type Stroke = {
 /** Degrees from ±X that are not a jump / crouch. Tune by feel. */
 const HORIZONTAL_DEADZONE_DEG = 33;
 /**
- * Horizontal swipe / dash is disabled until dash exists.
- * When it returns: commit on pointer-up (not mid-stroke), require a speed
- * threshold as well as distance, and do not latch run.
+ * Horizontal swipe / dash is off. Until dash exists, a fast horizontal
+ * flick latches run for RUN_LATCH_MS on pointer-up (not mid-stroke).
  */
-const SWIPE_DISTANCE_PX = 80;
+const SWIPE_DISTANCE_PX = 75;
 /** Slow post-settle swipes need this; short flicks use distance only. */
 const SWIPE_SPEED_PX_PER_SEC = 350;
 /**
@@ -74,6 +73,8 @@ const FLICK_DISTANCE_PX = 90;
 const TAP_MAX_DISTANCE_PX = 28;
 const TAP_MAX_DURATION_MS = 280;
 const HOLD_CANCEL_MS = 500;
+/** Stand-in for dash: keep full run after a fast horizontal flick. */
+const RUN_LATCH_MS = 550;
 /** Finger speed that maps to moveX = ±1 during a slow drag. */
 const DRAG_FULL_SPEED_PX_PER_SEC = 360;
 const DRAG_MIN_SPEED_PX_PER_SEC = 40;
@@ -113,9 +114,12 @@ const GAMEPLAY_KEY_CODES = new Set([
  * block jump / run. Live analog uses the most recently moving drag; jump and
  * crouch commit from either finger. Latches are player state, not per-finger.
  *
- * Swipe up jumps (moveX from the angle lasts until a surface); swipe down
- * latches crouch. Horizontal swipe is off until dash. Slow left/right drag
- * is live analog and dies when the finger is still or lifts. Tap, a still press
+ * Swipe up jumps (moveX from the angle lasts until a surface or a live drag);
+ * swipe down latches crouch. A fast horizontal flick latches run for 0.5 s
+ * until dash exists. Slow left/right drag is live analog and dies when the
+ * finger is still or lifts.
+ * The first live analog sample clears jump-run so a still finger does not snap
+ * back to the swipe course. Tap, a still press
  * (≥ 0.5 s), or any gameplay key clears latches when that contact is alone.
  * Jump flicks also commit on pointer-up so a short stroke is not dropped;
  * fat-finger contact jumps are treated as taps.
@@ -128,6 +132,8 @@ export class GestureTouchLayer extends Container {
 	private readonly controls: PlayerControls = createEmptyPlayerControls();
 
 	private latchedMoveX = 0;
+	/** 0 = until a surface (jump-run). Else expire time for a timed run flick. */
+	private runLatchUntil = 0;
 	private latchedCrouch = false;
 	private jumpCharge = 0;
 	private jumpCommitted = false;
@@ -163,9 +169,13 @@ export class GestureTouchLayer extends Container {
 
 	public getControls(): PlayerControls {
 		this.refreshHoldCancel();
+		this.refreshRunLatch();
 		const liveMoveX = this.resolveLiveMoveX();
-		if (liveMoveX !== 0 && this.jumpCharge <= 0) {
-			this.latchedCrouch = false;
+		if (liveMoveX !== 0) {
+			this.clearLatchedMoveX();
+			if (this.jumpCharge <= 0) {
+				this.latchedCrouch = false;
+			}
 		}
 
 		this.controls.moveX = liveMoveX !== 0 ? liveMoveX : this.latchedMoveX;
@@ -193,14 +203,14 @@ export class GestureTouchLayer extends Container {
 		}
 
 		if (feedback.clinging && !this.wasClinging) {
-			this.latchedMoveX = 0;
+			this.clearLatchedMoveX();
 			this.windupCancel = this.jumpCharge > 0;
 			this.jumpCharge = 0;
 			this.jumpCommitted = false;
 		}
 
 		if (feedback.onGround && !this.wasOnGround) {
-			this.latchedMoveX = 0;
+			this.clearLatchedMoveX();
 			this.jumpCharge = 0;
 			this.jumpCommitted = false;
 		} else if (!feedback.onGround && this.wasOnGround) {
@@ -210,13 +220,15 @@ export class GestureTouchLayer extends Container {
 
 		// Jump-run may only persist in air. A committed swipe that never left
 		// the ground (cancelled wind-up, lost capture) must not keep walking.
+		// A timed horizontal flick is allowed to coast on the ground.
 		if (
 			feedback.onGround
 			&& this.strokes.length === 0
 			&& !this.jumpCommitted
 			&& this.jumpCharge <= 0
+			&& this.runLatchUntil <= 0
 		) {
-			this.latchedMoveX = 0;
+			this.clearLatchedMoveX();
 		}
 
 		this.wasClinging = feedback.clinging;
@@ -262,7 +274,7 @@ export class GestureTouchLayer extends Container {
 		const now = performance.now();
 		this.strokes.push(createStroke(event.pointerId, local.x, local.y, now));
 		if (this.wasOnGround && !hadMovingStroke) {
-			this.latchedMoveX = 0;
+			this.clearLatchedMoveX();
 		}
 	};
 
@@ -321,7 +333,7 @@ export class GestureTouchLayer extends Container {
 			return;
 		}
 
-		this.latchedMoveX = 0;
+		this.clearLatchedMoveX();
 		this.latchedCrouch = false;
 		this.jumpCharge = 0;
 		this.jumpCommitted = false;
@@ -409,14 +421,14 @@ export class GestureTouchLayer extends Container {
 		if (kind === 'crouch') {
 			this.windupCancel = this.jumpCharge > 0;
 			this.latchedCrouch = true;
-			this.latchedMoveX = 0;
+			this.clearLatchedMoveX();
 			this.jumpCharge = 0;
 			this.jumpCommitted = false;
 			return;
 		}
 
 		this.latchedCrouch = false;
-		this.latchedMoveX = jumpMoveXFromAngle(angle);
+		this.latchMoveX(jumpMoveXFromAngle(angle));
 		this.jumpCharge = jumpAxisFromAngle(angle);
 		this.jumpCommitted = true;
 		this.windupCancel = false;
@@ -472,6 +484,14 @@ export class GestureTouchLayer extends Container {
 			return;
 		}
 
+		if (this.tryCommitHorizontalRun(stroke, fromOrigin)) {
+			return;
+		}
+
+		if (fromDown.durationMs <= FLICK_MAX_DURATION_MS && this.tryCommitHorizontalRun(stroke, fromDown)) {
+			return;
+		}
+
 		if (!soleContact) {
 			return;
 		}
@@ -483,7 +503,7 @@ export class GestureTouchLayer extends Container {
 			return;
 		}
 
-		this.latchedMoveX = 0;
+		this.clearLatchedMoveX();
 		if (!this.jumpCommitted) {
 			this.windupCancel = true;
 			this.latchedCrouch = false;
@@ -495,17 +515,37 @@ export class GestureTouchLayer extends Container {
 			return false;
 		}
 
-		const flick = measure.durationMs <= FLICK_MAX_DURATION_MS;
-		if (flick) {
-			if (measure.distance < FLICK_DISTANCE_PX) {
-				return false;
-			}
-		} else if (measure.distance < SWIPE_DISTANCE_PX || measure.speed < SWIPE_SPEED_PX_PER_SEC) {
+		if (!this.meetsSwipeThreshold(measure)) {
 			return false;
 		}
 
 		this.commitSwipe(stroke, measure.angle);
 		return true;
+	}
+
+	private tryCommitHorizontalRun(stroke: Stroke, measure: StrokeMeasure): boolean {
+		if (classifySwipe(measure.angle) !== 'horizontal') {
+			return false;
+		}
+
+		if (!this.meetsSwipeThreshold(measure)) {
+			return false;
+		}
+
+		stroke.consumed = true;
+		stroke.liveMoveX = 0;
+		this.latchedCrouch = false;
+		this.latchMoveX(Math.cos(measure.angle) < 0 ? -1 : 1, RUN_LATCH_MS);
+		return true;
+	}
+
+	private meetsSwipeThreshold(measure: StrokeMeasure): boolean {
+		const flick = measure.durationMs <= FLICK_MAX_DURATION_MS;
+		if (flick) {
+			return measure.distance >= FLICK_DISTANCE_PX;
+		}
+
+		return measure.distance >= SWIPE_DISTANCE_PX && measure.speed >= SWIPE_SPEED_PX_PER_SEC;
 	}
 
 	/** Centroid jumped, then the finger sat still — that is a tap, not a swipe. */
@@ -539,6 +579,16 @@ export class GestureTouchLayer extends Container {
 		}
 
 		return best?.liveMoveX ?? 0;
+	}
+
+	private refreshRunLatch(): void {
+		if (this.runLatchUntil <= 0) {
+			return;
+		}
+
+		if (performance.now() >= this.runLatchUntil) {
+			this.clearLatchedMoveX();
+		}
 	}
 
 	private refreshHoldCancel(): void {
@@ -687,7 +737,7 @@ export class GestureTouchLayer extends Container {
 	}
 
 	private clearLatches(): void {
-		this.latchedMoveX = 0;
+		this.clearLatchedMoveX();
 		this.latchedCrouch = false;
 		this.jumpCharge = 0;
 		this.jumpCommitted = false;
@@ -695,6 +745,16 @@ export class GestureTouchLayer extends Container {
 		for (const stroke of this.strokes) {
 			stroke.liveMoveX = 0;
 		}
+	}
+
+	private latchMoveX(moveX: number, durationMs = 0): void {
+		this.latchedMoveX = moveX;
+		this.runLatchUntil = durationMs > 0 ? performance.now() + durationMs : 0;
+	}
+
+	private clearLatchedMoveX(): void {
+		this.latchedMoveX = 0;
+		this.runLatchUntil = 0;
 	}
 
 	/** Remove a slot without recognizing it — eviction must not count as a tap. */

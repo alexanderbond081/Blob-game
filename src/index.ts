@@ -397,6 +397,8 @@ async function handleLevelExit(payload: LevelExitEvent): Promise<void> {
 		totalFireflies: payload.totalFireflies,
 		timeSec: payload.timeSec,
 		deaths: payload.deaths,
+	}, {
+		demoComplete: nextSceneId === null,
 	});
 }
 
