@@ -3,6 +3,8 @@ import { Container, ParticleContainer } from 'pixi.js';
 import { Collectible, SpriteCollectible } from '../entities/collectible';
 import { FireflyCollectible } from '../entities/firefly-collectible';
 import { Hazard } from '../entities/hazard';
+import { createLevelHint } from '../entities/hints/create-level-hint';
+import { LevelHint } from '../entities/hints/level-hint';
 import { LevelPortal } from '../entities/level-portal';
 import { Player } from '../entities/player';
 import { BlobDropletPool, DropletObstacleRect } from '../fx/blob-droplet-pool';
@@ -18,6 +20,7 @@ export class LevelRoot extends Container {
 	public readonly collectibles: Collectible[] = [];
 	public readonly staticBodies: StaticBody[] = [];
 	public readonly hazards: Hazard[] = [];
+	public readonly hints: LevelHint[] = [];
 	public readonly droplets: BlobDropletPool;
 	/** Every firefly in one batch; added above the portal so collected ones read on top. */
 	public readonly flies: ParticleContainer;
@@ -30,6 +33,19 @@ export class LevelRoot extends Container {
 		this.flies = new ParticleContainer({
 			dynamicProperties: { position: true, rotation: false, vertex: false, color: true, uvs: false },
 		});
+
+		const hintsLayer = new Container();
+		hintsLayer.eventMode = 'none';
+		this.addChild(hintsLayer);
+		for (const hintData of levelData.hints) {
+			const hint = createLevelHint(hintData);
+			if (!hint) {
+				continue;
+			}
+
+			hintsLayer.addChild(hint);
+			this.hints.push(hint);
+		}
 
 		for (const platform of levelData.platforms) {
 			const staticBody = new StaticBody({
@@ -80,6 +96,11 @@ export class LevelRoot extends Container {
 		this.player.setBurstFxHandler(null);
 		this.droplets.sleepAll();
 		this.droplets.destroy({ children: true });
+
+		for (const hint of this.hints) {
+			hint.destroy({ children: true });
+		}
+		this.hints.length = 0;
 
 		for (const staticBody of this.staticBodies) {
 			staticBody.removeFromWorld(physicsWorld);

@@ -122,7 +122,7 @@ Goal: a build good enough to publish on itch.io and send to Poki for publishing 
 | 3 | Enemies: moving hazards (beetle / spider / wasp) on fixed paths | New level-schema object; needed before authoring levels |
 | 4 | 10 levels with a progressive difficulty curve | Only after 1 and 3 |
 | 5 | Touch controls rework | **Done (playable).** Gesture layer: settle + flick-on-up, jump/crouch swipes, analog axes from angle, tap / 0.5 s / key cancel. Horizontal swipe deferred until dash. Remaining event-order polish in [`plans/poki.md`](./plans/poki.md) → Touch follow-ups |
-| 6 | Hints for the mechanics that already exist | Plan: [`plans/e6-level-hints.md`](./plans/e6-level-hints.md) — world posters, no input lock |
+| 6 | Hints for the mechanics that already exist | **In progress.** World posters (move/jump on meadow-01/03; crouch-jump in code). Plan: [`plans/e6-level-hints.md`](./plans/e6-level-hints.md) |
 | 7 | Demo outro screen after the last level | "Thanks for playing the demo…" |
 | 8 | Poki submission prerequisites | Requirements checklist, first-download size, 60 FPS on mid-range mobile, no-`localStorage` (incognito) path |
 
@@ -134,6 +134,7 @@ Goal: a build good enough to publish on itch.io and send to Poki for publishing 
 - Final art for sticky walls / spikes; per-skin droplet assets deferred (catalog field ready)
 - Bundle is heavier than an ideal Poki first download (`bundle.js` ~1.4 MB + music) — optimize before portal submit
 - Portrait / rotate UX and portal safe-area adaptation deferred to stage F
+- Pause modal stops the scene ticker but not `gsap.globalTimeline` (portal + hint loops keep playing). Platform ads do pause GSAP. Freeze hints later only if that contrast becomes a problem.
 
 ## License
 

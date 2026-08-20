@@ -300,6 +300,42 @@
 						"resolution": 2,
 						"scaleMode": "linear"
 					}
+				},
+				{
+					"alias": "hint-touch-hand",
+					"src": "assets/images/touch-hand.webp",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "hint-touch-point",
+					"src": "assets/images/touch-point.webp",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "hint-key-pressed",
+					"src": "assets/images/key-pressed-white.webp",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "hint-key-unpressed",
+					"src": "assets/images/key-unpressed-white.webp",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
 				}
 			]
 		},

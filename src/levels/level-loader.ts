@@ -37,6 +37,10 @@ const toRuntimeLevelData = (data: LevelData): LevelData => {
 			...data.exit,
 			y: authorYToRuntimeY(data.exit.y, levelHeight),
 		},
+		hints: data.hints.map((hint) => ({
+			...hint,
+			y: authorYToRuntimeY(hint.y, levelHeight),
+		})),
 		platforms: data.platforms.map((platform) => ({
 			...platform,
 			y: authorYToRuntimeY(platform.y, levelHeight),

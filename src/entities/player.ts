@@ -693,7 +693,7 @@ export class Player extends PhysicsBody {
 	 * Blocks corner grabs where the hang pose looks attached to empty air.
 	 */
 	private isStickyWallClingHeightOk(wallBody: Body): boolean {
-		return wallBody.bounds.min.y < this.body.position.y;
+		return wallBody.bounds.min.y < (this.body.position.y - PLAYER_RADIUS / 2);
 	}
 
 	private applyClingVelocity(): void {

@@ -3,9 +3,10 @@ import { z } from 'zod';
 /**
  * Level JSON uses authoring coordinates (converted to Pixi/Matter Y-down in loadLevelData):
  * - `y` = height above the bottom of the level (`size.height`).
- * - Platforms / hazards: `x` = left edge, `y` = **top** edge
+ * - Platforms / hazards / hints: `x` = left edge, `y` = **top** edge
  *   (ground with `y: 0` sits entirely below the playfield and is not visible).
  * - Spawn / collectibles / exit (points): `x`, `y` = **center**.
+ * - Hints store only `kind` + top-left; plate size lives in code per kind.
  */
 
 const sizeSchema = z.object({
@@ -59,6 +60,29 @@ const hazardSchema = z.object({
 	height: z.number().positive(),
 });
 
+export const hintKindSchema = z.enum([
+	'move-right',
+	'move-left',
+	'jump-right',
+	'jump-left',
+	'jump',
+	'crouch',
+	'crouchJump-right',
+	'crouchJump-left',
+	'cling-right',
+	'cling-left',
+	'dash',
+	'glide',
+	'flight',
+]);
+export type HintKind = z.infer<typeof hintKindSchema>;
+
+const hintSchema = z.object({
+	kind: hintKindSchema,
+	x: z.number(),
+	y: z.number(),
+});
+
 export const levelSchema = z.object({
 	id: z.string(),
 	size: sizeSchema,
@@ -66,6 +90,8 @@ export const levelSchema = z.object({
 	exit: exitSchema,
 	/** Back-to-front draw order. Engine uses texture + parallax only; `id` is optional designer markup. */
 	backgrounds: z.array(backgroundLayerSchema).min(1),
+	/** World-space control posters. Drawn behind platforms; size comes from `kind`. */
+	hints: z.array(hintSchema).default([]),
 	platforms: z.array(platformSchema),
 	hazards: z.array(hazardSchema),
 	collectibles: z.array(collectibleSchema),
@@ -78,3 +104,4 @@ export type LevelExit = z.infer<typeof exitSchema>;
 export type LevelHazard = z.infer<typeof hazardSchema>;
 export type LevelCollectible = z.infer<typeof collectibleSchema>;
 export type LevelBackgroundLayer = z.infer<typeof backgroundLayerSchema>;
+export type LevelHintData = z.infer<typeof hintSchema>;

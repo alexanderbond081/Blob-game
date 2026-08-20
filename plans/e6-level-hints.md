@@ -1,6 +1,6 @@
 # Stage E6 — In-level control hints
 
-**Status:** ready to implement (design locked in chat, 2026-08-18).  
+**Status:** in progress (move / jump / crouch-jump playing, 2026-08-20).  
 **Owner:** separate implementation pass. Do not mix with touch follow-ups, PWA/iOS chrome, or E3 enemies.  
 Related: [`poki.md`](./poki.md) stage E #6, [`player-mechanics-backlog.md`](./player-mechanics-backlog.md).
 
@@ -18,24 +18,28 @@ Levels are small: always-on loops are acceptable; do not persist `seenHints` in 
 - Hints sit **in front of** screen-space parallax (`sky` / `far` / `mid` are siblings **under** `worldRoot` in `PlatformLevelScene`).
 - Author geometry so leaves/walls do not cover the poster (layout, not engine clipping).
 - **Not** a screen-space HUD overlay. **Not** above the blob.
+- Content is **masked** to the rounded plate so the hand never draws outside.
 
 ### Look
 
-- Backing: filled rect, **black at 50% alpha**, **no outline / no 9-slice frame** (must not read as a platform).
-- Foreground: **opaque white** pictograms (not paragraphs of text). Short symbols on keycaps are OK (`↑`, WASD).
-- Keyboard: static keycap art + **pressed / unpressed** (two textures or two visibilities).
-- Touch: **motion** of a white pictogram (finger / swipe arrow), GSAP loop.
-- Gamepad: reserve a slot in data; **do not implement** until a gamepad path exists.
+- Backing: filled rect, **black at 50% alpha**, corner radius **8** (same as platforms), **no outline / no 9-slice frame**.
+- Plate size is **fixed per `kind`** in code (`hint-layout.ts`), not in JSON.
+- Keyboard: white `key-unpressed` / `key-pressed` @2x (100×100 source) + dark labels. Cycle per scheme: 0.5s idle → 1s press → 0.5s release, then fade, gap, swap arrows/WASD. No Space on the poster (reserved for a future dash).
+- Touch: `touch-hand` as a mouse-style pointer (no rotation; hotspot = fingertip). Contact ring + **8px** `#bfbfbf` trail with round caps; the tail fades first (comet).
+- Walk swipe speed = player walk (**300 px/s**). Jump swipe = **1.5×** that with `power2.in`.
+- Loop pause after each gesture: **1.5s**.
+- Gamepad: reserve a slot in `InputMode`; **do not implement** until a gamepad path exists.
 
 ### Behaviour
 
 - Visible for the whole run (looping). No trigger rect in v1 (display pose only).
 - **Do not** lock controls, teleport the blob, dim the whole screen, or require the player to “complete” the hint gesture.
 - Pause-menu help sheet is **out of scope** for this pass (same `kind` art can be reused later).
+- **Pause vs GSAP:** the pause modal stops the Pixi scene ticker, but **does not** pause `gsap.globalTimeline` (portal vortex and hint loops keep playing). Platform ads *do* pause the global timeline. Do not freeze hints on user-pause unless we later pause a dedicated hint timeline — same as the portal today.
 
 ### Input mode (which art to show)
 
-Last-input wins. **Do not** use UA / screen size / `maxTouchPoints`.
+Last-input wins. **Do not** use UA / screen size / `maxTouchPoints`. Tracker: [`src/input/input-mode.ts`](../src/input/input-mode.ts).
 
 | Event | Mode |
 |-------|------|
@@ -45,76 +49,55 @@ Last-input wins. **Do not** use UA / screen size / `maxTouchPoints`.
 
 Default before any gameplay input: `matchMedia('(pointer: coarse)').matches` → `touch`, else `keyboard`.
 
-Centralize this in something like `src/input/input-mode.ts` so hints and (later) other UI share one flag.
-
 ## Data
 
-Add `hints[]` to runtime level JSON ([`src/levels/level-schema.ts`](../src/levels/level-schema.ts)). Same authoring Y as spawn (from level bottom); flip in [`level-loader.ts`](../src/levels/level-loader.ts) like other points/rects.
+Add `hints[]` to runtime level JSON ([`src/levels/level-schema.ts`](../src/levels/level-schema.ts)). Same authoring Y as platforms (from level bottom); flip in [`level-loader.ts`](../src/levels/level-loader.ts). Missing `hints` defaults to `[]`.
 
 ```ts
 {
-  id: string;           // stable, unique per level (e.g. "meadow-01-jump")
-  kind: HintKind;       // see table below
+  kind: HintKind;
   x: number;            // left of backing rect (author space)
   y: number;            // top of backing rect (author space, from level bottom)
-  width: number;
-  height: number;
 }
 ```
 
-`id` is for future `seenHints`; unused in v1.
+No `width` / `height` / `id` in v1. Size comes from `kind`.
 
-Ogmo: new **rect** entity `hint` with enum value `kind` (and optional `id` string). Export into `src/levels/levels/*.json` the same way platforms are exported today (manual or existing convert step). Project file: `src/levels/*.ogmo.json`.
+Ogmo: still optional. meadow-01 currently hand-edits JSON.
 
 ## `kind` set
 
-Implement playback for **shipped** kit first. Stub `kind` values for queued moves so Ogmo does not break later.
+Playback is implemented for move, jump, and crouch-jump. Other values parse and are skipped at runtime.
 
-| `kind` | Keyboard loop | Touch loop | Notes |
+| `kind` | Keyboard loop | Touch loop | Status |
 |--------|-----------------|------------|--------|
-| `move` | ← / A then → / D press-unpress | finger / arrow slides L-R | |
-| `jump` | ↑ or Space blink | swipe up | |
-| `crouch` | ↓ / S hold-blink | swipe down | latched crouch |
-| `crouchJump` | ↓ held, then Space | swipe down, pause, swipe up | high hop; non-obvious |
-| `cling` | (optional key art) + jump | swipe up along wall | cling is **on air contact**, not “hold into wall” |
-| `portal` | walk / jump in | same idea | fireflies fill slots; extra flies fade |
-| `dash` | stub | stub | mechanics backlog #5 |
-| `glide` / `flight` | stub | stub | backlog #6 / #7 |
-
-Spikes: no hint required if the art reads as hazard; skip unless a level really needs it.
-
-## Animation tech
-
-- **Do not** use animated SVG inside Pixi (load = raster snapshot; DOM/SVG cannot z-sort between parallax and platforms).
-- SVG is fine as **source art** exported to PNG `@2x` (`manifest.json` `data.resolution: 2`), same as other game art.
-- Drive loops with **GSAP** (already in the project, `PixiPlugin` registered).
-  - Touch: tween position / alpha of white sprites on the plate.
-  - Keyboard: GSAP timeline toggles pressed/unpressed frames (optional slight `scale.y` on press).
-- One helper e.g. `HintPlayback` / `LevelHint` per instance: `start()`, `stop()`, `setInputMode()`.
-- Kill tweens on `destroy` (scene change).
-
-Placeholder v1 (allowed): Pixi `Graphics` white shapes on the 50% plate if PNGs are not ready. Swap to textures without changing JSON.
+| `move-right` | → / D | finger slides L-R | **Playing** (meadow-01) |
+| `move-left` | ← / A | finger slides R-L | Playing (meadow-03) |
+| `jump-right` | ↑+→ / W+D | swipe up-right | Playing (meadow-01) |
+| `jump-left` | ↑+← / W+A | swipe up-left | Playing (meadow-03) |
+| `jump` | ↑ | swipe up | stub |
+| `crouch` | ↓ | swipe down | stub |
+| `crouchJump-right` | ↓ 0.5s then ↑+→ (no idle between) | swipe down, then up-right | Playing (code only) |
+| `crouchJump-left` | ↓ 0.5s then ↑+← | swipe down, then up-left | Playing (code only) |
+| `cling-right` / `cling-left` | use jump-dir | use jump-dir | not a separate poster |
+| `dash` / `glide` / `flight` | stub | stub | backlog |
 
 ## Runtime wiring
 
-1. Parse `hints` (default `[]` so old JSON keeps working).
-2. `LevelRoot`: container **first** (before platforms) or `addChildAt(hints, 0)` so posters stay behind geometry.
-3. Each hint: backing `Graphics` + child content; position/size from rect.
-4. Subscribe to input-mode changes; swap / restart the matching timeline.
-5. `PlatformLevelScene.update` does not need per-hint logic if GSAP owns the loop.
-6. Gesture layer stays **above** the world (input). Hints are not interactive.
+1. Parse `hints` (default `[]`).
+2. `LevelRoot` adds a hints layer **first** (before platforms).
+3. `LevelHint` plate + masked content; `MoveHint` / `JumpHint` / `CrouchJumpHint` own GSAP loops.
+4. Subscribe to input-mode; swap / restart the matching timeline.
+5. `PlatformLevelScene.update` does not tick hints — GSAP owns the loop.
+6. Gesture layer stays **above** the world. Hints are not interactive.
 
-## Files likely to touch
+## Files
 
-- `src/levels/level-schema.ts`, `src/levels/level-loader.ts`
-- `src/levels/levels/meadow-01.json` (and Ogmo source) — at least **move** + **jump** as the first real placement
-- Optional: meadow-02 cling / portal; crouch where a low gap exists
+- `src/levels/level-schema.ts`, `src/levels/level-loader.ts`, `src/levels/levels/meadow-01.json`
+- `src/input/input-mode.ts`
+- `src/entities/hints/` (`level-hint.ts`, `move-hint.ts`, `jump-hint.ts`, `crouch-jump-hint.ts`, `touch-pointer.ts`, `keyboard-cluster.ts`, `hint-layout.ts`, `create-level-hint.ts`)
 - `src/world/level-root.ts`
-- New: `src/input/input-mode.ts`, `src/entities/level-hint.ts` (or `src/world/level-hints.ts`)
-- `src/assets/manifest.json` when real PNGs land
-- `.cursorrules` / README controls table only if behaviour is player-facing and stable
-
-Do **not** rewrite `gesture-touch-layer.ts` beyond a one-line callback/event if needed to detect `pointerType`.
+- `src/assets/manifest.json` (`hint-touch-hand`, `hint-touch-point`, `hint-key-pressed`, `hint-key-unpressed`, `resolution: 2`)
 
 ## Out of scope
 
@@ -122,9 +105,11 @@ Do **not** rewrite `gesture-touch-layer.ts` beyond a one-line callback/event if 
 - Trigger radius / fade-in by proximity (v1 always on)
 - `GameProgress.seenHints`
 - Pause-modal tutorial page
+- Freezing hint GSAP on the pause modal (see Behaviour)
 - iOS PWA / hiding the fullscreen HUD button
 - Gamepad glyphs
 - Frame-by-frame swipe filmstrips, Lottie, Spine
+- Ogmo entity (JSON is authored by hand for now)
 
 ## Test plan
 
@@ -135,12 +120,9 @@ Do **not** rewrite `gesture-touch-layer.ts` beyond a one-line callback/event if 
 - [ ] Coarse-pointer default shows touch art before first key.
 - [ ] Scene change / restart does not leak GSAP tweens.
 - [ ] meadow-01 readable on phone landscape and desktop 960×540.
+- [ ] Pause modal: hints keep looping (same as portal); ads freeze them.
 
-## Implementation order
+## Remaining
 
-1. Schema + loader Y-flip + empty `hints: []` on existing JSON.
-2. `input-mode.ts` + `LevelHint` placeholder Graphics + GSAP dummy loop.
-3. Ogmo entity + place move/jump on meadow-01.
-4. Real `kind` timelines (including `crouchJump`).
-5. PNG pass when art exists (`resolution: 2`, white on transparent).
-6. Mark E6 done in [`poki.md`](./poki.md) / README checklist.
+- Place remaining posters on later levels.
+- Mark E6 done in [`poki.md`](./poki.md) / README when the demo set is authored.

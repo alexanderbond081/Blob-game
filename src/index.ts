@@ -17,6 +17,7 @@ import './global-delay';
 import { GameHUD } from './hud/game-hud';
 import { SoundManager } from './managers/sound-manager';
 import { bindGameDelayTicker, setGameDelayPaused } from './global-delay';
+import { startInputModeTracking } from './input/input-mode';
 
 Filter.defaultOptions.resolution = 'inherit';
 gsap.registerPlugin(PixiPlugin);
@@ -198,6 +199,7 @@ async function initGame(): Promise<void> {
 	document.body.appendChild(app.canvas);
 	suppressBrowserTouchChrome(app.canvas);
 	bindPlatformWakeOnInput(app.canvas);
+	startInputModeTracking();
 	applyStageScale();
 
 	viewMask.rect(0, 0, gameWidth, gameHeight).fill(0xffffff);

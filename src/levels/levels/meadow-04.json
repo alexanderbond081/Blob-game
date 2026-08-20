@@ -8,27 +8,31 @@
 		{ "id": "far", "texture": "meadow-bg-far", "parallax": 0.1 },
 		{ "id": "mid", "texture": "meadow-bg-mid", "parallax": 0.3 }
 	],
+	"hints": [
+		{ "kind": "crouchJump-right", "x": 480, "y": 350 }
+	],
 	"platforms": [
 		{ "x": -20, "y": 50, "width": 1540, "height": 60, "type": "ground" },
 		{ "x": 1510, "y": 1490, "width": 30, "height": 1500, "type": "wall" },
 		{ "x": -40, "y": 1490, "width": 30, "height": 1500, "type": "wall" },
-		{ "x": 1240, "y": 180, "width": 200, "height": 30, "type": "leaf" },
-		{ "x": 430, "y": 380, "width": 200, "height": 30, "type": "leaf" },
+		{ "x": 1260, "y": 260, "width": 200, "height": 30, "type": "leaf" },
+		{ "x": 490, "y": 380, "width": 200, "height": 30, "type": "leaf" },
 		{ "x": -10, "y": 340, "width": 230, "height": 30, "type": "leaf" },
-		{ "x": 930, "y": 450, "width": 30, "height": 400, "type": "wall" },
-		{ "x": 960, "y": 320, "width": 200, "height": 30, "type": "leaf" },
-		{ "x": 730, "y": 230, "width": 200, "height": 30, "type": "leaf" },
-		{ "x": 810, "y": 500, "width": 270, "height": 60, "type": "sticky" },
-		{ "x": 20, "y": 170, "width": 150, "height": 120, "type": "ground" }
+		{ "x": 930, "y": 490, "width": 30, "height": 440, "type": "wall" },
+		{ "x": 980, "y": 400, "width": 200, "height": 30, "type": "leaf" },
+		{ "x": 720, "y": 240, "width": 200, "height": 30, "type": "leaf" },
+		{ "x": 820, "y": 550, "width": 250, "height": 60, "type": "sticky" },
+		{ "x": 20, "y": 170, "width": 150, "height": 120, "type": "ground" },
+		{ "x": 980, "y": 160, "width": 180, "height": 110, "type": "ground" }
 	],
 	"hazards": [
 	],
 	"collectibles": [
 		{ "id": "fly-0", "x": 820, "y": 110, "type": "firefly" },
-		{ "id": "fly-1", "x": 530, "y": 450, "type": "firefly" },
+		{ "id": "fly-1", "x": 590, "y": 450, "type": "firefly" },
 		{ "id": "fly-2", "x": 100, "y": 240, "type": "firefly" },
-		{ "id": "fly-3", "x": 1060, "y": 400, "type": "firefly" },
-		{ "id": "fly-4", "x": 1340, "y": 240, "type": "firefly" },
-		{ "id": "fly-4", "x": 1090, "y": 110, "type": "firefly" }
+		{ "id": "fly-3", "x": 1130, "y": 580, "type": "firefly" },
+		{ "id": "fly-4", "x": 1360, "y": 310, "type": "firefly" },
+		{ "id": "fly-5", "x": 1070, "y": 220, "type": "firefly" }
 	]
 }
