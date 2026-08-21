@@ -42,7 +42,7 @@ Not committed — reorder when scheduling:
 - Not every item has matching art yet (especially **fairy wings**, **sparkle trail**, **dash squash**).  
 - Prefer shared wing + trail FX for **double jump (#4)** and **glide (#6)**.  
 - Mark asset readiness when packs land; do not block design notes on missing sprites.
-- Sticky walls / spikes still use debug colored rects; droplet splash is in (even fan); puddle / land polish deferred.
+- Platform plates (`ground` / `leaf` / `wall` / `sticky`) are the ship look — translucent rounded Graphics, not placeholders. Optional later: tint / alpha only (no painted leaf textures). Spikes are a vector saw (AABB hitbox; optional later: round the inner core rectangle). Droplet splash is in (even fan); puddle / land polish deferred.
 
 ---
 
@@ -50,6 +50,6 @@ Not committed — reorder when scheduling:
 
 | # | Mechanic | Notes |
 |---|----------|-------|
-| 1 | Sticky vertical cling | **Done.** Cling + wall-jump; `sticky-wall` label; hang-left/right; jelly hang/squash/peel; jump preferred over peel; cling on air contact (no toward-wall input); cling only if wall top above blob center. |
-| 2 | Spikes / death surfaces | **Done.** Level `hazards[]` (`type: spikes`); solid Matter `hazard` bodies; shared death pipeline with fall (`beginDeath` → `burst` anim → pause → respawn). Death VFX: pooled kinematic droplets (`src/fx/blob-droplet-pool.ts`), even circular fan. Burst sheet may be a blank frame (droplets carry the pop); last frame is not force-hidden. **Next:** moving enemies (beetle / spider / wasp on fixed paths) reuse this kill path — scheduled for stage E, before the demo levels are authored. |
+| 1 | Sticky vertical cling | **Done.** Cling + wall-jump; `sticky-wall` label; hang-left/right; jelly hang/squash/peel; jump preferred over peel; cling on air contact (no toward-wall input); cling only if wall top above blob center. Display: translucent rounded Graphics plate (same family as `ground` / `leaf` / `wall`) — ship look; optional later tint / alpha only. |
+| 2 | Spikes / death surfaces | **Done.** Level `hazards[]` (`type: spikes`); solid Matter `hazard` AABB (kill volume unchanged). Display: generated isosceles saw inside that box ([`src/entities/spike-outline.ts`](../src/entities/spike-outline.ts)); optional `facing` + `length`. Not debug rects / not painted spike art. Optional later: round the inner core rectangle. Shared death pipeline with fall (`beginDeath` → `burst` anim → pause → respawn). Death VFX: pooled kinematic droplets (`src/fx/blob-droplet-pool.ts`), even circular fan. Burst sheet may be a blank frame (droplets carry the pop); last frame is not force-hidden. **Next:** moving enemies (beetle / spider / wasp on fixed paths) reuse this kill path — scheduled for stage E, before the demo levels are authored. |
 | 3 | Crouch / hide | **Done.** Hold ↓ / `KeyS` / down swipe (latches); blend-in squat (½ height, breath ×¼, alpha 0.6); Matter collider scaleY → 0.5 (feet planted); stand still (no crawl); release → 12-frame ease-in then micro-hop stand; crouch-jump buffer 18 frames after release; jump from any crouch skips squat wind-up and uses `CROUCH_JUMP_VELOCITY` (−14) with a lower-pitched jump SFX (`speed` ≈ 0.7–0.8); `isHidden` at full blend for future LOS. |

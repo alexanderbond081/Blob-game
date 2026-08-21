@@ -52,12 +52,19 @@ const collectibleSchema = z.object({
 	type: z.string(),
 });
 
+export const hazardFacingSchema = z.enum(['up', 'down', 'left', 'right']);
+export type HazardFacing = z.infer<typeof hazardFacingSchema>;
+
 const hazardSchema = z.object({
 	type: z.string(),
 	x: z.number(),
 	y: z.number(),
 	width: z.number().positive(),
 	height: z.number().positive(),
+	/** Spike teeth on this side only; omit for teeth on all four sides. */
+	facing: hazardFacingSchema.optional(),
+	/** Tooth length as a fraction of the max inward depth (0 = flat rect, 1 = full basis). Default 0.5. */
+	length: z.number().min(0).max(1).optional(),
 });
 
 export const hintKindSchema = z.enum([

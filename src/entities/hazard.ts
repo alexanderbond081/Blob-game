@@ -3,6 +3,7 @@ import { Container, Graphics } from 'pixi.js';
 
 import { LevelHazard } from '../levels/level-schema';
 import { PhysicsBody } from '../physics/physics-body';
+import { buildSpikePolygon } from './spike-outline';
 
 /** Matter body label for anything that kills the player on contact. */
 export const HAZARD_BODY_LABEL = 'hazard';
@@ -43,13 +44,27 @@ export class Hazard extends PhysicsBody {
 
 		// Inset by half the stroke so the outline sits inside the collider bounds.
 		const inset = OUTLINE_WIDTH * 0.5;
-		const innerWidth = Math.max(0, data.width - OUTLINE_WIDTH);
-		const innerHeight = Math.max(0, data.height - OUTLINE_WIDTH);
+		const spikePolygon = data.type === 'spikes'
+			? buildSpikePolygon({
+				width: data.width,
+				height: data.height,
+				inset,
+				facing: data.facing,
+				length: data.length,
+			})
+			: null;
+
+		if (spikePolygon && spikePolygon.length >= 3) {
+			graphics.poly(spikePolygon, true);
+		} else {
+			const innerWidth = Math.max(0, data.width - OUTLINE_WIDTH);
+			const innerHeight = Math.max(0, data.height - OUTLINE_WIDTH);
+			graphics.rect(inset, inset, innerWidth, innerHeight);
+		}
 
 		graphics
-			.rect(inset, inset, innerWidth, innerHeight)
 			.fill({ color: HAZARD_FILL, alpha: FILL_ALPHA })
-			.stroke({ color: HAZARD_OUTLINE, width: OUTLINE_WIDTH, alpha: 1 });
+			.stroke({ color: HAZARD_OUTLINE, width: OUTLINE_WIDTH, alpha: 1, join: 'round' });
 		container.addChild(graphics);
 		container.pivot.set(data.width * 0.5, data.height * 0.5);
 

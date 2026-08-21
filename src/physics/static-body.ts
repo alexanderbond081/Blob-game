@@ -7,13 +7,13 @@ import { PhysicsBody } from './physics-body';
 
 const CORNER_RADIUS = 8;
 const OUTLINE_WIDTH = 2;
-const FILL_ALPHA = 0.8;
+//const FILL_ALPHA = 0.8;
 
-const PLATFORM_STYLE: Record<PlatformType, { fill: number; outline: number }> = {
-	ground: { fill: 0x3b2412, outline: 0x8b5a2b },
-	wall: { fill: 0xa67c52, outline: 0xe2c49a },
-	leaf: { fill: 0x005020, outline: 0x30bf52 },
-	sticky: { fill: 0x0073a0, outline: 0x5fd2ff },
+const PLATFORM_STYLE: Record<PlatformType, { fill: number; outline: number; alpha: number }> = {
+	ground: { fill: 0x3b2412, outline: 0x8b5a2b, alpha: 0.8 },
+	wall: { fill: 0xa67c52, outline: 0xe2c49a, alpha: 0.8 },
+	leaf: { fill: 0x005020, outline: 0x30bf52, alpha: 0.8 },
+	sticky: { fill: 0x0073a0, outline: 0x5fd2ff, alpha: 0.6 },
 };
 
 export type StaticBodyOptions = {
@@ -56,7 +56,7 @@ export class StaticBody extends PhysicsBody {
 
 		graphics
 			.roundRect(inset, inset, innerWidth, innerHeight, CORNER_RADIUS)
-			.fill({ color: style.fill, alpha: FILL_ALPHA })
+			.fill({ color: style.fill, alpha: style.alpha })
 			.stroke({ color: style.outline, width: OUTLINE_WIDTH, alpha: 1 });
 
 		container.addChild(graphics);

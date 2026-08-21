@@ -43,7 +43,7 @@ Touch is gesture-first (no on-screen buttons). Horizontal swipes are ignored unt
 - Camera follow + clamp, dual parallax backgrounds
 - Blob player: run / jump / crouch wind-up, jelly squash, facing + hang sprites; colored skins via `skins-catalog`
 - **Sticky walls** (`label: "sticky-wall"`): air cling, slow slide, peel-off stretch, wall-jump
-- **Hazards** (`hazards[]`, e.g. `type: "spikes"`): solid kill volumes
+- **Hazards** (`hazards[]`, `type: "spikes"`): solid AABB kill volumes; generated isosceles saw inside the box ([`src/entities/spike-outline.ts`](src/entities/spike-outline.ts)). Optional `facing` (one side) and `length` (0–1 tooth height)
 - **Death:** shared kill path (hazard / fall) → optional `burst` anim → droplet splash → pause → respawn (empty burst frame OK; no forced hide of last frame)
 - **Crouch / hide:** hold ↓ / `S` / down swipe; blend-in squat + alpha; collider half-height; release → 12-frame ease-in then micro-hop; crouch-jump grace 18 frames; jump from any crouch skips squat wind-up, uses `CROUCH_JUMP_VELOCITY` and a lower-pitched jump SFX
 - **Portal gate:** starts locked; fireflies home to rim slots (`exit.slots`); door tweens out and a vortex spins when full; overlap then clears the level. Blob fly-in / suck-in animation is deferred
@@ -65,7 +65,7 @@ Level data: JSON + Zod ([`src/levels/`](src/levels/)) — `platforms`, `hazards`
 - Landscape-first; portrait / rotate UX deferred
 - Prefer **2×** art with `"data": { "resolution": 2 }` in [`src/assets/manifest.json`](src/assets/manifest.json) (logical sizes in Pixi — do not also `scale = 0.5`)
 - Backgrounds: logical bleed around the viewport; parallax clamped (no tiling)
-- Debug tinted rects for platforms / sticky walls / spikes until final art lands
+- World collision art is ship look: translucent rounded Graphics plates (`ground` / `leaf` / `wall` / `sticky`) and the spike saw. Optional later: tint / alpha, or round the spike inner core — not painted leaf/spike textures
 
 ## Scripts
 
@@ -132,7 +132,7 @@ Goal: a build good enough to publish on itch.io and send to Poki for publishing 
 - Touch follow-ups (not blockers): `pointerup` capture race vs Pixi up position; `touchend` identifier vs `pointerId`; `pointercancel` vs `touchcancel`; flick that pauses before lift; pause/blur leaving a committed jump; failed takeoff leaving a ground run — see [`plans/poki.md`](./plans/poki.md)
 - Portal entry (blob suck-in) animation before the result modal — deferred
 - More player kit still queued (double jump / flight, dash, glide) — see mechanics backlog
-- Final art for sticky walls / spikes; per-skin droplet assets deferred (catalog field ready)
+- Platform plates and the spike saw are the ship look (optional later: tint / alpha; round the spike inner core). Per-skin droplet assets deferred (catalog field ready)
 - Bundle is heavier than an ideal Poki first download (`bundle.js` ~1.4 MB + music) — optimize before portal submit
 - Portrait / rotate UX and portal safe-area adaptation deferred to stage F
 - Pause modal stops the scene ticker but not `gsap.globalTimeline` (portal + hint loops keep playing). Platform ads do pause GSAP. Freeze hints later only if that contrast becomes a problem.
