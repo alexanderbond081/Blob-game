@@ -291,6 +291,7 @@ Pixi = draw yourself + pick physics package. Phaser/Defold = gameplay kit includ
 - [x] Level catalog + portal exit chain + GameProgress save (A2); level-clear modal (C)
 - [x] Progress / Customize HudModals (stage D; OK dismiss) + skins catalog applied in-level
 - [x] Portal unlock by firefly rim slots + door / vortex art (stage E #1). Blob fly-in animation deferred
+- [x] Moving hazards (caterpillar / spider / mosquito) on fixed rails (stage E #3). Place on demo levels while authoring E4
 - [x] Portrait / rotate support → **stage F** (Poki accepts landscape-only; camera + HUD + hub modals rework is too costly for the demo)
 - [x] Rewarded help → **stage F**; shape still open (flight vs teleport to portal)
 - [x] Mobile background freeze: sync platform `hidden` on `pageshow` / `focus` / first pointer / Page Lifecycle freeze-resume, not only `visibilitychange`. Does **not** clear HUD Pause (`isPaused`)
@@ -309,7 +310,7 @@ Ordered by dependency: anything that changes level rules lands before the levels
 |---|------|--------------------|
 | 1 | Portal unlock by fireflies + door art | **Done.** Locked until `exit.slots` fireflies dock on the rim; door tweens out, vortex spins. Extra flies fade into the centre |
 | 2 | Portal entry animation + SFX before the result modal | Enter SFX (`portal-enter`) is in. **Blob fly-in / suck-in animation deferred** — result modal still fires on overlap |
-| 3 | Enemies: moving hazards (beetle / spider / wasp), fixed paths | New `enemies[]`-style schema entry; blocks level authoring |
+| 3 | Enemies: moving hazards (caterpillar / spider / mosquito), fixed paths | **Done (runtime).** Live in `hazards[]` (`from` / `to` centres + `speed`), not a separate `enemies[]`. Sensor kill volumes share the spike death path. Remaining: author onto the 10 demo levels |
 | 4 | 10 levels, progressive difficulty | After 3. Authoring is **Ogmo 3** entity layers → runtime JSON (Y flipped on load). Two meadow layouts in-repo so far |
 | 5 | Touch controls rework | **Done (playable).** Gesture-first; comfortable on phone after settle / flick-on-up / no false jump-run. Jump / crouch swipes; jump side-speed lasts until landing or cling. Horizontal swipe deferred until dash (then: on release + speed threshold, no run latch). Slow drag is live analog. Tap, 0.5 s hold, or any gameplay key cancels. Full jump height from 45° up; ~33° deadzone. Top HUD band (~72 px) **intentionally** ends the stroke (chrome / pause). Flick vs slow-swipe distances tuned. Remaining polish: [Touch follow-ups](#touch-follow-ups) |
 | 6 | Hints for existing mechanics only | **Playback done** (move / jump / crouch / crouch-jump). Remaining: place posters while authoring levels. Plan: [`e6-level-hints.md`](./e6-level-hints.md) |

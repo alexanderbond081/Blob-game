@@ -43,7 +43,7 @@ Touch is gesture-first (no on-screen buttons). Horizontal swipes are ignored unt
 - Camera follow + clamp, dual parallax backgrounds
 - Blob player: run / jump / crouch wind-up, jelly squash, facing + hang sprites; colored skins via `skins-catalog`
 - **Sticky walls** (`label: "sticky-wall"`): air cling, slow slide, peel-off stretch, wall-jump
-- **Hazards** (`hazards[]`, `type: "spikes"`): solid AABB kill volumes; generated isosceles saw inside the box ([`src/entities/spike-outline.ts`](src/entities/spike-outline.ts)). Optional `facing` (one side) and `length` (0–1 tooth height)
+- **Hazards** (`hazards[]`): `spikes` — solid AABB kill volumes; generated isosceles saw inside the box ([`src/entities/spike-outline.ts`](src/entities/spike-outline.ts)); optional `facing` (one side) and `length` (0–1 tooth height). Moving insects (`caterpillar` / `spider` / `mosquito`) — sensor kill volumes on a `from`–`to` rail + `speed`; same death path as spikes. Placement on the 10 demo levels still pending.
 - **Death:** shared kill path (hazard / fall) → optional `burst` anim → droplet splash → pause → respawn (empty burst frame OK; no forced hide of last frame)
 - **Crouch / hide:** hold ↓ / `S` / down swipe; blend-in squat + alpha; collider half-height; release → 12-frame ease-in then micro-hop; crouch-jump grace 18 frames; jump from any crouch skips squat wind-up, uses `CROUCH_JUMP_VELOCITY` and a lower-pitched jump SFX
 - **Portal gate:** starts locked; fireflies home to rim slots (`exit.slots`); door tweens out and a vortex spins when full; overlap then clears the level. Blob fly-in / suck-in animation is deferred
@@ -119,8 +119,8 @@ Goal: a build good enough to publish on itch.io and send to Poki for publishing 
 |---|------|-------|
 | 1 | Portal unlock by fireflies + door art | **Done.** Locked until `exit.slots` fireflies dock on the rim; door opens to a spinning vortex |
 | 2 | Portal entry animation + SFX before the result modal | Enter SFX is in; **blob fly-in animation deferred**. Result modal still fires on overlap |
-| 3 | Enemies: moving hazards (beetle / spider / wasp) on fixed paths | New level-schema object; needed before authoring levels |
-| 4 | 10 levels with a progressive difficulty curve | Only after 1 and 3 |
+| 3 | Enemies: moving hazards (caterpillar / spider / mosquito) on fixed paths | **Done (runtime).** Same `hazards[]` + death path; `from` / `to` body centres + `speed`. Art + spider look-out cycle in. Remaining: place on demo levels (Ogmo node optional); spider rail endpoints may still need a pass |
+| 4 | 10 levels with a progressive difficulty curve | After 1 and 3. Engine unblocks authoring |
 | 5 | Touch controls rework | **Done (playable).** Gesture layer: settle + flick-on-up, jump/crouch swipes, analog axes from angle, tap / 0.5 s / key cancel. Horizontal swipe deferred until dash. Remaining event-order polish in [`plans/poki.md`](./plans/poki.md) → Touch follow-ups |
 | 6 | Hints for the mechanics that already exist | **Playback done** (move / jump / crouch / crouch-jump). Place on levels while authoring. Plan: [`plans/e6-level-hints.md`](./plans/e6-level-hints.md) |
 | 7 | Demo outro screen after the last level | **Done (UI).** Result modal `demoComplete` when no next level. Celebratory SFX/VFX deferred |

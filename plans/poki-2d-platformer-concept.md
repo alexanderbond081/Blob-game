@@ -291,7 +291,7 @@ Collision shapes and entity spawns come from Ogmo **entity layers**, not from gu
 
 ## Prototype status (vertical slice)
 
-Shipped in-repo (not full MVP): meadow JSON levels authored in Ogmo (`meadow-01`, `meadow-02`), Matter player (cling, crouch/hide + crouch jump, spikes + death droplets), fireflies that fill portal rim slots and open the door/vortex, dual parallax, keyboard + touch, hub UI (Progress / Customize / pause / clear), portal SDK adapters. **Not yet:** blob fly-in into the open portal (deferred), episode gating (start as walk-only), pollen relics, gold fireflies, crowns, NG+, origin/ending beats, moving enemies. Runtime stays Zod-validated JSON; Ogmo is the layout editor.
+Shipped in-repo (not full MVP): meadow JSON levels authored in Ogmo (`meadow-01`, `meadow-02`), Matter player (cling, crouch/hide + crouch jump, spikes + death droplets), moving insects (`caterpillar` / `spider` / `mosquito` on `hazards[]` rails — runtime done, not yet placed on the 10 demo levels), fireflies that fill portal rim slots and open the door/vortex, dual parallax, keyboard + touch, hub UI (Progress / Customize / pause / clear), portal SDK adapters. **Not yet:** blob fly-in into the open portal (deferred), episode gating (start as walk-only), pollen relics, gold fireflies, crowns, NG+, origin/ending beats. Runtime stays Zod-validated JSON; Ogmo is the layout editor.
 
 ---
 
@@ -303,7 +303,7 @@ A smaller milestone than the MVP above: a build worth publishing on itch.io and 
 
 - [x] Portal opens on a firefly threshold, with door / vortex art  
 - [ ] Portal entry animation before the result modal (**deferred**)  
-- [ ] Moving enemies exist (beetle / spider / wasp on fixed paths) and share the death pipeline  
+- [x] Moving enemies exist (caterpillar / spider / mosquito on fixed paths) and share the death pipeline. Remaining: place on demo levels  
 - [ ] 10 levels with a readable difficulty curve  
 - [x] Touch controls are genuinely playable on a phone (gesture-first, no on-screen buttons). Event-order polish still open — [`poki.md`](./poki.md) Touch follow-ups  
 - [ ] Hints teach the mechanics that ship in the demo — spec [`e6-level-hints.md`](./e6-level-hints.md)  
