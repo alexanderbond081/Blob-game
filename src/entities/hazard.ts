@@ -1,7 +1,7 @@
 import { Bodies, Body } from 'matter-js';
 import { Container, Graphics } from 'pixi.js';
 
-import { LevelHazard } from '../levels/level-schema';
+import { LevelSpikeHazard } from '../levels/level-schema';
 import { PhysicsBody } from '../physics/physics-body';
 import { buildSpikePolygon } from './spike-outline';
 
@@ -15,10 +15,31 @@ const HAZARD_OUTLINE = 0xee7777;
 
 const hazardTypes = new WeakMap<Body, string>();
 
-export class Hazard extends PhysicsBody {
+export const registerHazardType = (body: Body, hazardType: string): void => {
+	hazardTypes.set(body, hazardType);
+};
+
+export abstract class Hazard extends PhysicsBody {
 	public readonly hazardType: string;
 
-	public constructor(data: LevelHazard) {
+	protected constructor(body: Body, display: Container, hazardType: string) {
+		super(body, display);
+		this.hazardType = hazardType;
+		registerHazardType(body, hazardType);
+	}
+
+	public update(_deltaTime: number): void {
+		return;
+	}
+
+	/** Static spikes block death droplets; moving insects do not. */
+	public get blocksDroplets(): boolean {
+		return true;
+	}
+}
+
+export class SpikeHazard extends Hazard {
+	public constructor(data: LevelSpikeHazard) {
 		const body = Bodies.rectangle(
 			data.x + data.width * 0.5,
 			data.y + data.height * 0.5,
@@ -31,28 +52,23 @@ export class Hazard extends PhysicsBody {
 				restitution: 0,
 			},
 		);
-		hazardTypes.set(body, data.type);
 
-		const display = Hazard.createDisplay(data);
-		super(body, display);
-		this.hazardType = data.type;
+		super(body, SpikeHazard.createDisplay(data), data.type);
 	}
 
-	private static createDisplay(data: LevelHazard): Container {
+	private static createDisplay(data: LevelSpikeHazard): Container {
 		const container = new Container();
 		const graphics = new Graphics();
 
 		// Inset by half the stroke so the outline sits inside the collider bounds.
 		const inset = OUTLINE_WIDTH * 0.5;
-		const spikePolygon = data.type === 'spikes'
-			? buildSpikePolygon({
-				width: data.width,
-				height: data.height,
-				inset,
-				facing: data.facing,
-				length: data.length,
-			})
-			: null;
+		const spikePolygon = buildSpikePolygon({
+			width: data.width,
+			height: data.height,
+			inset,
+			facing: data.facing,
+			length: data.length,
+		});
 
 		if (spikePolygon && spikePolygon.length >= 3) {
 			graphics.poly(spikePolygon, true);

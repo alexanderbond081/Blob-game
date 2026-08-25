@@ -1,0 +1,20 @@
+{
+	"frames": {
+		"spider-idle": { "frame": { "x": 0, "y": 0, "w": 150, "h": 150 } },
+		"spider-spread": { "frame": { "x": 150, "y": 0, "w": 150, "h": 150 } },
+		"spider-look-left": { "frame": { "x": 0, "y": 150, "w": 150, "h": 150 } },
+		"spider-look-right": { "frame": { "x": 150, "y": 150, "w": 150, "h": 150 } },
+		"spider-climb1": { "frame": { "x": 0, "y": 300, "w": 150, "h": 150 } },
+		"spider-climb2": { "frame": { "x": 150, "y": 300, "w": 150, "h": 150 } }
+	},
+	"animations": {
+		"idle": ["spider-idle"],
+		"look-out": ["spider-look-left", "spider-look-right"],
+		"climb": ["spider-climb1", "spider-climb2"],
+		"drop": ["spider-spread"]
+	},
+	"meta": {
+		"image": "spider-spritesheet-150x150.webp",
+		"scale": "2"
+	}
+}

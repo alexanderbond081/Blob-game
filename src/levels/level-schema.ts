@@ -3,9 +3,9 @@ import { z } from 'zod';
 /**
  * Level JSON uses authoring coordinates (converted to Pixi/Matter Y-down in loadLevelData):
  * - `y` = height above the bottom of the level (`size.height`).
- * - Platforms / hazards / hints: `x` = left edge, `y` = **top** edge
+ * - Platforms / spike hazards / hints: `x` = left edge, `y` = **top** edge
  *   (ground with `y: 0` sits entirely below the playfield and is not visible).
- * - Spawn / collectibles / exit (points): `x`, `y` = **center**.
+ * - Spawn / collectibles / exit / patrol `from`/`to`: `x`, `y` = **center**.
  * - Hints store only `kind` + top-left; plate size lives in code per kind.
  */
 
@@ -55,8 +55,11 @@ const collectibleSchema = z.object({
 export const hazardFacingSchema = z.enum(['up', 'down', 'left', 'right']);
 export type HazardFacing = z.infer<typeof hazardFacingSchema>;
 
-const hazardSchema = z.object({
-	type: z.string(),
+export const patrolHazardTypeSchema = z.enum(['caterpillar', 'spider', 'mosquito']);
+export type PatrolHazardType = z.infer<typeof patrolHazardTypeSchema>;
+
+const spikeHazardSchema = z.object({
+	type: z.literal('spikes'),
 	x: z.number(),
 	y: z.number(),
 	width: z.number().positive(),
@@ -66,6 +69,17 @@ const hazardSchema = z.object({
 	/** Tooth length as a fraction of the max inward depth (0 = flat rect, 1 = full basis). Default 0.5. */
 	length: z.number().min(0).max(1).optional(),
 });
+
+const patrolHazardSchema = z.object({
+	type: patrolHazardTypeSchema,
+	/** Rest-pose body centers; the enemy ping-pongs (or climbs) between these. */
+	from: pointSchema,
+	to: pointSchema,
+	/** Travel speed in world pixels per second. */
+	speed: z.number().positive(),
+});
+
+const hazardSchema = z.discriminatedUnion('type', [spikeHazardSchema, patrolHazardSchema]);
 
 export const hintKindSchema = z.enum([
 	'move-right',
@@ -109,6 +123,8 @@ export type LevelData = z.infer<typeof levelSchema>;
 export type LevelPlatform = z.infer<typeof platformSchema>;
 export type LevelExit = z.infer<typeof exitSchema>;
 export type LevelHazard = z.infer<typeof hazardSchema>;
+export type LevelSpikeHazard = z.infer<typeof spikeHazardSchema>;
+export type LevelPatrolHazard = z.infer<typeof patrolHazardSchema>;
 export type LevelCollectible = z.infer<typeof collectibleSchema>;
 export type LevelBackgroundLayer = z.infer<typeof backgroundLayerSchema>;
 export type LevelHintData = z.infer<typeof hintSchema>;

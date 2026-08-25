@@ -2,6 +2,7 @@ import { Container, ParticleContainer } from 'pixi.js';
 
 import { Collectible, SpriteCollectible } from '../entities/collectible';
 import { FireflyCollectible } from '../entities/firefly-collectible';
+import { createHazard } from '../entities/create-hazard';
 import { Hazard } from '../entities/hazard';
 import { createLevelHint } from '../entities/hints/create-level-hint';
 import { LevelHint } from '../entities/hints/level-hint';
@@ -60,7 +61,7 @@ export class LevelRoot extends Container {
 		}
 
 		for (const hazardData of levelData.hazards) {
-			const hazard = new Hazard(hazardData);
+			const hazard = createHazard(hazardData);
 			hazard.addToWorld(physicsWorld, this);
 			this.hazards.push(hazard);
 		}
@@ -136,6 +137,10 @@ export class LevelRoot extends Container {
 		}
 
 		for (const hazard of this.hazards) {
+			if (!hazard.blocksDroplets) {
+				continue;
+			}
+
 			rects.push(boundsToRect(hazard.body.bounds));
 		}
 

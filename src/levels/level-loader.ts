@@ -45,10 +45,26 @@ const toRuntimeLevelData = (data: LevelData): LevelData => {
 			...platform,
 			y: authorYToRuntimeY(platform.y, levelHeight),
 		})),
-		hazards: data.hazards.map((hazard) => ({
-			...hazard,
-			y: authorYToRuntimeY(hazard.y, levelHeight),
-		})),
+		hazards: data.hazards.map((hazard) => {
+			if (hazard.type === 'spikes') {
+				return {
+					...hazard,
+					y: authorYToRuntimeY(hazard.y, levelHeight),
+				};
+			}
+
+			return {
+				...hazard,
+				from: {
+					x: hazard.from.x,
+					y: authorYToRuntimeY(hazard.from.y, levelHeight),
+				},
+				to: {
+					x: hazard.to.x,
+					y: authorYToRuntimeY(hazard.to.y, levelHeight),
+				},
+			};
+		}),
 		collectibles: data.collectibles.map((collectible) => ({
 			...collectible,
 			y: authorYToRuntimeY(collectible.y, levelHeight),

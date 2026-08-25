@@ -104,6 +104,9 @@ export class PlatformLevelScene extends Scene {
 		}
 
 		this.levelRoot.player.setTouchControls(this.touchLayer.getControls());
+		for (const hazard of this.levelRoot.hazards) {
+			hazard.update(deltaTime);
+		}
 		this.physicsWorld.step(deltaTime);
 		this.touchLayer.notePlayerState({
 			clinging: this.levelRoot.player.isClinging,

@@ -25,7 +25,10 @@
 	],
 	"hazards": [
 		{ "type": "spikes", "x": 900, "y": 60, "width": 120, "height": 60, "facing": "up", "length": 0.7 },
-		{ "type": "spikes", "x": 450, "y": 60, "width": 125, "height": 60 }
+		{ "type": "spikes", "x": 450, "y": 60, "width": 125, "height": 60 },
+		{ "type": "caterpillar", "from": { "x": 360, "y": 345 }, "to": { "x": 620, "y": 345 }, "speed": 55 },
+		{ "type": "spider", "from": { "x": 400, "y": 980 }, "to": { "x": 400, "y": 560 }, "speed": 70 },
+		{ "type": "mosquito", "from": { "x": 980, "y": 620 }, "to": { "x": 1320, "y": 480 }, "speed": 90 }
 	],
 	"collectibles": [
 		{ "id": "fly-0", "x": 300, "y": 680, "type": "firefly" },

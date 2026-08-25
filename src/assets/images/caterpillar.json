@@ -1,0 +1,14 @@
+{
+	"frames": {
+		"caterpillar-right": { "frame": { "x": 0, "y": 0, "w": 180, "h": 90 } },
+		"caterpillar-left": { "frame": { "x": 0, "y": 90, "w": 180, "h": 90 } }
+	},
+	"animations": {
+		"right": ["caterpillar-right"],
+		"left": ["caterpillar-left"]
+	},
+	"meta": {
+		"image": "caterpillar-180x90.webp",
+		"scale": "2"
+	}
+}

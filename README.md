@@ -135,7 +135,7 @@ Goal: a build good enough to publish on itch.io and send to Poki for publishing 
 - Platform plates and the spike saw are the ship look (optional later: tint / alpha; round the spike inner core). Per-skin droplet assets deferred (catalog field ready)
 - Bundle is heavier than an ideal Poki first download (`bundle.js` ~1.4 MB + music) — optimize before portal submit
 - Portrait / rotate UX and portal safe-area adaptation deferred to stage F
-- Pause modal stops the scene ticker but not `gsap.globalTimeline` (portal + hint loops keep playing). Platform ads do pause GSAP. Freeze hints later only if that contrast becomes a problem.
+- Pause modal stops the scene ticker but not `gsap.globalTimeline` (portal + hint loops keep playing) and not Pixi `Ticker.shared` (spider climb / mosquito wing loops keep playing). Platform ads do pause GSAP. Freeze these later only if that contrast becomes a problem.
 
 ## License
 

@@ -336,6 +336,33 @@
 						"autoGenerateMipmaps": true,
 						"scaleMode": "linear"
 					}
+				},
+				{
+					"alias": "caterpillar",
+					"src": "assets/images/caterpillar.json",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "spider-sheet",
+					"src": "assets/images/spider.json",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "mosquito",
+					"src": "assets/images/mosquito.json",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
 				}
 			]
 		},

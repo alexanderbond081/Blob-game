@@ -1,0 +1,16 @@
+{
+	"frames": {
+		"mosquito-right-0": { "frame": { "x": 0, "y": 0, "w": 150, "h": 150 } },
+		"mosquito-right-1": { "frame": { "x": 150, "y": 0, "w": 150, "h": 150 } },
+		"mosquito-left-0": { "frame": { "x": 0, "y": 150, "w": 150, "h": 150 } },
+		"mosquito-left-1": { "frame": { "x": 150, "y": 150, "w": 150, "h": 150 } }
+	},
+	"animations": {
+		"fly-right": ["mosquito-right-0", "mosquito-right-1"],
+		"fly-left": ["mosquito-left-0", "mosquito-left-1"]
+	},
+	"meta": {
+		"image": "moskito-blur-spritesheet.webp",
+		"scale": "2"
+	}
+}
