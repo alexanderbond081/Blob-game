@@ -9,6 +9,7 @@ import { buildSpikePolygon } from './spike-outline';
 export const HAZARD_BODY_LABEL = 'hazard';
 
 const OUTLINE_WIDTH = 2;
+const SPIKE_HITBOX_INSET = 6;
 const FILL_ALPHA = 0.6;
 const HAZARD_FILL = 0x9b111e;
 const HAZARD_OUTLINE = 0xee7777;
@@ -40,11 +41,13 @@ export abstract class Hazard extends PhysicsBody {
 
 export class SpikeHazard extends Hazard {
 	public constructor(data: LevelSpikeHazard) {
+		const hitboxWidth = Math.max(1, data.width - SPIKE_HITBOX_INSET * 2);
+		const hitboxHeight = Math.max(1, data.height - SPIKE_HITBOX_INSET * 2);
 		const body = Bodies.rectangle(
 			data.x + data.width * 0.5,
 			data.y + data.height * 0.5,
-			data.width,
-			data.height,
+			hitboxWidth,
+			hitboxHeight,
 			{
 				isStatic: true,
 				label: HAZARD_BODY_LABEL,

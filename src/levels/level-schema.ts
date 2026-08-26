@@ -6,6 +6,7 @@ import { z } from 'zod';
  * - Platforms / spike hazards / hints: `x` = left edge, `y` = **top** edge
  *   (ground with `y: 0` sits entirely below the playfield and is not visible).
  * - Spawn / collectibles / exit / patrol `from`/`to`: `x`, `y` = **center**.
+ * - Obstacles: stone `x`,`y` = **center**; branch `x`,`y` = **center of one end**.
  * - Hints store only `kind` + top-left; plate size lives in code per kind.
  */
 
@@ -81,6 +82,39 @@ const patrolHazardSchema = z.object({
 
 const hazardSchema = z.discriminatedUnion('type', [spikeHazardSchema, patrolHazardSchema]);
 
+/**
+ * Dynamic walkable props (push / fall / roll; they do not kill).
+ *
+ * Ogmo export:
+ * - Stone: entity `width` is the diameter → runtime `size`. Ignore `originX` / `originY`
+ *   (`x`,`y` is already the origin, typically the centre).
+ * - Branch: unrotated rect is vertical (`width` = thickness, `height` = length).
+ *   `rotation` is **radians** (0 = hanging down). `x`,`y` is the pivot end (top of the
+ *   unrotated rect — the upper / right end after a lean). Authoring angle:
+ *   `-90 - rotation * 180/π` (0 = right, CCW, Y-up).
+ */
+const stoneObstacleSchema = z.object({
+	type: z.literal('stone'),
+	x: z.number(),
+	y: z.number(),
+	/** Diameter in world pixels (not radius). */
+	size: z.number().positive(),
+});
+
+const branchObstacleSchema = z.object({
+	type: z.literal('branch'),
+	/** Center of the start end-cap. */
+	x: z.number(),
+	y: z.number(),
+	length: z.number().positive(),
+	/** Cylinder diameter. */
+	thickness: z.number().positive(),
+	/** Degrees; 0 = right; CCW in authoring (Y-up). Loader negates after the Y-flip. */
+	angle: z.number(),
+});
+
+const obstacleSchema = z.discriminatedUnion('type', [stoneObstacleSchema, branchObstacleSchema]);
+
 export const hintKindSchema = z.enum([
 	'move-right',
 	'move-left',
@@ -115,6 +149,8 @@ export const levelSchema = z.object({
 	hints: z.array(hintSchema).default([]),
 	platforms: z.array(platformSchema),
 	hazards: z.array(hazardSchema),
+	/** Dynamic stones / branches. Missing key → []. */
+	obstacles: z.array(obstacleSchema).default([]),
 	collectibles: z.array(collectibleSchema),
 });
 
@@ -126,5 +162,8 @@ export type LevelHazard = z.infer<typeof hazardSchema>;
 export type LevelSpikeHazard = z.infer<typeof spikeHazardSchema>;
 export type LevelPatrolHazard = z.infer<typeof patrolHazardSchema>;
 export type LevelCollectible = z.infer<typeof collectibleSchema>;
+export type LevelObstacle = z.infer<typeof obstacleSchema>;
+export type LevelStoneObstacle = z.infer<typeof stoneObstacleSchema>;
+export type LevelBranchObstacle = z.infer<typeof branchObstacleSchema>;
 export type LevelBackgroundLayer = z.infer<typeof backgroundLayerSchema>;
 export type LevelHintData = z.infer<typeof hintSchema>;

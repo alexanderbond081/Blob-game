@@ -1,4 +1,4 @@
-import { Bodies, Body, Engine, Events } from 'matter-js';
+import { Bodies, Body, Composite, Engine, Events, Query } from 'matter-js';
 import { AnimatedSprite, Assets, Spritesheet, Texture } from 'pixi.js';
 
 import { axisDirection, createEmptyPlayerControls, PlayerControls } from '../input/player-controls';
@@ -7,6 +7,7 @@ import {
 	getWallContactSide,
 	isStickyWallBody,
 	isWalkableContact,
+	OBSTACLE_BODY_LABEL,
 	PhysicsCollisionInfo,
 	WallSide,
 } from '../physics/ground-contact';
@@ -17,7 +18,16 @@ import { PlayerState, resolvePlayerState } from './player-state';
 import { SoundManager } from '../managers/sound-manager';
 
 export const PLAYER_RADIUS = 30;
+const BODY_DENSITY = 0.03; // 0.004,
 const MOVE_SPEED_X = 5;
+/** Run/air speed scale while an obstacle sits in the side probe (mass stand-in). */
+const SIDE_OBSTACLE_SPEED_SCALE = 0.5;
+/** Ignore the sole so a floor stone underfoot is not a side block. */
+const SIDE_PROBE_FOOT_INSET = 4;
+/** Ignore the crown so a rock on the head is not a side block. */
+const SIDE_PROBE_HEAD_INSET = 8;
+/** How far past the collider AABB to look for a side obstacle. */
+const SIDE_PROBE_REACH = 1;
 /** Walk speed while uncrouching. Stand-up only — dash must not use this. */
 const CROUCH_MOVE_SPEED_X = 3;
 const LANDING_VELOCITY_THRESHOLD = 2;
@@ -173,7 +183,7 @@ export class Player extends PhysicsBody {
 			friction: 0,
 			frictionAir: 0,
 			restitution: 0,
-			density: 0.004,
+			density: BODY_DENSITY,
 			inertia: Infinity,
 			frictionStatic: 0,
 		});
@@ -552,9 +562,20 @@ export class Player extends PhysicsBody {
 		}
 
 		Body.setVelocity(this.body, {
-			x: speedX,
+			x: speedX + this.getGroundCarryVelocityX(),
 			y: this.body.velocity.y,
 		});
+	}
+
+	/** Linear velocity of a moving walkable underfoot (stones / branches). */
+	private getGroundCarryVelocityX(): number {
+		for (const body of this.groundContacts) {
+			if (!body.isStatic) {
+				return body.velocity.x;
+			}
+		}
+
+		return 0;
 	}
 
 	private applyClingInput(
@@ -573,7 +594,7 @@ export class Player extends PhysicsBody {
 		if (onGround) {
 			this.endCling();
 			Body.setVelocity(this.body, {
-				x: moveX * MOVE_SPEED_X,
+				x: this.scaleSpeedForSideObstacle(moveX * MOVE_SPEED_X) + this.getGroundCarryVelocityX(),
 				y: this.body.velocity.y,
 			});
 			return;
@@ -763,8 +784,9 @@ export class Player extends PhysicsBody {
 		this.jumpWindupActive = false;
 		this.jumpWindupLocked = false;
 		this.jumpBufferFrames = 0;
+		const carryX = this.getGroundCarryVelocityX();
 		Body.setVelocity(this.body, {
-			x: speedX,
+			x: speedX + carryX,
 			y: velocityY,
 		});
 		this.groundContacts.clear();
@@ -920,10 +942,54 @@ export class Player extends PhysicsBody {
 
 		// Future dash should return before this — stand-up crawl is not dash.
 		if (this.isStandingFromCrouch()) {
-			return moveX * CROUCH_MOVE_SPEED_X;
+			return this.scaleSpeedForSideObstacle(moveX * CROUCH_MOVE_SPEED_X);
 		}
 
-		return moveX * MOVE_SPEED_X;
+		return this.scaleSpeedForSideObstacle(moveX * MOVE_SPEED_X);
+	}
+
+	private scaleSpeedForSideObstacle(speedX: number): number {
+		if (speedX === 0 || !this.hasSideObstacle(speedX > 0 ? 'right' : 'left')) {
+			return speedX;
+		}
+
+		return speedX * SIDE_OBSTACLE_SPEED_SCALE;
+	}
+
+	/**
+	 * Thin SAT probe on one side of the collider (not the obstacle AABB).
+	 * A rotated branch's bounding box overlaps both sides; the real polygon does not.
+	 */
+	private hasSideObstacle(side: WallSide): boolean {
+		if (!this.boundEngine || this.dying) {
+			return false;
+		}
+
+		const bounds = this.body.bounds;
+		const bandTop = bounds.min.y + SIDE_PROBE_HEAD_INSET;
+		const bandBottom = bounds.max.y - SIDE_PROBE_FOOT_INSET;
+		if (bandBottom <= bandTop) {
+			return false;
+		}
+
+		const height = bandBottom - bandTop;
+		const width = SIDE_PROBE_REACH + 1;
+		const centerX = side === 'right'
+			? bounds.max.x + SIDE_PROBE_REACH * 0.5 - 0.5
+			: bounds.min.x - SIDE_PROBE_REACH * 0.5 + 0.5;
+		const probe = Bodies.rectangle(centerX, (bandTop + bandBottom) * 0.5, width, height, {
+			isSensor: true,
+		});
+		const hits = Query.collides(probe, Composite.allBodies(this.boundEngine.world));
+		for (const hit of hits) {
+			const other = hit.bodyA.id === probe.id ? hit.bodyB : hit.bodyA;
+			const parent = other.parent ?? other;
+			if (parent.label === OBSTACLE_BODY_LABEL || other.label === OBSTACLE_BODY_LABEL) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/** True during the uncrouch windup/hop window (held crouch still stands still). */

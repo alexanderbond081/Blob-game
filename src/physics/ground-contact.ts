@@ -5,6 +5,9 @@ import { PlatformType } from '../levels/level-schema';
 /** Matter `body.label` for walkable surfaces (static or moving). */
 export const PLATFORM_BODY_LABEL = 'platform';
 
+/** Matter `body.label` for dynamic stones / branches (walkable, not sticky, not lethal). */
+export const OBSTACLE_BODY_LABEL = 'obstacle';
+
 /** Minimum dot(normal, worldUp) for a contact to count as standing on a surface (~60° max slope). */
 export const WALKABLE_NORMAL_THRESHOLD = 0.5;
 
@@ -94,12 +97,16 @@ export const getWallContactSide = (
 	return null;
 };
 
+export const isWalkableSurfaceBody = (body: Body): boolean => {
+	return body.label === PLATFORM_BODY_LABEL || body.label === OBSTACLE_BODY_LABEL;
+};
+
 export const getPlatformBody = (playerBody: Body, bodyA: Body, bodyB: Body): Body | null => {
-	if (bodyA.id === playerBody.id && bodyB.label === PLATFORM_BODY_LABEL) {
+	if (bodyA.id === playerBody.id && isWalkableSurfaceBody(bodyB)) {
 		return bodyB;
 	}
 
-	if (bodyB.id === playerBody.id && bodyA.label === PLATFORM_BODY_LABEL) {
+	if (bodyB.id === playerBody.id && isWalkableSurfaceBody(bodyA)) {
 		return bodyA;
 	}
 

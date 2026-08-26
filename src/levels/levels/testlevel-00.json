@@ -23,6 +23,11 @@
 		{ "x": 1080, "y": 540, "width": 180, "height": 35, "type": "leaf" },
 		{ "x": 1300, "y": 480, "width": 200, "height": 35, "type": "leaf" }
 	],
+	"obstacles": [
+		{ "type": "stone", "x": 250, "y": 344, "size": 60 },
+		{ "type": "stone", "x": 740, "y": 210, "size": 40 },
+		{ "type": "branch", "x": 800, "y": 498, "length": 140, "thickness": 18, "angle": 8 }
+	],
 	"hazards": [
 		{ "type": "spikes", "x": 900, "y": 60, "width": 120, "height": 60, "facing": "up", "length": 0.7 },
 		{ "type": "spikes", "x": 450, "y": 60, "width": 125, "height": 60 },

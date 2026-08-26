@@ -69,6 +69,21 @@ const toRuntimeLevelData = (data: LevelData): LevelData => {
 			...collectible,
 			y: authorYToRuntimeY(collectible.y, levelHeight),
 		})),
+		obstacles: data.obstacles.map((obstacle) => {
+			if (obstacle.type === 'stone') {
+				return {
+					...obstacle,
+					y: authorYToRuntimeY(obstacle.y, levelHeight),
+				};
+			}
+
+			// Y-down makes CCW authoring angles clockwise on screen — negate.
+			return {
+				...obstacle,
+				y: authorYToRuntimeY(obstacle.y, levelHeight),
+				angle: -obstacle.angle,
+			};
+		}),
 	};
 };
 

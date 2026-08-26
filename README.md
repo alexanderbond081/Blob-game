@@ -43,7 +43,9 @@ Touch is gesture-first (no on-screen buttons). Horizontal swipes are ignored unt
 - Camera follow + clamp, dual parallax backgrounds
 - Blob player: run / jump / crouch wind-up, jelly squash, facing + hang sprites; colored skins via `skins-catalog`
 - **Sticky walls** (`label: "sticky-wall"`): air cling, slow slide, peel-off stretch, wall-jump
-- **Hazards** (`hazards[]`): `spikes` — solid AABB kill volumes; generated isosceles saw inside the box ([`src/entities/spike-outline.ts`](src/entities/spike-outline.ts)); optional `facing` (one side) and `length` (0–1 tooth height). Moving insects (`caterpillar` / `spider` / `mosquito`) — sensor kill volumes on a `from`–`to` rail + `speed`; same death path as spikes. Placement on the 10 demo levels still pending.
+- **Hazards** (`hazards[]`): `spikes` — solid AABB kill volumes; generated isosceles saw inside the box ([`src/entities/spike-outline.ts`](src/entities/spike-outline.ts)); optional `facing` (one side) and `length` (0–1 tooth height). Killbox is inset **6 px** from the drawn AABB (same art). Moving insects (`caterpillar` / `spider` / `mosquito`) — sensor kill volumes on a `from`–`to` rail + `speed`; same death path as spikes. Placement on the 10 demo levels still pending.
+- **Obstacles** (`obstacles[]`): dynamic walkable props (`stone` / `branch`) — push, fall, roll; they do not kill. Stone `size` is **diameter**. Ogmo: stone `width` → `size` (ignore `originX` / `originY`). Branch: unrotated Ogmo rect is vertical (`width` = thickness, `height` = length); `rotation` is **radians** (0 = hanging down); `x,y` = pivot end; authoring `angle` = `-90 - deg(rotation)`. Loader still Y-flips and **negates** branch angle. Fall-cull same slack as the blob. Spikes are solid for them; fireflies / portal / patrol insects are sensors (pass through). Density / friction retune in [`src/entities/obstacle.ts`](src/entities/obstacle.ts). First authored pieces: `meadow-13` + `testlevel-00`.
+- **Blob vs obstacles:** run/jump stay synthetic (`Body.setVelocity` every frame) — that is why Matter `density` / `friction` barely change a shove from the blob (player `friction` is 0, so pair friction with the blob is 0). A full force-based player was tried and **rolled back** (broke walking on inclined sticks; objects on the head became free “balloons”). Current mass stand-in: **½ move speed** while a SAT side-probe hits an `obstacle` (feet+4 px to below the crown; not platforms). Probe uses real polygons, not AABBs — a rotated branch AABB had been slowing both uphill and downhill. True mass coupling is deferred.
 - **Death:** shared kill path (hazard / fall) → optional `burst` anim → droplet splash → pause → respawn (empty burst frame OK; no forced hide of last frame)
 - **Crouch / hide:** hold ↓ / `S` / down swipe; blend-in squat + alpha; collider half-height; release → 12-frame ease-in then micro-hop; crouch-jump grace 18 frames; jump from any crouch skips squat wind-up, uses `CROUCH_JUMP_VELOCITY` and a lower-pitched jump SFX
 - **Portal gate:** starts locked; fireflies home to rim slots (`exit.slots`); door tweens out and a vortex spins when full; overlap then clears the level. Blob fly-in / suck-in animation is deferred
@@ -51,7 +53,7 @@ Touch is gesture-first (no on-screen buttons). Horizontal swipes are ignored unt
 - Top icon HUD: fullscreen (non-Poki), pause (gameplay), separate music / SFX mute
 - Platform SDK bridge: `gameLoadingFinished`, `gameplayStart` / `Stop`, `commercialBreak` / rewarded hooks ([`src/platform/platform.ts`](src/platform/platform.ts))
 
-Level data: JSON + Zod ([`src/levels/`](src/levels/)) — `platforms`, `hazards`, `collectibles`, spawn, size, backgrounds, exit portal. Layouts are blocked in **[Ogmo 3](https://ogmo-editor-3.github.io/)** (`*-ogmo.json`); Y is flipped on load (`authorY` from the level bottom).
+Level data: JSON + Zod ([`src/levels/`](src/levels/)) — `platforms`, `hazards`, `obstacles`, `collectibles`, spawn, size, backgrounds, exit portal. Layouts are blocked in **[Ogmo 3](https://ogmo-editor-3.github.io/)** (`*-ogmo.json`); Y is flipped on load (`authorY` from the level bottom). **Ogmo stone `width` → runtime `size` (diameter).** **Ogmo branch `rotation` is radians**; see schema comment in [`src/levels/level-schema.ts`](src/levels/level-schema.ts).
 
 ## Goals
 
@@ -65,7 +67,7 @@ Level data: JSON + Zod ([`src/levels/`](src/levels/)) — `platforms`, `hazards`
 - Landscape-first; portrait / rotate UX deferred
 - Prefer **2×** art with `"data": { "resolution": 2 }` in [`src/assets/manifest.json`](src/assets/manifest.json) (logical sizes in Pixi — do not also `scale = 0.5`)
 - Backgrounds: logical bleed around the viewport; parallax clamped (no tiling)
-- World collision art is ship look: translucent rounded Graphics plates (`ground` / `leaf` / `wall` / `sticky`) and the spike saw. Optional later: tint / alpha, or round the spike inner core — not painted leaf/spike textures
+- World collision art is ship look: translucent rounded Graphics plates (`ground` / `leaf` / `wall` / `sticky`), the spike saw, and opaque Graphics stones / branches. Platform **Matter** colliders are sharp rects (the roundRect is display only). They still *feel* rounded/slippery because the blob is a **circle** (r = 30) with `friction: 0` and kinematic `vx`. Optional later: tint / alpha, or round the spike inner core — not painted leaf/spike/stone textures
 
 ## Scripts
 
@@ -87,7 +89,7 @@ Production builds write `dist/BUILD.txt` (version, channel, git meta). Upload th
 |------|------|
 | `src/scenes/` | Loading, main menu, platform level |
 | `src/components/` | Level carousel and shared UI bits |
-| `src/entities/` | Player, fireflies, portal, hazards |
+| `src/entities/` | Player, fireflies, portal, hazards, obstacles |
 | `src/fx/` | Death droplet pool and other short-lived VFX |
 | `src/physics/` | Matter world, static bodies, ground / wall contact |
 | `src/world/` | Camera, parallax, level root |
@@ -132,7 +134,8 @@ Goal: a build good enough to publish on itch.io and send to Poki for publishing 
 - Touch follow-ups (not blockers): `pointerup` capture race vs Pixi up position; `touchend` identifier vs `pointerId`; `pointercancel` vs `touchcancel`; flick that pauses before lift; pause/blur leaving a committed jump; failed takeoff leaving a ground run — see [`plans/poki.md`](./plans/poki.md)
 - Portal entry (blob suck-in) animation before the result modal — deferred
 - More player kit still queued (double jump / flight, dash, glide) — see mechanics backlog
-- Platform plates and the spike saw are the ship look (optional later: tint / alpha; round the spike inner core). Per-skin droplet assets deferred (catalog field ready)
+- Platform plates and the spike saw are the ship look (optional later: tint / alpha; round the spike inner core). Spike killbox inset 6 px vs the drawn box. Stones / branches are opaque Graphics. Per-skin droplet assets deferred (catalog field ready)
+- Blob vs stones/branches: kinematic `setVelocity` (game feel) vs Matter mass is an open compromise. Side-probe ½-speed is the current stand-in; force-based player deferred (see mechanics backlog)
 - Bundle is heavier than an ideal Poki first download (`bundle.js` ~1.4 MB + music) — optimize before portal submit
 - Portrait / rotate UX and portal safe-area adaptation deferred to stage F
 - Pause modal stops the scene ticker but not `gsap.globalTimeline` (portal + hint loops keep playing) and not Pixi `Ticker.shared` (spider climb / mosquito wing loops keep playing). Platform ads do pause GSAP. Freeze these later only if that contrast becomes a problem.
@@ -147,7 +150,7 @@ You may view the source for portfolio / learning; reuse of code or assets needs 
 | File | Contents |
 |------|----------|
 | [`plans/poki-2d-platformer-concept.md`](./plans/poki-2d-platformer-concept.md) | Game concept, scope, stack |
-| [`plans/player-mechanics-backlog.md`](./plans/player-mechanics-backlog.md) | Player mechanics backlog (cling / death / crouch + crouch jump done; double jump, dash, glide queued) |
+| [`plans/player-mechanics-backlog.md`](./plans/player-mechanics-backlog.md) | Player mechanics backlog (cling / death / crouch + obstacles runtime; double jump, dash, glide queued) |
 | [`plans/e6-level-hints.md`](./plans/e6-level-hints.md) | Stage E6: in-level control hints (authoring + playback) |
 | [`plans/poki.md`](./plans/poki.md) | Poki / CrazyGames technical notes |
 

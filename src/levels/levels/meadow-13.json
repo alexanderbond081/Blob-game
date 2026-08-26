@@ -38,6 +38,11 @@
 		{ "type": "spikes", "x": 620, "y": 160, "width": 60, "height": 30 },
 		{ "type": "spikes", "x": 1220, "y": 860, "width": 30, "height": 320 }
 	],
+	"obstacles": [
+		{ "type": "stone", "x": 510, "y": 100, "size": 70 },
+		{ "type": "stone", "x": 530, "y": 500, "size": 60 },
+		{ "type": "branch", "x": 560, "y": 450, "length": 190, "thickness": 45, "angle": -140 }
+	],
 	"collectibles": [
 		{ "id": "fly-0", "x": 160, "y": 1120, "type": "firefly" },
 		{ "id": "fly-1", "x": 400, "y": 360, "type": "firefly" },

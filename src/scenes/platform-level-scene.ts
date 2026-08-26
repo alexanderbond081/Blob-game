@@ -108,6 +108,7 @@ export class PlatformLevelScene extends Scene {
 			hazard.update(deltaTime);
 		}
 		this.physicsWorld.step(deltaTime);
+		this.levelRoot.updateObstacles(this.physicsWorld, this.fallLimitY);
 		this.touchLayer.notePlayerState({
 			clinging: this.levelRoot.player.isClinging,
 			dying: this.levelRoot.player.isDying,

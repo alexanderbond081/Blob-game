@@ -1,12 +1,14 @@
 import { Container, ParticleContainer } from 'pixi.js';
 
 import { Collectible, SpriteCollectible } from '../entities/collectible';
-import { FireflyCollectible } from '../entities/firefly-collectible';
 import { createHazard } from '../entities/create-hazard';
+import { createObstacle } from '../entities/create-obstacle';
+import { FireflyCollectible } from '../entities/firefly-collectible';
 import { Hazard } from '../entities/hazard';
 import { createLevelHint } from '../entities/hints/create-level-hint';
 import { LevelHint } from '../entities/hints/level-hint';
 import { LevelPortal } from '../entities/level-portal';
+import { Obstacle } from '../entities/obstacle';
 import { Player } from '../entities/player';
 import { BlobDropletPool, DropletObstacleRect } from '../fx/blob-droplet-pool';
 import { LevelData } from '../levels/level-schema';
@@ -21,6 +23,7 @@ export class LevelRoot extends Container {
 	public readonly collectibles: Collectible[] = [];
 	public readonly staticBodies: StaticBody[] = [];
 	public readonly hazards: Hazard[] = [];
+	public readonly obstacles: Obstacle[] = [];
 	public readonly hints: LevelHint[] = [];
 	public readonly droplets: BlobDropletPool;
 	/** Every firefly in one batch; added above the portal so collected ones read on top. */
@@ -60,6 +63,12 @@ export class LevelRoot extends Container {
 			this.staticBodies.push(staticBody);
 		}
 
+		for (const obstacleData of levelData.obstacles) {
+			const obstacle = createObstacle(obstacleData);
+			obstacle.addToWorld(physicsWorld, this);
+			this.obstacles.push(obstacle);
+		}
+
 		for (const hazardData of levelData.hazards) {
 			const hazard = createHazard(hazardData);
 			hazard.addToWorld(physicsWorld, this);
@@ -93,6 +102,21 @@ export class LevelRoot extends Container {
 		});
 	}
 
+	/** Sync displays after the physics step; drop anything that fell past the kill plane. */
+	public updateObstacles(physicsWorld: PhysicsWorld, fallLimitY: number): void {
+		for (let i = this.obstacles.length - 1; i >= 0; i -= 1) {
+			const obstacle = this.obstacles[i];
+			if (obstacle.body.position.y > fallLimitY) {
+				obstacle.removeFromWorld(physicsWorld);
+				obstacle.destroy();
+				this.obstacles.splice(i, 1);
+				continue;
+			}
+
+			obstacle.syncFromBody();
+		}
+	}
+
 	public destroyLevel(physicsWorld: PhysicsWorld): void {
 		this.player.setBurstFxHandler(null);
 		this.droplets.sleepAll();
@@ -108,6 +132,12 @@ export class LevelRoot extends Container {
 			staticBody.destroy();
 		}
 		this.staticBodies.length = 0;
+
+		for (const obstacle of this.obstacles) {
+			obstacle.removeFromWorld(physicsWorld);
+			obstacle.destroy();
+		}
+		this.obstacles.length = 0;
 
 		for (const hazard of this.hazards) {
 			hazard.removeFromWorld(physicsWorld);
@@ -132,6 +162,7 @@ export class LevelRoot extends Container {
 	private collectObstacleRects(): DropletObstacleRect[] {
 		const rects: DropletObstacleRect[] = [];
 
+		// Snapshot only — dynamic stones/branches are omitted on purpose.
 		for (const platform of this.staticBodies) {
 			rects.push(boundsToRect(platform.body.bounds));
 		}
