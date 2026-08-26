@@ -34,7 +34,7 @@ export class StaticBody extends PhysicsBody {
 			{
 				isStatic: true,
 				label: PLATFORM_BODY_LABEL,
-				friction: 0.8,
+				friction: 2,
 				restitution: 0,
 			},
 		);

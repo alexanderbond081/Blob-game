@@ -24,7 +24,7 @@
 		{ "x": 1300, "y": 480, "width": 200, "height": 35, "type": "leaf" }
 	],
 	"obstacles": [
-		{ "type": "stone", "x": 250, "y": 344, "size": 60 },
+		{ "type": "branch", "x": 250, "y": 344, "length": 60, "thickness": 80, "angle": 0},
 		{ "type": "stone", "x": 740, "y": 210, "size": 40 },
 		{ "type": "branch", "x": 800, "y": 498, "length": 140, "thickness": 18, "angle": 8 }
 	],

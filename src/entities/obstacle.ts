@@ -9,15 +9,15 @@ const OUTLINE_WIDTH = 2;
 
 /** First-pass feel; retune after play. Heavier than the blob so it can be shoved, not flicked. */
 const STONE_DENSITY = 0.3; //0.012;
-const STONE_FRICTION = 0.8;
+const STONE_FRICTION = 1;
 const STONE_FRICTION_STATIC = 1;
 const STONE_FRICTION_AIR = 0.002;
 const STONE_RESTITUTION = 0.12;
 
 /** Slightly heavier than the blob; more air drag so logs do not roll forever. */
 const BRANCH_DENSITY = 0.05; //0.0055;
-const BRANCH_FRICTION = 2;
-const BRANCH_FRICTION_STATIC = 5;
+const BRANCH_FRICTION = 1.5;
+const BRANCH_FRICTION_STATIC = 3;
 const BRANCH_FRICTION_AIR = 0.018;
 const BRANCH_RESTITUTION = 0.05;
 
