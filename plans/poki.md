@@ -98,7 +98,9 @@ For a leaf-jumper-style 2D game, prefer **Defold / Construct / Pixi / Phaser** o
 
 ## Viewport / Aspect Ratio Approach
 
-Runtime: [`src/world/game-view.ts`](../src/world/game-view.ts). Canvas fills the iframe; the **playfield** is contain-scaled and centered. No stage mask — backgrounds may draw into the letterbox. HUD chrome is the same scale as the world but origin'd at the canvas corner (iframe edges).
+**Supported.** Landscape, portrait, live rotate, and odd iframe sizes (21:9 phones, ~1:1 fold, desktop letterbox) are handled in this build. Remaining work is art: re-export meadow plates so the pad is painted, not `#222`.
+
+Runtime: [`src/world/game-view.ts`](../src/world/game-view.ts). Canvas fills the iframe; the **playfield** is contain-scaled and centered. Resize / `orientationchange` switches 16:9 ↔ 9:16 live. No stage mask — backgrounds may draw into the letterbox. HUD chrome is the same scale as the world but origin'd at the canvas corner (iframe edges).
 
 | Orientation | Playfield (camera / Matter) | Aspect |
 |-------------|-----------------------------|--------|
@@ -260,7 +262,7 @@ Pixi = draw yourself + pick physics package. Phaser/Defold = gameplay kit includ
 | Layer | Suggestion |
 |-------|------------|
 | Render / game | Pixi.js + TS **or** Defold / Phaser if wanting editor + physics bundled |
-| Design resolution | **960×540** landscape / **540×960** portrait, contain + unclipped bg bleed (`VIEW_BLEED` 240); **2×** art; HUD on iframe edges; far/mid **tune parallax** as well as bleed — see Viewport section |
+| Design resolution | **Supported:** 960×540 landscape / 540×960 portrait, live rotate, contain into any iframe + unclipped bg bleed (`VIEW_BLEED` 240); **2×** art; HUD on iframe edges; far/mid floor-pin — see Viewport section |
 | Physics | Matter (start) → Rapier if needed |
 | Monetization | Thin adapter: `PokiSDK` / `CrazyGames.SDK` behind one interface |
 | Bundle size | Design for **Poki’s ~8 MB** first — then CrazyGames is easy |
@@ -284,14 +286,14 @@ Pixi = draw yourself + pick physics package. Phaser/Defold = gameplay kit includ
 ## Open Decisions (for later)
 
 - [x] Stack for Fairy Blob → **Pixi DIY + Matter** (not Defold/Phaser)
-- [x] Orientation for v1 → **landscape 16:9 + portrait 9:16** (contain playfield, bg in letterbox, HUD on iframe)
+- [x] Orientation for v1 → **landscape 16:9 + portrait 9:16**, live rotate, contain into any iframe (bg in letterbox, HUD on iframe)
 - [x] Physics for v1 → **Matter.js** (custom AABB only for death droplet FX)
 - [x] UI hub + pause loop (menu carousel, Pause Home/Resume/Restart, platform session + commercialBreak on intent to play)
 - [x] Level catalog + portal exit chain + GameProgress save (A2); level-clear modal (C)
 - [x] Progress / Customize HudModals (stage D; OK dismiss) + skins catalog applied in-level
 - [x] Portal unlock by firefly rim slots + door / vortex art (stage E #1). Blob fly-in animation deferred
 - [x] Moving hazards (caterpillar / spider / mosquito) on fixed rails (stage E #3). Place on demo levels while authoring E4
-- [x] Portrait / rotate playfield → **done** (540×960 camera, menu reflow, HUD on iframe). Remaining: re-export meadow bg plates to the bleed spec; pull-back zoom if 540-wide is too tight
+- [x] Portrait / rotate / odd iframe sizes → **done** (540×960 camera, menu reflow, HUD on iframe, sky center + far/mid floor). Remaining: re-export meadow bg plates to the bleed spec; optional pull-back zoom if 540-wide is too tight
 - [x] Rewarded help → **stage F**; shape still open (flight vs teleport to portal)
 - [x] Mobile background freeze: sync platform `hidden` on `pageshow` / `focus` / first pointer / Page Lifecycle freeze-resume, not only `visibilitychange`. Does **not** clear HUD Pause (`isPaused`)
 - [ ] Target Poki first vs CrazyGames Basic Launch first
@@ -335,7 +337,7 @@ Suggested support work for balancing 10 levels: lightweight local telemetry (per
 
 ### Stage F — content & feature depth (after publishing approval)
 
-- Re-export meadow sky/far/mid to the bleed spec (see Viewport); optional portrait camera pull-back
+- Re-export meadow sky/far/mid to the bleed spec (see Viewport; orientation/layout already ships); optional portrait camera pull-back
 - Finish player mechanics — mainly animations and VFX for them
 - Finish locations and levels, including enemy art and level design
 - Rewarded help: flight or teleport to the portal

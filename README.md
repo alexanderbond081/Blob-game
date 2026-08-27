@@ -41,6 +41,7 @@ Touch is gesture-first (no on-screen buttons). Horizontal swipes are ignored unt
 - Pause modal (gameplay): Home → menu (no ad break); Resume / Restart → `commercialBreak` when an ad actually starts, then gameplay
 - Matter.js physics, walkable ground detection (slopes-ready normals)
 - Camera follow + clamp, dual parallax backgrounds
+- **Orientation + iframe sizes:** live rotate between landscape **960×540** (16:9) and portrait **540×960** (9:16); any host size contain-scales the playfield and fills letterbox with backgrounds (HUD on iframe edges)
 - Blob player: run / jump / crouch wind-up, jelly squash, facing + hang sprites; colored skins via `skins-catalog`
 - **Sticky walls** (`label: "sticky-wall"`): air cling, slow slide, peel-off stretch, wall-jump
 - **Hazards** (`hazards[]`): `spikes` — solid AABB kill volumes; generated isosceles saw inside the box ([`src/entities/spike-outline.ts`](src/entities/spike-outline.ts)); optional `facing` (one side) and `length` (0–1 tooth height). Killbox is inset **6 px** from the drawn AABB (same art). Moving insects (`caterpillar` / `spider` / `mosquito`) — sensor kill volumes on a `from`–`to` rail + `speed`; same death path as spikes. Placement on the 10 demo levels still pending.
@@ -61,13 +62,18 @@ Level data: JSON + Zod ([`src/levels/`](src/levels/)) — `platforms`, `hazards`
 - Also shipable to **[itch.io](https://itch.io/)** and **[CrazyGames](https://www.crazygames.com/)**
 - Monetize on portals; source public for portfolio under **All Rights Reserved** (see [`LICENSE`](./LICENSE))
 
-## Resolution & art
+## Resolution & orientation
 
-- Design size: **960×540** (16:9) landscape / **540×960** (9:16) portrait; contain-scale into the host iframe; backgrounds draw into the letterbox (no clip mask)
-- HUD chrome pins to the iframe edges; playfield stays centered
-- Prefer **2×** art with `"data": { "resolution": 2 }` in [`src/assets/manifest.json`](src/assets/manifest.json) (logical sizes in Pixi — do not also `scale = 0.5`)
-- Backgrounds: logical bleed around the playfield (`VIEW_BLEED` 240) plus parallax travel — spec in [`plans/poki.md`](plans/poki.md)
+Supported in this build (runtime: [`src/world/game-view.ts`](src/world/game-view.ts)):
+
+- **Rotate / aspect:** landscape **960×540** (16:9) when the iframe is wider than tall; portrait **540×960** (9:16) when it is taller. Resize and `orientationchange` switch live — menu, HUD, camera, and parallax reflow.
+- **Any iframe size:** the canvas fills the host; the playfield is **contain**-scaled and centered. Extra pixels (21:9 phones, ~1:1 fold inners, desktop letterbox) are logical pad, not a black mask. Backgrounds draw into that pad (`VIEW_BLEED` 240).
+- **HUD** pins to the iframe edges; gameplay camera stays on the 16:9 / 9:16 box.
+- **Parallax:** sky centered on the playfield; far/mid floor-pinned to the playfield bottom (horizon stays on the playfield edge). Details in [`plans/poki.md`](plans/poki.md) → Viewport.
+- Prefer **2×** art with `"data": { "resolution": 2 }` in [`src/assets/manifest.json`](src/assets/manifest.json) (logical sizes in Pixi — do not also `scale = 0.5`).
 - World collision art is ship look: translucent rounded Graphics plates (`ground` / `leaf` / `wall` / `sticky`), the spike saw, and opaque Graphics stones / branches. Platform **Matter** colliders are sharp rects (the roundRect is display only). They still *feel* rounded/slippery because the blob is a **circle** (r = 30) with `friction: 0` and kinematic `vx`. Optional later: tint / alpha, or round the spike inner core — not painted leaf/spike/stone textures
+
+Art remaining (not a layout gap): re-export meadow sky/far/mid plates to the bleed spec so portrait and wide iframes do not show the `#222` clear.
 
 ## Scripts
 
@@ -137,7 +143,7 @@ Goal: a build good enough to publish on itch.io and send to Poki for publishing 
 - Platform plates and the spike saw are the ship look (optional later: tint / alpha; round the spike inner core). Spike killbox inset 6 px vs the drawn box. Stones / branches are opaque Graphics. Per-skin droplet assets deferred (catalog field ready)
 - Blob vs stones/branches: kinematic `setVelocity` (game feel) vs Matter mass is an open compromise. Side-probe ½-speed is the current stand-in; force-based player deferred (see mechanics backlog)
 - Bundle is heavier than an ideal Poki first download (`bundle.js` ~1.4 MB + music) — optimize before portal submit
-- Portrait / rotate UX: playfield **540×960**, HUD on iframe; meadow bg plates still need re-export to the bleed spec in [`plans/poki.md`](plans/poki.md)
+- Meadow sky/far/mid plates still need re-export to the bleed spec so portrait and wide iframes fully cover the pad ([`plans/poki.md`](plans/poki.md) → Viewport)
 - Pause modal stops the scene ticker but not `gsap.globalTimeline` (portal + hint loops keep playing) and not Pixi `Ticker.shared` (spider climb / mosquito wing loops keep playing). Platform ads do pause GSAP. Freeze these later only if that contrast becomes a problem.
 
 ## License

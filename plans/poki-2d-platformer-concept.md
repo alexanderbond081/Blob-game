@@ -143,7 +143,7 @@ Old “Arcade timer on the same casual run” folds into **Speedrun** as the pos
 | Soft glow + slight dimming | Real lighting / shadows engine |
 | Simple hazards (spikes etc. as blockers / kill) | Energy drain systems |
 | Static + light parallax backgrounds | Complex weather / day cycle |
-| Touch + keyboard; **960×540** / **540×960** contain playfield, unclipped bg bleed, HUD on iframe; **2×** art | Portrait FOV is 540 wide — pull-back zoom in `game-view.ts` if the path is hard to read |
+| Touch + keyboard; **rotate** 16:9 ↔ 9:16; any iframe contain-scale + unclipped bg bleed; HUD on iframe; **2×** art | Optional portrait pull-back zoom in `game-view.ts` if the 540-wide path is hard to read |
 | Local progress save (levels, abilities, firefly totals) | Cloud saves / accounts |
 | Basic SFX + 1 music track | Full adaptive soundtrack pack |
 | Gold fireflies + gold skin **nice-to-have in MVP** if cheap | Must-ship gold skin on day one |
@@ -193,7 +193,7 @@ Old “Arcade timer on the same casual run” folds into **Speedrun** as the pos
 
 Parallax = **offset layers by camera × factor** (manual in [`ParallaxLayer`](../src/world/parallax-layer.ts)).
 
-**Art / orientation policy:** playfield is 16:9 or 9:16 contain-scaled; paint **bleed** around the core so iframe letterbox is not `#222` (spec in [`plans/poki.md`](./poki.md) → Viewport). Mid/far tufts stay expensive — extend sky/soil in the pad, **lower `p`** rather than painting full parallax travel. Platforms/colliders remain the source of truth for layout.
+**Art / orientation policy (supported):** live rotate between 16:9 and 9:16; contain-scale into any iframe. Paint **bleed** around the core so letterbox is not `#222` (spec in [`plans/poki.md`](./poki.md) → Viewport). Mid/far tufts stay expensive — extend sky/soil in the pad, **lower `p`** rather than painting full parallax travel. Platforms/colliders remain the source of truth for layout.
 
 ---
 
@@ -291,7 +291,7 @@ Collision shapes and entity spawns come from Ogmo **entity layers**, not from gu
 
 ## Prototype status (vertical slice)
 
-Shipped in-repo (not full MVP): meadow JSON levels authored in Ogmo (`meadow-01`, `meadow-02`), Matter player (cling, crouch/hide + crouch jump, spikes + death droplets), moving insects (`caterpillar` / `spider` / `mosquito` on `hazards[]` rails — runtime done, not yet placed on the 10 demo levels), fireflies that fill portal rim slots and open the door/vortex, dual parallax, keyboard + touch, hub UI (Progress / Customize / pause / clear), portal SDK adapters. **Not yet:** blob fly-in into the open portal (deferred), episode gating (start as walk-only), pollen relics, gold fireflies, crowns, NG+, origin/ending beats. Runtime stays Zod-validated JSON; Ogmo is the layout editor.
+Shipped in-repo (not full MVP): meadow JSON levels authored in Ogmo (`meadow-01`, `meadow-02`), Matter player (cling, crouch/hide + crouch jump, spikes + death droplets), moving insects (`caterpillar` / `spider` / `mosquito` on `hazards[]` rails — runtime done, not yet placed on the 10 demo levels), fireflies that fill portal rim slots and open the door/vortex, dual parallax, keyboard + touch, **landscape/portrait rotate + odd iframe sizes**, hub UI (Progress / Customize / pause / clear), portal SDK adapters. **Not yet:** blob fly-in into the open portal (deferred), episode gating (start as walk-only), pollen relics, gold fireflies, crowns, NG+, origin/ending beats. Runtime stays Zod-validated JSON; Ogmo is the layout editor. Meadow bleed plates still need re-export.
 
 ---
 
@@ -310,7 +310,7 @@ A smaller milestone than the MVP above: a build worth publishing on itch.io and 
 - [x] Outro screen after the last level points at the full version — result modal `demoComplete` (Home / Restart). Celebratory SFX/VFX deferred  
 - [ ] Poki submission prerequisites pass (see [`poki.md`](./poki.md))  
 
-Scope differences from the MVP: 10 levels instead of 15–20, no pollen-relic episode gating (most of the kit is available from the start; **flight** is the candidate for the single unlockable / rewarded move), no NG+, no gold fireflies or crowns, no hub meta beyond Progress / Customize. Portrait support, rewarded help and the wider content pass move to stage F.
+Scope differences from the MVP: 10 levels instead of 15–20, no pollen-relic episode gating (most of the kit is available from the start; **flight** is the candidate for the single unlockable / rewarded move), no NG+, no gold fireflies or crowns, no hub meta beyond Progress / Customize. Portrait / rotate / iframe sizes **ship**. Remaining stage F: meadow bleed plates, rewarded help, wider content pass.
 
 ---
 
