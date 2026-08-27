@@ -4,17 +4,25 @@ export abstract class Scene extends Container {
 	protected static viewportWidth = 960;
 	protected static viewportHeight = 540;
 
-	protected readonly designWidth = 960;
-	protected readonly designHeight = 540;
+	public static setPlayfield(width: number, height: number): void {
+		Scene.viewportWidth = width;
+		Scene.viewportHeight = height;
+	}
+
+	protected get designWidth(): number {
+		return Scene.viewportWidth;
+	}
+
+	protected get designHeight(): number {
+		return Scene.viewportHeight;
+	}
 
 	public abstract init(): Promise<void>;
 
 	public abstract update(deltaTime: number): void;
 
 	public resize(width: number, height: number): void {
-		Scene.viewportWidth = width;
-		Scene.viewportHeight = height;
-
+		Scene.setPlayfield(width, height);
 		this.onResize();
 	}
 

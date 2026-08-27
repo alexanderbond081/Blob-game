@@ -15,7 +15,7 @@ export const skinsCatalog: SkinCatalogEntry[] = [
 ];
 
 /** Demo/test UI: first three catalog skins start unlocked. */
-export const DEFAULT_UNLOCKED_SKIN_IDS = skinsCatalog.slice(0, 3).map((entry) => entry.id);
+export const DEFAULT_UNLOCKED_SKIN_IDS = skinsCatalog.slice(0, 4).map((entry) => entry.id);
 
 export const skinById = new Map<string, SkinCatalogEntry>(skinsCatalog.map((e) => [e.id, e]));
 

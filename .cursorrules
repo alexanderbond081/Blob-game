@@ -4,9 +4,9 @@
 You are an experienced HTML5 Game Developer. Your task is to help write clean, modular, and optimized code for a short-level landscape (960×540) casual game on Pixi.js (Poki / itch / CrazyGames targets) without outdated patterns.
 
 ## Design resolution and assets
-- **Design size:** 960×540 (16:9). Stage uses contain/letterbox scale; clip content to the design rect.
+- **Design size:** **960×540** landscape (16:9) / **540×960** portrait (9:16). Canvas fills the iframe; playfield is contain-scaled and centered. **Do not clip** the view root — backgrounds draw into the letterbox. HUD chrome pins to iframe edges.
 - **Art is 2×:** mark textures in the Assets manifest with `data.resolution: 2` so `texture.width`/`height` are logical. Do not also apply `sprite.scale = 0.5` on those assets.
-- **Backgrounds:** screen-space layers (not stretched). Bottom-center anchor at level floor; parallax with **no edge clamp**. Prefer **tune `parallax`** / separate portrait **sky** over large bleed canvases (painted props are costly). Details: `plans/poki.md` → Background art strategy.
+- **Backgrounds:** screen-space layers (not stretched). Extra width split left/right of the playfield; extra height = top bleed first (`VIEW_BLEED` 240), remainder bottom. Parallax with **no edge clamp**. Size spec: `plans/poki.md` → Viewport / meadow-01 background sizes.
 
 ## Technology stack and versions
 - **Engine:** Pixi.js (current version v8+). Use modern syntax (e.g. `Assets.load` instead of the legacy `Loader`).

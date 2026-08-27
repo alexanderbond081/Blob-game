@@ -1,6 +1,6 @@
 # Fairy Blob
 
-Casual HTML5 platformer: a glowing blob jumps across leaves and collects fireflies. Short Poki-style levels, landscape **960×540**.
+Casual HTML5 platformer: a glowing blob jumps across leaves and collects fireflies. Short Poki-style levels, landscape **960×540** / portrait **540×960**.
 
 **Status:** playable vertical slice / portfolio prototype — main menu with level carousel, Ogmo-authored meadow levels, sticky walls, hazards/death, crouch/hide + crouch jump, fireflies that fill the portal, pause → Home / Resume / Restart. Not yet submitted to portals.
 
@@ -63,10 +63,10 @@ Level data: JSON + Zod ([`src/levels/`](src/levels/)) — `platforms`, `hazards`
 
 ## Resolution & art
 
-- Design size: **960×540** (16:9), contain-scale into the host window / iframe, clipped to the design rect
-- Landscape-first; portrait / rotate UX deferred
+- Design size: **960×540** (16:9) landscape / **540×960** (9:16) portrait; contain-scale into the host iframe; backgrounds draw into the letterbox (no clip mask)
+- HUD chrome pins to the iframe edges; playfield stays centered
 - Prefer **2×** art with `"data": { "resolution": 2 }` in [`src/assets/manifest.json`](src/assets/manifest.json) (logical sizes in Pixi — do not also `scale = 0.5`)
-- Backgrounds: logical bleed around the viewport; parallax clamped (no tiling)
+- Backgrounds: logical bleed around the playfield (`VIEW_BLEED` 240) plus parallax travel — spec in [`plans/poki.md`](plans/poki.md)
 - World collision art is ship look: translucent rounded Graphics plates (`ground` / `leaf` / `wall` / `sticky`), the spike saw, and opaque Graphics stones / branches. Platform **Matter** colliders are sharp rects (the roundRect is display only). They still *feel* rounded/slippery because the blob is a **circle** (r = 30) with `friction: 0` and kinematic `vx`. Optional later: tint / alpha, or round the spike inner core — not painted leaf/spike/stone textures
 
 ## Scripts
@@ -110,7 +110,7 @@ Production builds write `dist/BUILD.txt` (version, channel, git meta). Upload th
 | C — Level-clear modal (stats + Continue) | UI shell | Done |
 | D — Progress / Customize modals + selected skin in-level | UI shell | Done |
 | **E — Playable demo** (portal gate, enemies, 10 levels, touch rework, hints, demo outro) | Ship to itch + submit to Poki | **Next** |
-| F — Content & feature depth (portrait, rewarded help, more mechanics / skins / audio, asset optimization) | Post-approval | Later |
+| F — Content & feature depth (bg bleed plates, rewarded help, more mechanics / skins / audio, asset optimization) | Post-approval | Later |
 | G — Final polish before portal tests (`movePill`, safe areas, etc.) | Pre-release | Later |
 
 ### Stage E — demo checklist
@@ -137,7 +137,7 @@ Goal: a build good enough to publish on itch.io and send to Poki for publishing 
 - Platform plates and the spike saw are the ship look (optional later: tint / alpha; round the spike inner core). Spike killbox inset 6 px vs the drawn box. Stones / branches are opaque Graphics. Per-skin droplet assets deferred (catalog field ready)
 - Blob vs stones/branches: kinematic `setVelocity` (game feel) vs Matter mass is an open compromise. Side-probe ½-speed is the current stand-in; force-based player deferred (see mechanics backlog)
 - Bundle is heavier than an ideal Poki first download (`bundle.js` ~1.4 MB + music) — optimize before portal submit
-- Portrait / rotate UX and portal safe-area adaptation deferred to stage F
+- Portrait / rotate UX: playfield **540×960**, HUD on iframe; meadow bg plates still need re-export to the bleed spec in [`plans/poki.md`](plans/poki.md)
 - Pause modal stops the scene ticker but not `gsap.globalTimeline` (portal + hint loops keep playing) and not Pixi `Ticker.shared` (spider climb / mosquito wing loops keep playing). Platform ads do pause GSAP. Freeze these later only if that contrast becomes a problem.
 
 ## License

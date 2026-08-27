@@ -36,6 +36,10 @@ export class IdleBounceAnimator {
 		this.introDelaySec = introDelaySec;
 	}
 
+	/**
+	 * Host should sit at local (0, 0) inside a layout wrapper so GSAP y/scale
+	 * never fight parent position (see CustomizeSkinTile).
+	 */
 	public attach(host: Container): void {
 		if (this.host === host) {
 			return;
@@ -76,7 +80,8 @@ export class IdleBounceAnimator {
 	}
 
 	/**
-	 * Call after layout moves the button so the next bounce / stop uses the new rest Y.
+	 * Call after layout moves the bounce *host*. Prefer animating a child
+	 * wrapper at local y = 0 so parent layout never fights GSAP.
 	 */
 	public syncRestPosition(): void {
 		if (!this.host || this.bounce?.isActive()) {
@@ -154,10 +159,8 @@ export class IdleBounceAnimator {
 			return null;
 		}
 
-		const restY = button.y;
-		this.restY = restY;
+		const restY = this.restY;
 		const height = button.height;
-
 		this.bounce?.kill();
 		gsap.killTweensOf(button);
 		button.scale.set(1);

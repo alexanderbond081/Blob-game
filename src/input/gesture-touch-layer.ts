@@ -55,21 +55,26 @@ const HORIZONTAL_DEADZONE_DEG = 33;
  * Horizontal swipe / dash is off. Until dash exists, a fast horizontal
  * flick latches run for RUN_LATCH_MS on pointer-up (not mid-stroke).
  */
-const SWIPE_DISTANCE_PX = 75;
+const SWIPE_DISTANCE_PX = 80; //75;
 /** Slow post-settle swipes need this; short flicks use distance only. */
-const SWIPE_SPEED_PX_PER_SEC = 350;
+const SWIPE_SPEED_PX_PER_SEC = 400; //350;
 /**
  * Follow the contact until it is still (fat-finger centroid jump) or this
  * timer elapses. Distance for a swipe is measured after that, not from raw down.
  */
-const SETTLE_MS = 40;
+const SETTLE_MS = 50;
 const SETTLE_RADIUS_PX = 72;
-const SETTLE_SPEED_PX_PER_SEC = 220;
+const SETTLE_SPEED_PX_PER_SEC = 300; //220;
 const SETTLE_MIN_MS = 16;
 const MIN_SPEED_DT_MS = 16;
 /** Fast lift: commit from the whole stroke even if settle chased the finger. */
 const FLICK_MAX_DURATION_MS = 160;
 const FLICK_DISTANCE_PX = 90;
+/**
+ * fromDown may recover a flick only if post-settle travel is at least this.
+ * Blocks centroid-only "jumps"; a real flick still has leftover motion after settle.
+ */
+const FLICK_RECOVER_MIN_PX = 48;
 const TAP_MAX_DISTANCE_PX = 28;
 const TAP_MAX_DURATION_MS = 280;
 const HOLD_CANCEL_MS = 500;
@@ -121,12 +126,17 @@ const GAMEPLAY_KEY_CODES = new Set([
  * The first live analog sample clears jump-run so a still finger does not snap
  * back to the swipe course. Tap, a still press
  * (≥ 0.5 s), or any gameplay key clears latches when that contact is alone.
- * Jump flicks also commit on pointer-up so a short stroke is not dropped;
- * fat-finger contact jumps are treated as taps.
+ * Jump flicks also commit on pointer-up so a short stroke is not dropped,
+ * but only if the finger still moved after settle (centroid jumps are not jumps).
+ * Fat-finger contact jumps are treated as taps.
  */
 export class GestureTouchLayer extends Container {
-	private readonly viewWidth: number;
-	private readonly viewHeight: number;
+	private viewWidth: number;
+	private viewHeight: number;
+	private padLeft = 0;
+	private padTop = 0;
+	private padRight = 0;
+	private padBottom = 0;
 	private readonly hudTopReleaseY: number;
 	private readonly strokes: Stroke[] = [];
 	private readonly controls: PlayerControls = createEmptyPlayerControls();
@@ -149,7 +159,7 @@ export class GestureTouchLayer extends Container {
 
 		this.eventMode = 'static';
 		this.cursor = 'default';
-		this.hitArea = new Rectangle(0, 0, this.viewWidth, this.viewHeight);
+		this.applyHitArea();
 
 		this.on('pointerdown', this.onPointerDown);
 		this.on('pointermove', this.onPointerMove);
@@ -165,6 +175,32 @@ export class GestureTouchLayer extends Container {
 		window.addEventListener('keydown', this.onKeyDown);
 		window.addEventListener('blur', this.onWindowBlur);
 		document.addEventListener('visibilitychange', this.onVisibilityChange);
+	}
+
+	public setViewSize(
+		width: number,
+		height: number,
+		padLeft = 0,
+		padTop = 0,
+		padRight = 0,
+		padBottom = 0,
+	): void {
+		this.viewWidth = width;
+		this.viewHeight = height;
+		this.padLeft = padLeft;
+		this.padTop = padTop;
+		this.padRight = padRight;
+		this.padBottom = padBottom;
+		this.applyHitArea();
+	}
+
+	private applyHitArea(): void {
+		this.hitArea = new Rectangle(
+			-this.padLeft,
+			-this.padTop,
+			this.viewWidth + this.padLeft + this.padRight,
+			this.viewHeight + this.padTop + this.padBottom,
+		);
 	}
 
 	public getControls(): PlayerControls {
@@ -480,15 +516,17 @@ export class GestureTouchLayer extends Container {
 			return;
 		}
 
-		if (fromDown.durationMs <= FLICK_MAX_DURATION_MS && this.tryCommitStroke(stroke, fromDown)) {
-			return;
+		if (this.canRecoverFlickFromDown(stroke, fromOrigin, fromDown)) {
+			if (this.tryCommitStroke(stroke, fromDown)) {
+				return;
+			}
+
+			if (this.tryCommitHorizontalRun(stroke, fromDown)) {
+				return;
+			}
 		}
 
 		if (this.tryCommitHorizontalRun(stroke, fromOrigin)) {
-			return;
-		}
-
-		if (fromDown.durationMs <= FLICK_MAX_DURATION_MS && this.tryCommitHorizontalRun(stroke, fromDown)) {
 			return;
 		}
 
@@ -521,6 +559,31 @@ export class GestureTouchLayer extends Container {
 
 		this.commitSwipe(stroke, measure.angle);
 		return true;
+	}
+
+	/**
+	 * Whole-stroke flick fallback. Settle can eat the first 40 ms of a real
+	 * swipe; fromDown puts that motion back. Require leftover travel in the
+	 * same direction so a contact-centroid jump is not a swipe.
+	 */
+	private canRecoverFlickFromDown(
+		stroke: Stroke,
+		fromOrigin: StrokeMeasure,
+		fromDown: StrokeMeasure,
+	): boolean {
+		if (fromDown.durationMs > FLICK_MAX_DURATION_MS) {
+			return false;
+		}
+
+		if (!stroke.originLocked) {
+			return true;
+		}
+
+		if (fromOrigin.distance < FLICK_RECOVER_MIN_PX) {
+			return false;
+		}
+
+		return classifySwipe(fromOrigin.angle) === classifySwipe(fromDown.angle);
 	}
 
 	private tryCommitHorizontalRun(stroke: Stroke, measure: StrokeMeasure): boolean {
@@ -629,11 +692,14 @@ export class GestureTouchLayer extends Container {
 	}
 
 	private isInHudReleaseBand(localY: number): boolean {
-		return localY < this.hudTopReleaseY;
+		return localY + this.padTop < this.hudTopReleaseY;
 	}
 
 	private isOutsidePlayfield(localX: number, localY: number): boolean {
-		return localX < 0 || localX > this.viewWidth || localY > this.viewHeight;
+		return localX < -this.padLeft
+			|| localX > this.viewWidth + this.padRight
+			|| localY < -this.padTop
+			|| localY > this.viewHeight + this.padBottom;
 	}
 
 	private isStrokeStill(stroke: Stroke): boolean {

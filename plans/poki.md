@@ -98,72 +98,71 @@ For a leaf-jumper-style 2D game, prefer **Defold / Construct / Pixi / Phaser** o
 
 ## Viewport / Aspect Ratio Approach
 
-### Pattern (proven in slot project)
+Runtime: [`src/world/game-view.ts`](../src/world/game-view.ts). Canvas fills the iframe; the **playfield** is contain-scaled and centered. No stage mask — backgrounds may draw into the letterbox. HUD chrome is the same scale as the world but origin'd at the canvas corner (iframe edges).
 
-Fixed **design resolution** + **contain / letterbox** scale:
+| Orientation | Playfield (camera / Matter) | Aspect |
+|-------------|-----------------------------|--------|
+| Landscape (`clientW ≥ clientH`) | **960×540** | 16:9 |
+| Portrait (`clientH > clientW`) | **540×960** | 9:16 |
 
-```javascript
-const scale = Math.min(clientWidth / gameWidth, clientHeight / gameHeight);
-stage.scale.set(scale);
-stage.x = (clientWidth - gameWidth * scale) * 0.5;
-stage.y = (clientHeight - gameHeight * scale) * 0.5;
-```
+To pull the portrait camera back (more world in frame), multiply both 540 and 960 by the same factor in `game-view.ts`.
 
-### For Poki / this project
+### Letterbox (not CSS black bars)
 
-- Design size: **960×540** (16:9).
-- Scale with **contain** (`Math.min`) so the stage fills whatever window/iframe the portal provides.
-- Inside a 16:9 Poki iframe, contain scale fills the canvas with **no bars**.
-- Prefer **contain** over **cover** (`Math.max` + crop) unless intentional.
-- **Clip** all game content to the 960×540 design rect (mask on the view root) so overflow outside the letterboxed stage is never visible — easier to tell scene bugs from “drawing past the frame”.
+`scale = min(clientW / viewW, clientH / viewH)`. Empty iframe around the playfield is **logical pad** (same units as the camera). Fill it with background art, not `#222` forever. Renderer clear `#222` is only a fallback until textures cover the pad.
 
-### Art / texture resolution (2× for Retina)
+Pad budget **`VIEW_BLEED = 240`** logical px per edge covers:
 
-Gameplay and layout use **logical** design pixels (960×540). Source art is authored at **2×** so it stays sharp on high-DPI phones / Full HD iframes.
+- 21:9 phones vs 16:9 / 9:16 (~150 px)
+- ~1:1 fold inners (~210 px)
 
-| Asset | Source file (2×) | Logical size (1×) | How |
-|-------|------------------|-------------------|-----|
-| Static **sky** (landscape) | often **1920×1080** (exact cover) or **1920×1280** (3:2 mild spare) | **960×540** or **960×640** | Manifest `data.resolution: 2` |
-| Parallax **far / mid** | size to taste; prefer tuning `parallax` over huge bleed canvases | usually ≈ viewport or slightly larger | Same `resolution` hook |
-| Other sprites / UI (typical) | 2× the on-screen size | on-screen size | Same: `resolution: 2`, or spritesheet `meta.scale` |
+### HUD
 
-- In Pixi, **`resolution: 2`** on the asset means `texture.width` / `height` are already logical (half of the file pixels). Do **not** also apply `sprite.scale = 0.5` on those assets — that would be 0.25×.
-- Equivalent idea to “scale 0.5”, but the correct Pixi hook for textures is **`resolution`**, not a hardcoded sprite scale in every consumer.
+Buttons sit on the **iframe** (logical screen = playfield + pad), not on the 16:9/9:16 box. Modals dim the full iframe.
+
+### Texture resolution (2× for Retina)
+
+Gameplay uses logical pixels. Source art is **2×** (`data.resolution: 2`). Do **not** also `sprite.scale = 0.5`.
 
 ### Background placement (parallax)
 
-Background is **not** stretched to the level size and **does not tile**. It sits in **screen space** ([`ParallaxLayer`](../src/world/parallax-layer.ts)):
+Screen-space, not stretched, no clamp ([`ParallaxLayer`](../src/world/parallax-layer.ts)):
 
-- Logical size = file pixels / manifest `resolution` (sprite is not scaled in code).
-- **Anchor:** when the camera is on the level floor (`cameraY = levelHeight − 540`) and `cameraX = 0`, the layer is **horizontally centered** and its **bottom** matches the viewport bottom
-- Parallax: `offset = (camera − anchor) × factor` on X/Y. **No edge clamp** — if travel × factor exceeds texture oversize, the image edge can enter the frame.
-- Level JSON: `backgrounds` is an **array** (back→front). Optional `id` (`sky` / `far` / `mid` / …) is designer markup only.
+- Extra **width** is always split left/right of the playfield (`originX = (viewW − tileW) / 2`).
+- **Sky** (`id: sky` or `parallax: 0`): **centered** on the playfield. A 1440×1440 plate is the union of 16:9 and 9:16 plus pad. A centered camera (blob in the middle of the screen) always sits on the same sky pixel; a blob on the **ground** sits lower on the sky in 9:16 than in 16:9 (taller view, same texture). That gradient shift is inherent unless sky is a flat color or we floor-align sky (then the ground is stable and high platforms drift instead).
+- **Far / mid** (`parallax > 0`): **floor** — image bottom = playfield bottom (horizon). Extra height goes **up**. 16:9 ↔ 9:16 changes how far the horizon sits below screen center (270 vs 480), so a centered blob slides against these layers; that keeps the painted horizon on the playfield edge.
+- Parallax: `offset = (levelH − cameraY − viewH) × p`. Camera clamps to the **playfield**, not the iframe.
 
-### Background art strategy (landscape now, portrait later)
+Level JSON `backgrounds[]` is back→front. `id: sky` selects the center anchor.
 
-Painful lesson: painted mid/far layers (grass tufts, props, etc.) are **expensive to author**. Do **not** rely on large spare bleed margins as the default way to hide parallax edges.
+### meadow-01 background sizes (1500×1500, p_sky=0, p_far=0.1, p_mid=0.3)
 
-**Preferred approach**
+Current files @2 (`meadow-bg-*-blur*`): sky **960×540**, far **1015×519**, mid **1125×625** — landscape core only; portrait and iframe pads will show `#222` until re-exported.
 
-1. **Gameplay / platforms first** — colliders and layout do not depend on bg cover; orientation must not break platform geometry.
-2. **Sky (static, `parallax: 0`)**
-   - Landscape: can be exact **960×540** logical (e.g. 1920×1080 @ 2) — fills the design rect; will not show edges while `p = 0`.
-   - Portrait (when we build it): use a **separate sky texture**. It does **not** need to match the landscape sky logically (mood plate, not a shared world slice). Optional later: `texturePortrait` / portrait backgrounds array.
-3. **Far / mid (and any moving layers)**
-   - **Primary control: lower `parallax`** in the level JSON so `(levelSize − viewport) × p` stays within whatever oversize the art already has.
-   - Small oversize is fine if it falls out of the paint naturally; **avoid** rebuilding huge bleed canvases just to support a high `p`.
-   - Zooming the whole game to “cover” a tall phone makes the **playable width** much narrower (~540–640 instead of 960) — that is a playability problem, not solved by fatter sky art. Portrait play may stay landscape-only + rotate hint, or get a dedicated UI/camera layout later.
+**Letterbox plate** (must, both orientations, `VIEW_BLEED=240`):
 
-**Rejected as default:** mandating **1100×600** / large universal bleed for every parallax layer; mandating square skies only to serve portrait without a second asset.
+A plate that covers both cores + 240 pad is **1440×1440** logical (**2880×2880** @2). Sky (`p = 0`) can be this square (or two files: landscape **1440×1020**, portrait **1020×1440**).
 
-### Mobile / orientation (deferred)
+**Plus parallax travel** (so camera motion does not reveal the texture edge):
 
-Landscape-only 16:9 on a portrait phone → large letterboxing. Options later:
+\[
+W = \mathrm{core}W + 2(\mathrm{level}W - \mathrm{core}W)\,p + 2\times 240
+\]
+\[
+H = \mathrm{core}H + (\mathrm{level}H - \mathrm{core}H)\,p + 2\times 240
+\]
 
-- Landscape-only + “rotate device” hint (likely for v1 gameplay), or
-- Separate portrait layout + **separate sky** + retuned far/mid `parallax` (see strategy above).
+Take the **max** of landscape core 960×540 and portrait core 540×960:
 
-**Current decision:** landscape-first only; portrait UX in **stage F**, i.e. after the demo is submitted. Many Poki games ship horizontal; still verify portal requirements before submit so a publisher agreement is not accidentally violated.
+| Layer | p | Logical W×H | File @2 |
+|-------|---|-------------|---------|
+| sky | 0 | **1440×1440** | 2880×2880 |
+| far | 0.1 | **1548×1494** → round **1560×1500** | 3120×3000 |
+| mid | 0.3 | **1764×1602** → round **1800×1620** | 3600×3240 |
+
+The **painted** detail can stay in the 16:9 / 9:16 core; bleed may be simple sky/soil extension (no extra tufts). To avoid huge mid canvases, **lower `p`** instead of painting travel+bleed at full detail.
+
+Optional ground-crop pad (~80 px of soil below the horizon) lives **inside** the bottom 240 bleed.
 
 ---
 
@@ -261,7 +260,7 @@ Pixi = draw yourself + pick physics package. Phaser/Defold = gameplay kit includ
 | Layer | Suggestion |
 |-------|------------|
 | Render / game | Pixi.js + TS **or** Defold / Phaser if wanting editor + physics bundled |
-| Design resolution | **960×540** (16:9) + contain scale + clip; **2×** art via `resolution: 2`; bg: exact/static sky OK; far/mid **tune parallax** over large bleed; portrait → **separate sky** (see Background art strategy) |
+| Design resolution | **960×540** landscape / **540×960** portrait, contain + unclipped bg bleed (`VIEW_BLEED` 240); **2×** art; HUD on iframe edges; far/mid **tune parallax** as well as bleed — see Viewport section |
 | Physics | Matter (start) → Rapier if needed |
 | Monetization | Thin adapter: `PokiSDK` / `CrazyGames.SDK` behind one interface |
 | Bundle size | Design for **Poki’s ~8 MB** first — then CrazyGames is easy |
@@ -285,14 +284,14 @@ Pixi = draw yourself + pick physics package. Phaser/Defold = gameplay kit includ
 ## Open Decisions (for later)
 
 - [x] Stack for Fairy Blob → **Pixi DIY + Matter** (not Defold/Phaser)
-- [x] Orientation for v1 → **landscape-first** (portrait UX deferred)
+- [x] Orientation for v1 → **landscape 16:9 + portrait 9:16** (contain playfield, bg in letterbox, HUD on iframe)
 - [x] Physics for v1 → **Matter.js** (custom AABB only for death droplet FX)
 - [x] UI hub + pause loop (menu carousel, Pause Home/Resume/Restart, platform session + commercialBreak on intent to play)
 - [x] Level catalog + portal exit chain + GameProgress save (A2); level-clear modal (C)
 - [x] Progress / Customize HudModals (stage D; OK dismiss) + skins catalog applied in-level
 - [x] Portal unlock by firefly rim slots + door / vortex art (stage E #1). Blob fly-in animation deferred
 - [x] Moving hazards (caterpillar / spider / mosquito) on fixed rails (stage E #3). Place on demo levels while authoring E4
-- [x] Portrait / rotate support → **stage F** (Poki accepts landscape-only; camera + HUD + hub modals rework is too costly for the demo)
+- [x] Portrait / rotate playfield → **done** (540×960 camera, menu reflow, HUD on iframe). Remaining: re-export meadow bg plates to the bleed spec; pull-back zoom if 540-wide is too tight
 - [x] Rewarded help → **stage F**; shape still open (flight vs teleport to portal)
 - [x] Mobile background freeze: sync platform `hidden` on `pageshow` / `focus` / first pointer / Page Lifecycle freeze-resume, not only `visibilitychange`. Does **not** clear HUD Pause (`isPaused`)
 - [ ] Target Poki first vs CrazyGames Basic Launch first
@@ -336,7 +335,7 @@ Suggested support work for balancing 10 levels: lightweight local telemetry (per
 
 ### Stage F — content & feature depth (after publishing approval)
 
-- Portrait / rotate support (moved out of the demo)
+- Re-export meadow sky/far/mid to the bleed spec (see Viewport); optional portrait camera pull-back
 - Finish player mechanics — mainly animations and VFX for them
 - Finish locations and levels, including enemy art and level design
 - Rewarded help: flight or teleport to the portal

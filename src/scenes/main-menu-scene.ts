@@ -1,14 +1,15 @@
-import { Assets, DestroyOptions, ParticleContainer, Sprite, Spritesheet, Texture } from 'pixi.js';
+import { Assets, Container, DestroyOptions, ParticleContainer, Sprite, Spritesheet, Texture } from 'pixi.js';
 
 import { bindDebouncedTap } from '../components/debounced-tap';
 import { HighlightDecoration } from '../components/highlight-decoration';
 import { IdleBounceAnimator } from '../components/idle-bounce-animator';
-import { LevelCarousel } from '../components/level-carousel';
+import { LevelCarousel, CAROUSEL_BELOW_ARROW_OFFSET_Y } from '../components/level-carousel';
 import { AnotherFly } from '../components/particle-fly';
 import { UIButton } from '../components/ui-button';
 import { GameProgress, isCarouselLevelPlayable } from '../managers/game-progress';
 import { SoundManager } from '../managers/sound-manager';
 import { Scene } from './scene';
+import { getGameView } from '../world/game-view';
 
 const PLAY_BUTTON_SIZE = 100;
 const SIDE_BUTTON_SIZE = 68;
@@ -23,10 +24,10 @@ const PLAY_BUTTON_Y = 462;
 const SIDE_BUTTON_Y = 470;
 const SIDE_BUTTON_MARGIN = 72;
 
-const PORTRAIT_CAROUSEL_RATIO = 0.36;
-const PORTRAIT_PLAY_GAP = 250;
-const PORTRAIT_SIDE_GAP = 100;
-const PORTRAIT_SIDE_SPREAD = 110;
+const PORTRAIT_CAROUSEL_RATIO = 0.45;
+const PORTRAIT_SIDE_BOTTOM_MARGIN = 72;
+/** Match carousel 'below' arrow spacing (`TILE_STEP` = 165). */
+const PORTRAIT_SIDE_SPREAD = 165;
 
 /**
  * Menu hub: level carousel plus Play and the two meta-screen entries.
@@ -38,6 +39,7 @@ export class MainMenuScene extends Scene {
 	private flies: AnotherFly[] = [];
 	private fliesContainer!: ParticleContainer;
 	private carousel!: LevelCarousel;
+	private playButtonRoot!: Container;
 	private playButton!: UIButton;
 	private playBounce = new IdleBounceAnimator();
 	private progressButton!: UIButton;
@@ -101,9 +103,12 @@ export class MainMenuScene extends Scene {
 		}
 
 		const { texture } = this.background;
+		const view = getGameView();
+		const coverWidth = view.screenWidth;
+		const coverHeight = view.screenHeight;
 		const scale = Math.max(
-			Scene.viewportWidth / texture.width,
-			Scene.viewportHeight / texture.height,
+			coverWidth / texture.width,
+			coverHeight / texture.height,
 		);
 
 		this.background.scale.set(scale);
@@ -181,7 +186,9 @@ export class MainMenuScene extends Scene {
 			PLAY_BUTTON_SIZE,
 			new HighlightDecoration(0.85),
 		);
-		this.addChild(this.playButton);
+		this.playButtonRoot = new Container();
+		this.playButtonRoot.addChild(this.playButton);
+		this.addChild(this.playButtonRoot);
 		this.playBounce.attach(this.playButton);
 
 		// Stay clickable for locked levels too — feedback is sound + lock shake.
@@ -232,9 +239,8 @@ export class MainMenuScene extends Scene {
 		this.carousel.x = centerX;
 		this.carousel.y = CAROUSEL_CENTER_Y;
 
-		this.playButton.x = centerX;
-		this.playButton.y = PLAY_BUTTON_Y;
-		this.playBounce.syncRestPosition();
+		this.playButtonRoot.x = centerX;
+		this.playButtonRoot.y = PLAY_BUTTON_Y;
 
 		this.progressButton.x = SIDE_BUTTON_MARGIN;
 		this.progressButton.y = SIDE_BUTTON_Y;
@@ -249,19 +255,22 @@ export class MainMenuScene extends Scene {
 
 		const centerX = Scene.viewportWidth * 0.5;
 		const carouselY = Scene.viewportHeight * PORTRAIT_CAROUSEL_RATIO;
+		const sideY = Scene.viewportHeight
+			- PORTRAIT_SIDE_BOTTOM_MARGIN
+			- SIDE_BUTTON_SIZE / 2;
+		const arrowY = carouselY + CAROUSEL_BELOW_ARROW_OFFSET_Y;
 
 		this.carousel.setArrowLayout('below');
 		this.carousel.x = centerX;
 		this.carousel.y = carouselY;
 
-		this.playButton.x = centerX;
-		this.playButton.y = carouselY + PORTRAIT_PLAY_GAP;
-		this.playBounce.syncRestPosition();
+		this.playButtonRoot.x = centerX;
+		this.playButtonRoot.y = (arrowY + sideY) * 0.5;
 
 		this.progressButton.x = centerX - PORTRAIT_SIDE_SPREAD;
-		this.progressButton.y = this.playButton.y + PORTRAIT_SIDE_GAP;
+		this.progressButton.y = sideY;
 		this.customizeButton.x = centerX + PORTRAIT_SIDE_SPREAD;
-		this.customizeButton.y = this.playButton.y + PORTRAIT_SIDE_GAP;
+		this.customizeButton.y = sideY;
 	}
 
 	private syncPlayButton(): void {

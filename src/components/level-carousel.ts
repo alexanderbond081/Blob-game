@@ -38,7 +38,8 @@ const TILE_TEXT_LOCKED_ALPHA = 0.72;
 
 const ARROW_SIZE = 60;
 const ARROW_SIDE_OFFSET_X = 295;
-const ARROW_BELOW_OFFSET_Y = 158;
+/** Below-tile arrows: was 158; + half arrow height so they sit a little lower. */
+export const CAROUSEL_BELOW_ARROW_OFFSET_Y = 188;
 const ARROW_DISABLED_ALPHA = 0.35;
 
 /** Tiles fade out between one and this many steps away from the center. */
@@ -340,8 +341,8 @@ export class LevelCarousel extends Container {
 		if (this.arrowLayout === 'below') {
 			this.leftArrow.x = -TILE_STEP;
 			this.rightArrow.x = TILE_STEP;
-			this.leftArrow.y = ARROW_BELOW_OFFSET_Y;
-			this.rightArrow.y = ARROW_BELOW_OFFSET_Y;
+			this.leftArrow.y = CAROUSEL_BELOW_ARROW_OFFSET_Y;
+			this.rightArrow.y = CAROUSEL_BELOW_ARROW_OFFSET_Y;
 			return;
 		}
 

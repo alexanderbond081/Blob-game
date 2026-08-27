@@ -18,6 +18,7 @@ import { GameHUD } from './hud/game-hud';
 import { SoundManager } from './managers/sound-manager';
 import { bindGameDelayTicker, setGameDelayPaused } from './global-delay';
 import { startInputModeTracking } from './input/input-mode';
+import { computeGameView, getGameView, setGameView } from './world/game-view';
 
 Filter.defaultOptions.resolution = 'inherit';
 gsap.registerPlugin(PixiPlugin);
@@ -27,16 +28,11 @@ const app = new Application();
 const gameHUD = new GameHUD();
 
 const viewRoot = new Container();
-const viewMask = new Graphics();
 const gameLayer = new Container();
 const hudLayer = new Container();
 const uiOverlay = new Container();
 const fadeRect = new Graphics();
 uiOverlay.addChild(fadeRect);
-
-/** Design resolution (16:9). Scaled with contain to fill the host iframe/window. */
-let gameWidth = 960;
-let gameHeight = 540;
 
 let currentScene: Scene | null = null;
 let gameSceneAssets: string = '';
@@ -66,27 +62,29 @@ const getClientSize = (): { width: number; height: number } => {
 const applyStageScale = (): void => {
 	const dpr = window.devicePixelRatio || 1;
 	const { width: clientWidth, height: clientHeight } = getClientSize();
+	const layout = computeGameView(clientWidth, clientHeight);
+	setGameView(layout);
+	Scene.setPlayfield(layout.viewWidth, layout.viewHeight);
 
 	app.renderer.resolution = dpr;
 	app.renderer.resize(clientWidth, clientHeight);
 
-	const scale = Math.min(
-		clientWidth / gameWidth,
-		clientHeight / gameHeight,
-	);
+	viewRoot.scale.set(layout.scale);
+	viewRoot.x = layout.offsetX;
+	viewRoot.y = layout.offsetY;
 
-	app.stage.scale.set(scale);
-	app.stage.x = (clientWidth - gameWidth * scale) * 0.5;
-	app.stage.y = (clientHeight - gameHeight * scale) * 0.5;
+	hudLayer.scale.set(layout.scale);
+	hudLayer.x = 0;
+	hudLayer.y = 0;
 
-	viewMask.clear().rect(0, 0, gameWidth, gameHeight).fill(0xffffff);
-};
+	uiOverlay.scale.set(layout.scale);
+	uiOverlay.x = 0;
+	uiOverlay.y = 0;
 
-const applyResponsiveLayout = (): void => {
-	// !! to be implemented
-	//app.renderer.resize(gameWidth, gameHeight);
-	//currentScene?.resize(gameWidth, gameHeight);
-	//gameHUD.resize(gameWidth, gameHeight);
+	fadeRect.clear().rect(0, 0, layout.screenWidth, layout.screenHeight).fill(0xffffff);
+
+	currentScene?.resize(layout.viewWidth, layout.viewHeight);
+	gameHUD.layoutToScreen(layout.screenWidth, layout.screenHeight);
 };
 
 const isFullscreen = (): boolean => {
@@ -188,28 +186,30 @@ async function initGame(): Promise<void> {
 
 	await app.init({
 		background: '0x222222',
-		width: gameWidth,
-		height: gameHeight,
+		width: getGameView().viewWidth,
+		height: getGameView().viewHeight,
 		antialias: false,
 		autoDensity: true,
 		resolution: window.devicePixelRatio || 1,
 	});
 	bindGameDelayTicker(app.ticker);
 	setGameDelayPaused(isGamePaused);
-	document.body.appendChild(app.canvas);
+	const gameContainer = document.getElementById('game-container');
+	if (!gameContainer) {
+		throw new Error('Missing #game-container');
+	}
+
+	gameContainer.appendChild(app.canvas);
 	suppressBrowserTouchChrome(app.canvas);
 	bindPlatformWakeOnInput(app.canvas);
 	startInputModeTracking();
-	applyStageScale();
 
-	viewMask.rect(0, 0, gameWidth, gameHeight).fill(0xffffff);
-	viewRoot.addChild(viewMask);
-	viewRoot.mask = viewMask;
 	viewRoot.addChild(gameLayer);
-	viewRoot.addChild(hudLayer);
-	viewRoot.addChild(uiOverlay);
 	app.stage.addChild(viewRoot);
+	app.stage.addChild(hudLayer);
+	app.stage.addChild(uiOverlay);
 	initFadeEffect();
+	applyStageScale();
 
 	await Assets.init({ manifest: 'assets/manifest.json' });
 
@@ -228,6 +228,7 @@ async function initGame(): Promise<void> {
 	// show logo and loading screen
 	await preload();
 	await initHUD();
+	applyStageScale();
 
 	// setup keys and window focus - the app works fine without it
 	//app.canvas.setAttribute('tabindex', '0');
@@ -273,6 +274,8 @@ async function changeScene(newScene: Scene, bundleName: string = '', doThings?: 
 		const fadeIsOff = fadeEffect(500, false);
 		currentScene.destroy({ children: true });
 		currentScene = newScene;
+		const view = getGameView();
+		newScene.resize(view.viewWidth, view.viewHeight);
 
 		// !!! assets unload temporary turned off!
 		oldSceneAssets = ''; // !!! assets unload temporary turned off!
@@ -295,6 +298,8 @@ async function changeScene(newScene: Scene, bundleName: string = '', doThings?: 
 		doThings?.();
 		gameLayer.addChild(newScene);
 		currentScene = newScene;
+		const view = getGameView();
+		newScene.resize(view.viewWidth, view.viewHeight);
 		await fadeEffect(100, false, 0x00);
 	}
 }
@@ -590,7 +595,8 @@ function connectPauseControls(): void {
 }
 
 function initFadeEffect(): void {
-	fadeRect.rect(0, 0, gameWidth, gameHeight).fill(0xffffff);
+	const view = getGameView();
+	fadeRect.clear().rect(0, 0, view.screenWidth, view.screenHeight).fill(0xffffff);
 	fadeRect.tint = 0x000000;
 	fadeRect.alpha = 1;
 	fadeRect.interactive = true;

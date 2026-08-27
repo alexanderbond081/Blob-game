@@ -11,6 +11,7 @@ import { SoundManager } from '../managers/sound-manager';
 import { PhysicsCollisionInfo } from '../physics/ground-contact';
 import { PhysicsWorld } from '../physics/physics-world';
 import { GameCamera } from '../world/game-camera';
+import { getGameView } from '../world/game-view';
 import { LevelRoot } from '../world/level-root';
 import { ParallaxLayer } from '../world/parallax-layer';
 import { Scene } from './scene';
@@ -72,6 +73,7 @@ export class PlatformLevelScene extends Scene {
 				viewportWidth: this.designWidth,
 				viewportHeight: this.designHeight,
 				levelHeight: levelData.size.height,
+				anchor: layer.id === 'sky' || layer.parallax === 0 ? 'center' : 'floor',
 			});
 			this.parallaxLayers.push(parallax);
 			this.addChild(parallax);
@@ -82,10 +84,19 @@ export class PlatformLevelScene extends Scene {
 		this.worldRoot.addChild(this.levelRoot);
 		this.centerCameraOnPlayer();
 
+		const view = getGameView();
 		this.touchLayer = new GestureTouchLayer({
 			width: this.designWidth,
 			height: this.designHeight,
 		});
+		this.touchLayer.setViewSize(
+			view.viewWidth,
+			view.viewHeight,
+			view.padLeft,
+			view.padTop,
+			view.padRight,
+			view.padBottom,
+		);
 		this.addChild(this.touchLayer);
 
 		this.physicsWorld.onCollisionStart((collision) => {
@@ -145,7 +156,19 @@ export class PlatformLevelScene extends Scene {
 	}
 
 	protected onResize(): void {
-		// World uses fixed design coordinates; letterbox handled in index.ts.
+		const view = getGameView();
+		this.camera?.setViewport(view.viewWidth, view.viewHeight);
+		for (const layer of this.parallaxLayers) {
+			layer.setViewport(view.viewWidth, view.viewHeight);
+		}
+		this.touchLayer?.setViewSize(
+			view.viewWidth,
+			view.viewHeight,
+			view.padLeft,
+			view.padTop,
+			view.padRight,
+			view.padBottom,
+		);
 	}
 
 	/**

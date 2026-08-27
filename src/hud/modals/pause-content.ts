@@ -21,6 +21,7 @@ const TITLE_Y = -78;
 export class PauseModalContent extends Container {
 	private title!: ReturnType<typeof createModalTitle>;
 	private homeButton!: UIButton;
+	private resumeButtonRoot!: Container;
 	private resumeButton!: UIButton;
 	private restartButton!: UIButton;
 	private readonly playBounce = new IdleBounceAnimator(5, 22, 0.05);
@@ -36,7 +37,6 @@ export class PauseModalContent extends Container {
 	}
 
 	public startPlayIdle(): void {
-		this.playBounce.syncRestPosition();
 		this.playBounce.start();
 	}
 
@@ -46,7 +46,6 @@ export class PauseModalContent extends Container {
 
 	public reflow(_contentWidth: number): void {
 		this.layout();
-		this.playBounce.syncRestPosition();
 	}
 
 	public override destroy(options?: DestroyOptions): void {
@@ -84,7 +83,9 @@ export class PauseModalContent extends Container {
 		);
 
 		this.addChild(this.homeButton);
-		this.addChild(this.resumeButton);
+		this.resumeButtonRoot = new Container();
+		this.resumeButtonRoot.addChild(this.resumeButton);
+		this.addChild(this.resumeButtonRoot);
 		this.addChild(this.restartButton);
 		this.playBounce.attach(this.resumeButton);
 		this.layout();
@@ -98,8 +99,8 @@ export class PauseModalContent extends Container {
 		this.title.x = 0;
 		this.title.y = TITLE_Y;
 
-		this.resumeButton.x = 0;
-		this.resumeButton.y = BUTTONS_Y;
+		this.resumeButtonRoot.x = 0;
+		this.resumeButtonRoot.y = BUTTONS_Y;
 
 		const sideOffset = RESUME_BUTTON_SIZE / 2 + BUTTON_GAP + SIDE_BUTTON_SIZE / 2;
 		this.homeButton.x = -sideOffset;

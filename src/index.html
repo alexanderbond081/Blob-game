@@ -8,30 +8,38 @@
 	<script src="<%= script.src %>"></script>
 	<% } %>
 	<style>
+		html, body, canvas, #game-container {
+			touch-action: none;
+			-webkit-touch-callout: none;
+			-webkit-user-select: none;
+			user-select: none;
+			overflow: hidden;
+		}
+
 		html, body {
 			margin: 0;
 			padding: 0;
 			width: 100%;
 			height: 100%;
-			overflow: hidden;
 			background: #222222;
-			touch-action: none;
-			-webkit-user-select: none;
-			user-select: none;
-			-webkit-touch-callout: none;
 			-webkit-tap-highlight-color: transparent;
+		}
+
+		#game-container {
+			position: relative;
+			width: 100%;
+			height: 100%;
 		}
 
 		canvas {
 			display: block;
 			width: 100%;
 			height: 100%;
-			touch-action: none;
-			-webkit-user-select: none;
-			user-select: none;
-			-webkit-touch-callout: none;
+			-webkit-tap-highlight-color: transparent;
 		}
 	</style>
 </head>
-<body></body>
+<body>
+	<div id="game-container"></div>
+</body>
 </html>

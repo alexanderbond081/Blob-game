@@ -143,7 +143,7 @@ Old “Arcade timer on the same casual run” folds into **Speedrun** as the pos
 | Soft glow + slight dimming | Real lighting / shadows engine |
 | Simple hazards (spikes etc. as blockers / kill) | Energy drain systems |
 | Static + light parallax backgrounds | Complex weather / day cycle |
-| Touch + keyboard; **960×540** design, contain-scale + clip; **2×** art; bg: static sky can be exact viewport; far/mid **tune parallax** rather than huge bleed (art is costly); portrait later → **separate sky** | Portrait playable FOV is narrow for side-scroll — likely rotate-hint or dedicated layout, not “one square bg for all” |
+| Touch + keyboard; **960×540** / **540×960** contain playfield, unclipped bg bleed, HUD on iframe; **2×** art | Portrait FOV is 540 wide — pull-back zoom in `game-view.ts` if the path is hard to read |
 | Local progress save (levels, abilities, firefly totals) | Cloud saves / accounts |
 | Basic SFX + 1 music track | Full adaptive soundtrack pack |
 | Gold fireflies + gold skin **nice-to-have in MVP** if cheap | Must-ship gold skin on day one |
@@ -193,7 +193,7 @@ Old “Arcade timer on the same casual run” folds into **Speedrun** as the pos
 
 Parallax = **offset layers by camera × factor** (manual in [`ParallaxLayer`](../src/world/parallax-layer.ts)).
 
-**Art / orientation policy (do not forget):** painted mid/far plates are labor-heavy (hand-placed tufts/props). Prefer **lowering `parallax`** so edges stay off-screen over inventing large bleed margins. For **portrait**, use a **separate sky** texture (mood only — need not match landscape sky); far/mid keep the same plates with retuned `p` if needed. Platforms/colliders are the source of truth for playability — bg cover is secondary. Full write-up: [`plans/poki.md`](./poki.md) → *Background art strategy*.
+**Art / orientation policy:** playfield is 16:9 or 9:16 contain-scaled; paint **bleed** around the core so iframe letterbox is not `#222` (spec in [`plans/poki.md`](./poki.md) → Viewport). Mid/far tufts stay expensive — extend sky/soil in the pad, **lower `p`** rather than painting full parallax travel. Platforms/colliders remain the source of truth for layout.
 
 ---
 

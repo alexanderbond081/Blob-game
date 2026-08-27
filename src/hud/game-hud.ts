@@ -7,7 +7,6 @@ import { DebugHudPanel } from '../debug/debug-hud-panel';
 import { SoundManager } from '../managers/sound-manager';
 import { GameProgress } from '../managers/game-progress';
 import { isFullscreenControlAllowed } from '../platform/platform';
-import { Scene } from '../scenes/scene';
 import { HUD } from './hud';
 import { HudModal } from './hud-modal';
 import { computeHubModalLayout } from './modals/hub-modal-layout';
@@ -50,6 +49,8 @@ export class GameHUD extends HUD {
 	private customizeContent: CustomizeModalContent | null = null;
 	private isBuilt = false;
 	private profile: HudProfile = 'menu';
+	private screenWidth = 960;
+	private screenHeight = 540;
 
 	public async init(): Promise<void> {
 		if (this.isBuilt) {
@@ -75,6 +76,15 @@ export class GameHUD extends HUD {
 		await this.ensureCustomizeModal();
 		this.applyProfile();
 		this.onResize();
+	}
+
+	/** Layout chrome and modals in iframe/logical-screen space (not the 16:9 playfield). */
+	public layoutToScreen(screenWidth: number, screenHeight: number): void {
+		this.screenWidth = screenWidth;
+		this.screenHeight = screenHeight;
+		if (this.isBuilt) {
+			this.onResize();
+		}
 	}
 
 	public get activeProfile(): HudProfile {
@@ -184,9 +194,9 @@ export class GameHUD extends HUD {
 		}
 
 		this.pauseModal.adjustLayout(
-			Scene.viewportWidth,
-			Scene.viewportHeight,
-			Scene.viewportHeight * 0.5,
+			this.screenWidth,
+			this.screenHeight,
+			this.screenHeight * 0.5,
 		);
 		this.pauseModal.open();
 		this.pauseContent?.startPlayIdle();
@@ -212,9 +222,9 @@ export class GameHUD extends HUD {
 		const panelWidth = presentation.demoComplete ? DEMO_RESULT_MODAL_WIDTH : RESULT_MODAL_WIDTH;
 		const panelHeight = presentation.demoComplete ? DEMO_RESULT_MODAL_HEIGHT : RESULT_MODAL_HEIGHT;
 		this.resultModal.adjustLayout(
-			Scene.viewportWidth,
-			Scene.viewportHeight,
-			Scene.viewportHeight * 0.5,
+			this.screenWidth,
+			this.screenHeight,
+			this.screenHeight * 0.5,
 			panelWidth,
 			panelHeight,
 		);
@@ -289,17 +299,17 @@ export class GameHUD extends HUD {
 		this.debugPanel?.adjustLayout();
 		if (this.pauseModal?.isOpen) {
 			this.pauseModal.adjustLayout(
-				Scene.viewportWidth,
-				Scene.viewportHeight,
-				Scene.viewportHeight * 0.5,
+				this.screenWidth,
+				this.screenHeight,
+				this.screenHeight * 0.5,
 			);
 		}
 		if (this.resultModal?.isOpen) {
 			const demoComplete = this.resultContent?.isDemoComplete === true;
 			this.resultModal.adjustLayout(
-				Scene.viewportWidth,
-				Scene.viewportHeight,
-				Scene.viewportHeight * 0.5,
+				this.screenWidth,
+				this.screenHeight,
+				this.screenHeight * 0.5,
 				demoComplete ? DEMO_RESULT_MODAL_WIDTH : RESULT_MODAL_WIDTH,
 				demoComplete ? DEMO_RESULT_MODAL_HEIGHT : RESULT_MODAL_HEIGHT,
 			);
@@ -359,7 +369,7 @@ export class GameHUD extends HUD {
 			return;
 		}
 
-		const layout = computeHubModalLayout(Scene.viewportWidth, Scene.viewportHeight);
+		const layout = computeHubModalLayout(this.screenWidth, this.screenHeight);
 		this.progressModal = await HudModal.create({
 			width: layout.width,
 			height: layout.height,
@@ -377,7 +387,7 @@ export class GameHUD extends HUD {
 			return;
 		}
 
-		const layout = computeHubModalLayout(Scene.viewportWidth, Scene.viewportHeight);
+		const layout = computeHubModalLayout(this.screenWidth, this.screenHeight);
 		this.customizeModal = await HudModal.create({
 			width: layout.width,
 			height: layout.height,
@@ -391,10 +401,10 @@ export class GameHUD extends HUD {
 	}
 
 	private layoutHubModal(modal: HudModal): void {
-		const layout = computeHubModalLayout(Scene.viewportWidth, Scene.viewportHeight);
+		const layout = computeHubModalLayout(this.screenWidth, this.screenHeight);
 		modal.adjustLayout(
-			Scene.viewportWidth,
-			Scene.viewportHeight,
+			this.screenWidth,
+			this.screenHeight,
 			layout.centerY,
 			layout.width,
 			layout.height,
@@ -496,7 +506,7 @@ export class GameHUD extends HUD {
 		}
 
 		// Right cluster: Music | Sound | Pause (pause is rightmost when visible).
-		this.pauseButton.x = Scene.viewportWidth - HUD_MARGIN - HUD_BUTTON_SIZE / 2;
+		this.pauseButton.x = this.screenWidth - HUD_MARGIN - HUD_BUTTON_SIZE / 2;
 		this.pauseButton.y = HUD_MARGIN + HUD_BUTTON_SIZE / 2;
 	}
 
@@ -506,7 +516,7 @@ export class GameHUD extends HUD {
 		}
 
 		const slotsFromRight = this.pauseButton?.visible ? 2 : 1;
-		this.musicButton.x = Scene.viewportWidth
+		this.musicButton.x = this.screenWidth
 			- HUD_MARGIN
 			- HUD_BUTTON_SIZE * (slotsFromRight + 0.5)
 			- HUD_BUTTON_GAP * slotsFromRight;
@@ -519,7 +529,7 @@ export class GameHUD extends HUD {
 		}
 
 		const slotsFromRight = this.pauseButton?.visible ? 1 : 0;
-		this.soundButton.x = Scene.viewportWidth
+		this.soundButton.x = this.screenWidth
 			- HUD_MARGIN
 			- HUD_BUTTON_SIZE * (slotsFromRight + 0.5)
 			- HUD_BUTTON_GAP * slotsFromRight;

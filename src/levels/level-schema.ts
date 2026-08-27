@@ -21,7 +21,7 @@ const pointSchema = z.object({
 });
 
 const backgroundLayerSchema = z.object({
-	/** Designer label only (far / mid / near / …). Ignored by the runtime. */
+	/** `sky` → centered plate; other ids are designer markup (far / mid / …). */
 	id: z.string().optional(),
 	texture: z.string(),
 	/** Parallax factor for both X and Y camera axes (0 = fixed to viewport, 1 = world-locked). */

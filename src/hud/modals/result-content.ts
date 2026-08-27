@@ -69,6 +69,7 @@ export class ResultModalContent extends Container {
 	private timeText!: Text;
 	private deathsText!: Text;
 	private homeButton!: UIButton;
+	private continueButtonRoot!: Container;
 	private continueButton!: UIButton;
 	private restartButton!: UIButton;
 	private readonly playBounce = new IdleBounceAnimator(5, 22, 0.05);
@@ -103,12 +104,14 @@ export class ResultModalContent extends Container {
 			this.subtitle.visible = true;
 			this.continueButton.visible = false;
 			this.continueButton.eventMode = 'none';
+			this.continueButtonRoot.visible = false;
 		} else {
 			this.title.text = 'Clear!';
 			this.title.style.fontSize = 44;
 			this.subtitle.visible = false;
 			this.continueButton.visible = true;
 			this.continueButton.eventMode = 'static';
+			this.continueButtonRoot.visible = true;
 		}
 
 		this.layout();
@@ -120,7 +123,6 @@ export class ResultModalContent extends Container {
 			return;
 		}
 
-		this.playBounce.syncRestPosition();
 		this.playBounce.start();
 	}
 
@@ -130,9 +132,6 @@ export class ResultModalContent extends Container {
 
 	public reflow(_contentWidth: number): void {
 		this.layout();
-		if (!this.demoComplete) {
-			this.playBounce.syncRestPosition();
-		}
 	}
 
 	public override destroy(options?: DestroyOptions): void {
@@ -195,7 +194,9 @@ export class ResultModalContent extends Container {
 		);
 
 		this.addChild(this.homeButton);
-		this.addChild(this.continueButton);
+		this.continueButtonRoot = new Container();
+		this.continueButtonRoot.addChild(this.continueButton);
+		this.addChild(this.continueButtonRoot);
 		this.addChild(this.restartButton);
 		this.playBounce.attach(this.continueButton);
 		this.layout();
@@ -223,17 +224,17 @@ export class ResultModalContent extends Container {
 
 		this.homeButton.y = this.demoComplete ? DEMO_BUTTONS_Y : BUTTONS_Y;
 		this.restartButton.y = this.demoComplete ? DEMO_BUTTONS_Y : BUTTONS_Y;
-		this.continueButton.y = BUTTONS_Y;
+		this.continueButtonRoot.y = BUTTONS_Y;
 
 		if (this.demoComplete) {
 			const halfGap = DEMO_SIDE_GAP / 2 + SIDE_BUTTON_SIZE / 2;
 			this.homeButton.x = -halfGap;
 			this.restartButton.x = halfGap;
-			this.continueButton.x = 0;
+			this.continueButtonRoot.x = 0;
 			return;
 		}
 
-		this.continueButton.x = 0;
+		this.continueButtonRoot.x = 0;
 		const sideOffset = CONTINUE_BUTTON_SIZE / 2 + BUTTON_GAP + SIDE_BUTTON_SIZE / 2;
 		this.homeButton.x = -sideOffset;
 		this.restartButton.x = sideOffset;

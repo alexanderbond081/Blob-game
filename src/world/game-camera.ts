@@ -4,8 +4,8 @@ export class GameCamera {
 	public x = 0;
 	public y = 0;
 
-	private readonly viewportWidth: number;
-	private readonly viewportHeight: number;
+	private viewportWidth: number;
+	private viewportHeight: number;
 	private readonly levelWidth: number;
 	private readonly levelHeight: number;
 	private readonly followLerp: number;
@@ -22,6 +22,15 @@ export class GameCamera {
 		this.levelWidth = levelWidth;
 		this.levelHeight = levelHeight;
 		this.followLerp = followLerp;
+	}
+
+	public setViewport(viewportWidth: number, viewportHeight: number): void {
+		this.viewportWidth = viewportWidth;
+		this.viewportHeight = viewportHeight;
+		const maxX = Math.max(0, this.levelWidth - this.viewportWidth);
+		const maxY = Math.max(0, this.levelHeight - this.viewportHeight);
+		this.x = this.clamp(this.x, 0, maxX);
+		this.y = this.clamp(this.y, 0, maxY);
 	}
 
 	/** Jumps straight to the target without smoothing (level start, respawn, teleports). */
