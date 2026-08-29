@@ -4,6 +4,12 @@ import { PhysicsCollisionInfo } from './ground-contact';
 
 export type CollisionCallback = (collision: PhysicsCollisionInfo) => void;
 
+/**
+ * Matter reuses a fixed two-slot `supports` array per pair and reports how many
+ * slots hold this step's contacts. `@types/matter-js` omits `supportCount`.
+ */
+type CollisionRecord = Matter.Collision & { supportCount?: number };
+
 const TARGET_FPS = 60;
 const FIXED_DELTA_MS = 1000 / TARGET_FPS;
 const MAX_SUB_STEPS = 5;
@@ -24,19 +30,19 @@ export class PhysicsWorld {
 
 		Events.on(this.engine, 'collisionStart', (event) => {
 			for (const pair of event.pairs) {
-				this.dispatchPair(this.collisionStartHandlers, pair.bodyA, pair.bodyB, pair.collision.normal);
+				this.dispatchPair(this.collisionStartHandlers, pair);
 			}
 		});
 
 		Events.on(this.engine, 'collisionActive', (event) => {
 			for (const pair of event.pairs) {
-				this.dispatchPair(this.collisionActiveHandlers, pair.bodyA, pair.bodyB, pair.collision.normal);
+				this.dispatchPair(this.collisionActiveHandlers, pair);
 			}
 		});
 
 		Events.on(this.engine, 'collisionEnd', (event) => {
 			for (const pair of event.pairs) {
-				this.dispatchPair(this.collisionEndHandlers, pair.bodyA, pair.bodyB, pair.collision.normal);
+				this.dispatchPair(this.collisionEndHandlers, pair);
 			}
 		});
 	}
@@ -93,14 +99,51 @@ export class PhysicsWorld {
 
 	private dispatchPair(
 		handlers: CollisionCallback[],
-		bodyA: Body,
-		bodyB: Body,
-		normal: Matter.Vector,
+		pair: Matter.Pair,
 	): void {
-		const collision: PhysicsCollisionInfo = { bodyA, bodyB, normal };
+		const contact = pair.collision as CollisionRecord | undefined;
+		const collision: PhysicsCollisionInfo = {
+			bodyA: pair.bodyA,
+			bodyB: pair.bodyB,
+			normal: contact?.normal ?? { x: 0, y: 0 },
+			contactX: averageSupportX(contact?.supports, contact?.supportCount),
+		};
 
 		for (const handler of handlers) {
 			handler(collision);
 		}
 	}
 }
+
+/**
+ * Mean X of this step's contacts only. Slots past `supportCount` still hold a
+ * live vertex from an earlier step, which would drag the mean off the contact.
+ */
+const averageSupportX = (
+	supports: Array<Matter.Vector | null> | undefined,
+	supportCount: number | undefined,
+): number | null => {
+	if (!supports) {
+		return null;
+	}
+
+	const validCount = Math.min(supportCount ?? supports.length, supports.length);
+
+	let sumX = 0;
+	let count = 0;
+	for (let index = 0; index < validCount; index += 1) {
+		const support = supports[index];
+		if (!support) {
+			continue;
+		}
+
+		sumX += support.x;
+		count += 1;
+	}
+
+	if (count === 0) {
+		return null;
+	}
+
+	return sumX / count;
+};

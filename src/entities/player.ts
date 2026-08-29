@@ -27,7 +27,7 @@ const SIDE_PROBE_FOOT_INSET = 4;
 /** Ignore the crown so a rock on the head is not a side block. */
 const SIDE_PROBE_HEAD_INSET = 8;
 /** How far past the collider AABB to look for a side obstacle. */
-const SIDE_PROBE_REACH = 1;
+const SIDE_PROBE_REACH = 0;
 /** Walk speed while uncrouching. Stand-up only — dash must not use this. */
 const CROUCH_MOVE_SPEED_X = 3;
 const LANDING_VELOCITY_THRESHOLD = 2;
@@ -1130,7 +1130,7 @@ export class Player extends PhysicsBody {
 	}
 
 	private handleGroundCollision(collision: PhysicsCollisionInfo, isContact: boolean): void {
-		const { bodyA, bodyB, normal } = collision;
+		const { bodyA, bodyB, normal, contactX } = collision;
 		const platformBody = getPlatformBody(this.body, bodyA, bodyB);
 
 		if (!platformBody) {
@@ -1143,7 +1143,7 @@ export class Player extends PhysicsBody {
 			return;
 		}
 
-		if (isWalkableContact(this.body, bodyA, bodyB, normal)) {
+		if (isWalkableContact(this.body, bodyA, bodyB, normal, contactX)) {
 			this.groundContacts.add(platformBody);
 			this.stickyWallContacts.delete(platformBody.id);
 			return;

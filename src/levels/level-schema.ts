@@ -53,8 +53,9 @@ const collectibleSchema = z.object({
 	type: z.string(),
 });
 
-export const hazardFacingSchema = z.enum(['up', 'down', 'left', 'right']);
-export type HazardFacing = z.infer<typeof hazardFacingSchema>;
+export const hazardFacingSchema = z.enum(['up', 'down', 'left', 'right', 'none']);
+/** Directed tooth side. `'none'` (Ogmo cannot omit the field) means all four sides. */
+export type HazardFacing = Exclude<z.infer<typeof hazardFacingSchema>, 'none'>;
 
 export const patrolHazardTypeSchema = z.enum(['caterpillar', 'spider', 'mosquito']);
 export type PatrolHazardType = z.infer<typeof patrolHazardTypeSchema>;
@@ -65,7 +66,7 @@ const spikeHazardSchema = z.object({
 	y: z.number(),
 	width: z.number().positive(),
 	height: z.number().positive(),
-	/** Spike teeth on this side only; omit for teeth on all four sides. */
+	/** Spike teeth on this side only. Omit or `'none'` = teeth on all four sides (Ogmo always writes the field). */
 	facing: hazardFacingSchema.optional(),
 	/** Tooth length as a fraction of the max inward depth (0 = flat rect, 1 = full basis). Default 0.5. */
 	length: z.number().min(0).max(1).optional(),

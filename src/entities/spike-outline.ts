@@ -36,7 +36,8 @@ export type SpikeOutlineInput = {
 	width: number;
 	height: number;
 	inset: number;
-	facing?: HazardFacing;
+	/** `'none'` is the Ogmo stand-in for undirected (all four sides). */
+	facing?: HazardFacing | 'none';
 	length?: number;
 };
 
@@ -58,7 +59,7 @@ export const buildSpikePolygon = (input: SpikeOutlineInput): Point[] | null => {
 
 	const x = input.inset;
 	const y = input.inset;
-	const facing = input.facing;
+	const facing = input.facing === 'none' ? undefined : input.facing;
 	const depth = facing
 		? facingThickness(facing, innerWidth, innerHeight) * toothLength
 		: Math.min(innerWidth, innerHeight) * 0.5 * toothLength;

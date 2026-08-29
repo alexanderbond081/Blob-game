@@ -3,6 +3,10 @@ import meadow01 from './levels/meadow-01.json';
 import meadow02 from './levels/meadow-02.json';
 import meadow03 from './levels/meadow-03.json';
 import meadow04 from './levels/meadow-04.json';
+import meadow05 from './levels/meadow-05.json';
+import meadow06 from './levels/meadow-06.json';
+import meadow07 from './levels/meadow-07.json';
+import meadow08 from './levels/meadow-08.json';
 import meadow13 from './levels/meadow-13.json';
 import testlevel from './levels/testlevel-00.json';
 
@@ -11,6 +15,10 @@ const LEVEL_REGISTRY: Record<string, unknown> = {
 	'meadow-02': meadow02,
 	'meadow-03': meadow03,
 	'meadow-04': meadow04,
+	'meadow-05': meadow05,
+	'meadow-06': meadow06,
+	'meadow-07': meadow07,
+	'meadow-08': meadow08,
 	'meadow-13': meadow13,
 	'testlevel-00': testlevel,
 };

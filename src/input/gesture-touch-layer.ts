@@ -55,16 +55,16 @@ const HORIZONTAL_DEADZONE_DEG = 33;
  * Horizontal swipe / dash is off. Until dash exists, a fast horizontal
  * flick latches run for RUN_LATCH_MS on pointer-up (not mid-stroke).
  */
-const SWIPE_DISTANCE_PX = 80; //75;
+const SWIPE_DISTANCE_PX = 75; //75;
 /** Slow post-settle swipes need this; short flicks use distance only. */
-const SWIPE_SPEED_PX_PER_SEC = 400; //350;
+const SWIPE_SPEED_PX_PER_SEC = 350; //350;
 /**
  * Follow the contact until it is still (fat-finger centroid jump) or this
  * timer elapses. Distance for a swipe is measured after that, not from raw down.
  */
-const SETTLE_MS = 50;
+const SETTLE_MS = 40;
 const SETTLE_RADIUS_PX = 72;
-const SETTLE_SPEED_PX_PER_SEC = 300; //220;
+const SETTLE_SPEED_PX_PER_SEC = 250; //220;
 const SETTLE_MIN_MS = 16;
 const MIN_SPEED_DT_MS = 16;
 /** Fast lift: commit from the whole stroke even if settle chased the finger. */

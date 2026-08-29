@@ -1,0 +1,110 @@
+{
+  "ogmoVersion": "3.4.0",
+  "width": 1500,
+  "height": 1500,
+  "offsetX": 0,
+  "offsetY": 0,
+  "layers": [
+    {
+      "name": "platforms",
+      "_eid": "57334173",
+      "offsetX": 0,
+      "offsetY": 0,
+      "gridCellWidth": 10,
+      "gridCellHeight": 10,
+      "gridCellsX": 150,
+      "gridCellsY": 150,
+      "entities": [
+        {"name": "ground", "id": 0, "_eid": "57405180", "x": -90, "y": 1450, "width": 1660, "height": 50},
+        {"name": "blob", "id": 16, "_eid": "57583892", "x": 120, "y": 950},
+        {"name": "firefly", "id": 20, "_eid": "57574758", "x": 830, "y": 1200},
+        {"name": "firefly", "id": 23, "_eid": "57574758", "x": 600, "y": 1050},
+        {"name": "firefly", "id": 24, "_eid": "57574758", "x": 140, "y": 1260},
+        {
+          "name": "portal",
+          "id": 25,
+          "_eid": "57607701",
+          "x": 940,
+          "y": 720,
+          "values": {"slots": 6}
+        },
+        {"name": "leaf", "id": 29, "_eid": "57377904", "x": 1300, "y": 1240, "width": 140, "height": 30},
+        {"name": "leaf", "id": 31, "_eid": "57377904", "x": 500, "y": 1110, "width": 200, "height": 30},
+        {"name": "leaf", "id": 32, "_eid": "57377904", "x": 70, "y": 1060, "width": 110, "height": 30},
+        {"name": "wall", "id": 35, "_eid": "57390486", "x": 930, "y": 1010, "width": 30, "height": 440},
+        {"name": "leaf", "id": 36, "_eid": "57377904", "x": 970, "y": 1100, "width": 180, "height": 30},
+        {"name": "firefly", "id": 37, "_eid": "57574758", "x": 1150, "y": 930},
+        {"name": "leaf", "id": 38, "_eid": "57377904", "x": 740, "y": 1260, "width": 180, "height": 30},
+        {"name": "sticky", "id": 39, "_eid": "57409953", "x": 840, "y": 840, "width": 210, "height": 170},
+        {"name": "firefly", "id": 41, "_eid": "57574758", "x": 1370, "y": 1190},
+        {"name": "ground", "id": 42, "_eid": "57405180", "x": 70, "y": 1330, "width": 150, "height": 120},
+        {"name": "firefly", "id": 43, "_eid": "57574758", "x": 1070, "y": 1280},
+        {"name": "ground", "id": 44, "_eid": "57405180", "x": 980, "y": 1340, "width": 180, "height": 110},
+        {"name": "crouchJump-right", "id": 45, "_eid": "23641656", "x": 480, "y": 1150},
+        {"name": "wall", "id": 46, "_eid": "57390486", "x": 1450, "y": 620, "width": 30, "height": 830},
+        {"name": "leaf", "id": 47, "_eid": "57377904", "x": 1490, "y": 1030, "width": 140, "height": 30},
+        {"name": "leaf", "id": 49, "_eid": "57377904", "x": 1290, "y": 810, "width": 150, "height": 30},
+        {"name": "ground", "id": 51, "_eid": "57405180", "x": -90, "y": 840, "width": 160, "height": 610},
+        {"name": "leaf", "id": 53, "_eid": "57377904", "x": -100, "y": 810, "width": 180, "height": 30},
+        {"name": "wall", "id": 54, "_eid": "57390486", "x": -50, "y": 740, "width": 80, "height": 70},
+        {
+          "name": "spikes",
+          "id": 55,
+          "_eid": "57417469",
+          "x": -110,
+          "y": 630,
+          "width": 200,
+          "height": 160,
+          "values": {"facing": "none", "length": 0.4}
+        },
+        {
+          "name": "spikes",
+          "id": 56,
+          "_eid": "57417469",
+          "x": -80,
+          "y": 660,
+          "width": 140,
+          "height": 100,
+          "values": {"facing": "none", "length": 0.5}
+        },
+        {"name": "firefly", "id": 57, "_eid": "57574758", "x": 1360, "y": 760},
+        {"name": "firefly", "id": 58, "_eid": "57574758", "x": 1370, "y": 1380},
+        {"name": "firefly", "id": 59, "_eid": "57574758", "x": 590, "y": 1400},
+        {"name": "sticky", "id": 60, "_eid": "57409953", "x": 1390, "y": 440, "width": 150, "height": 150},
+        {"name": "leaf", "id": 61, "_eid": "57377904", "x": 980, "y": 1340, "width": 180, "height": 30},
+        {"name": "leaf", "id": 62, "_eid": "57377904", "x": 70, "y": 1330, "width": 150, "height": 30},
+        {
+          "name": "spikes",
+          "id": 63,
+          "_eid": "57417469",
+          "x": 1360,
+          "y": 440,
+          "width": 30,
+          "height": 150,
+          "values": {"facing": "left", "length": 0.8}
+        },
+        {
+          "name": "spikes",
+          "id": 64,
+          "_eid": "57417469",
+          "x": 1390,
+          "y": 410,
+          "width": 150,
+          "height": 30,
+          "values": {"facing": "up", "length": 0.8}
+        },
+        {
+          "name": "spikes",
+          "id": 65,
+          "_eid": "57417469",
+          "x": 1540,
+          "y": 440,
+          "width": 30,
+          "height": 150,
+          "values": {"facing": "right", "length": 0.8}
+        },
+        {"name": "leaf", "id": 66, "_eid": "57377904", "x": 1410, "y": 590, "width": 110, "height": 30}
+      ]
+    }
+  ]
+}

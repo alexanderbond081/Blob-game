@@ -11,6 +11,13 @@ export const OBSTACLE_BODY_LABEL = 'obstacle';
 /** Minimum dot(normal, worldUp) for a contact to count as standing on a surface (~60° max slope). */
 export const WALKABLE_NORMAL_THRESHOLD = 0.5;
 
+/**
+ * Max slope that still counts as ground via contact-X inset.
+ * A circle on a 50° slope has |contact.x − center.x| = radius × sin(50°);
+ * steeper / rim / cube-corner hits sit further out and are not support.
+ */
+export const MAX_WALKABLE_SLOPE_DEG = 35;
+
 /** Minimum |support.x| for a contact to count as a vertical wall (~60° from floor). */
 export const WALL_NORMAL_THRESHOLD = 0.5;
 
@@ -25,6 +32,8 @@ export type PhysicsCollisionInfo = {
 	bodyA: Body;
 	bodyB: Body;
 	normal: Vector;
+	/** Average X of this step's contact points, or null if the pair has none. */
+	contactX: number | null;
 };
 
 export const setPlatformType = (body: Body, type: PlatformType): void => {
@@ -53,12 +62,15 @@ export const getSupportNormal = (
 	return { x: -pairNormal.x, y: -pairNormal.y };
 };
 
+const MAX_WALKABLE_CONTACT_OFFSET_RATIO = Math.sin((MAX_WALKABLE_SLOPE_DEG * Math.PI) / 180);
+
 /** True when the player is supported from below (floor, slope, moving platform). */
 export const isWalkableContact = (
 	playerBody: Body,
 	bodyA: Body,
 	bodyB: Body,
 	pairNormal: Vector,
+	contactX: number | null = null,
 	threshold = WALKABLE_NORMAL_THRESHOLD,
 ): boolean => {
 	if (bodyA.id !== playerBody.id && bodyB.id !== playerBody.id) {
@@ -66,7 +78,14 @@ export const isWalkableContact = (
 	}
 
 	const supportNormal = getSupportNormal(playerBody, bodyA, bodyB, pairNormal);
-	return Vector.dot(supportNormal, WORLD_UP) > threshold;
+	if (Vector.dot(supportNormal, WORLD_UP) <= threshold) {
+		return false;
+	}
+
+	const halfWidth = (playerBody.bounds.max.x - playerBody.bounds.min.x) * 0.5;
+	const maxOffsetX = halfWidth * MAX_WALKABLE_CONTACT_OFFSET_RATIO;
+	const resolvedContactX = contactX ?? (playerBody.position.x - supportNormal.x * halfWidth);
+	return Math.abs(resolvedContactX - playerBody.position.x) <= maxOffsetX;
 };
 
 /**

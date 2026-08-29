@@ -1,38 +1,47 @@
 {
 	"id": "meadow-04",
 	"size": { "width": 1500, "height": 1500 },
-	"spawn": { "x": 110, "y": 470 },
-	"exit": { "x": 950, "y": 650, "slots": 4 },
+	"spawn": { "x": 210, "y": 320 },
+	"exit": { "x": 1300, "y": 370, "slots": 4 },
 	"backgrounds": [
 		{ "id": "sky", "texture": "meadow-bg-sky", "parallax": 0 },
 		{ "id": "far", "texture": "meadow-bg-far", "parallax": 0.1 },
 		{ "id": "mid", "texture": "meadow-bg-mid", "parallax": 0.3 }
 	],
 	"hints": [
-		{ "kind": "crouchJump-right", "x": 480, "y": 350 }
+		{ "kind": "crouchJump-right", "x": 300, "y": 370 },
+		{ "kind": "crouchJump-right", "x": 980, "y": 370 }
 	],
 	"platforms": [
-		{ "x": -20, "y": 50, "width": 1540, "height": 60, "type": "ground" },
-		{ "x": 1510, "y": 1490, "width": 30, "height": 1500, "type": "wall" },
-		{ "x": -40, "y": 1490, "width": 30, "height": 1500, "type": "wall" },
-		{ "x": 1260, "y": 260, "width": 200, "height": 30, "type": "leaf" },
-		{ "x": 490, "y": 380, "width": 200, "height": 30, "type": "leaf" },
-		{ "x": -10, "y": 340, "width": 230, "height": 30, "type": "leaf" },
-		{ "x": 930, "y": 490, "width": 30, "height": 440, "type": "wall" },
-		{ "x": 980, "y": 400, "width": 200, "height": 30, "type": "leaf" },
-		{ "x": 720, "y": 240, "width": 200, "height": 30, "type": "leaf" },
-		{ "x": 820, "y": 550, "width": 250, "height": 60, "type": "sticky" },
-		{ "x": 20, "y": 170, "width": 150, "height": 120, "type": "ground" },
-		{ "x": 980, "y": 160, "width": 180, "height": 110, "type": "ground" }
+		{ "x": -110, "y": 60, "width": 1630, "height": 60, "type": "ground" },
+		{ "x": 550, "y": 240, "width": 160, "height": 180, "type": "ground" },
+		{ "x": 30, "y": 890, "width": 30, "height": 420, "type": "wall" },
+		{ "x": -80, "y": 1180, "width": 250, "height": 290, "type": "sticky" },
+		{ "x": 70, "y": 640, "width": 80, "height": 30, "type": "leaf" },
+		{ "x": 550, "y": 240, "width": 160, "height": 30, "type": "leaf" },
+		{ "x": -40, "y": 440, "width": 160, "height": 380, "type": "ground" },
+		{ "x": -50, "y": 470, "width": 180, "height": 30, "type": "leaf" },
+		{ "x": -60, "y": 800, "width": 80, "height": 30, "type": "leaf" },
+		{ "x": 1230, "y": 270, "width": 140, "height": 210, "type": "ground" },
+		{ "x": 1400, "y": 840, "width": 30, "height": 780, "type": "wall" },
+		{ "x": 1260, "y": 710, "width": 130, "height": 30, "type": "leaf" },
+		{ "x": 1440, "y": 600, "width": 120, "height": 30, "type": "leaf" },
+		{ "x": 1300, "y": 500, "width": 90, "height": 30, "type": "leaf" },
+		{ "x": 1440, "y": 390, "width": 80, "height": 30, "type": "leaf" },
+		{ "x": 710, "y": 90, "width": 520, "height": 30, "type": "leaf" },
+		{ "x": 1230, "y": 270, "width": 140, "height": 30, "type": "leaf" }
 	],
 	"hazards": [
+		{ "type": "spikes", "x": 110, "y": 1130, "width": 30, "height": 30, "length": 0.2 },
+		{ "type": "spikes", "x": 50, "y": 970, "width": 30, "height": 30, "length": 0.2 },
+		{ "type": "spikes", "x": -40, "y": 1090, "width": 30, "height": 30, "length": 0.2 },
+		{ "type": "spikes", "x": 1320, "y": 1000, "width": 190, "height": 190, "length": 0.3 }
 	],
 	"collectibles": [
-		{ "id": "fly-0", "x": 820, "y": 110, "type": "firefly" },
-		{ "id": "fly-1", "x": 590, "y": 450, "type": "firefly" },
-		{ "id": "fly-2", "x": 100, "y": 240, "type": "firefly" },
-		{ "id": "fly-3", "x": 1130, "y": 580, "type": "firefly" },
-		{ "id": "fly-4", "x": 1360, "y": 310, "type": "firefly" },
-		{ "id": "fly-5", "x": 1070, "y": 220, "type": "firefly" }
+		{ "id": "fly-0", "x": 630, "y": 310, "type": "firefly" },
+		{ "id": "fly-1", "x": 390, "y": 110, "type": "firefly" },
+		{ "id": "fly-2", "x": 880, "y": 140, "type": "firefly" },
+		{ "id": "fly-3", "x": 1090, "y": 260, "type": "firefly" },
+		{ "id": "fly-4", "x": 820, "y": 430, "type": "firefly" }
 	]
 }
