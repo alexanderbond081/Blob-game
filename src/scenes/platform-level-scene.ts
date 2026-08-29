@@ -193,7 +193,6 @@ export class PlatformLevelScene extends Scene {
 		const player = this.levelRoot.player;
 
 		if (player.finishDeathIfReady(this.spawnX, this.spawnY)) {
-			console.info('[player] burst complete — respawned at spawn');
 			return;
 		}
 
@@ -204,7 +203,6 @@ export class PlatformLevelScene extends Scene {
 		if (player.position.y > this.fallLimitY) {
 			this.registerDeath();
 			player.beginDeath();
-			console.info('[player] fell below level — bursting');
 		}
 	}
 
@@ -236,10 +234,6 @@ export class PlatformLevelScene extends Scene {
 			timeSec: this.runTimeSec,
 			deaths: this.runDeaths,
 		};
-		console.info(
-			`[level] exit ${payload.levelId} collected=${payload.collected}/${payload.totalFireflies} `
-			+ `time=${payload.timeSec.toFixed(1)}s deaths=${payload.deaths}`,
-		);
 		this.emit('level-exit', payload);
 	}
 
@@ -259,7 +253,6 @@ export class PlatformLevelScene extends Scene {
 
 		this.registerDeath();
 		player.beginDeath();
-		console.info('[player] hit hazard — bursting');
 	}
 
 	private registerDeath(): void {
@@ -296,6 +289,5 @@ export class PlatformLevelScene extends Scene {
 		SoundManager.playSound('firefly-wind', 3);
 		this.collected++;
 		collectible.deliverToPortal(this.levelRoot.portal, this.collected === this.totalFireflies);
-		console.info(`collected ${this.collected} fireflies`);
 	}
 }

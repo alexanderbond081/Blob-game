@@ -393,7 +393,6 @@ async function handleLevelExit(payload: LevelExitEvent): Promise<void> {
 	);
 	pendingResultNextSceneId = nextSceneId;
 	pendingResultLevelId = payload.levelId;
-	console.info(`[level] clear ${payload.levelId} → modal (next=${nextSceneId ?? 'main-menu'})`);
 
 	isPaused = true;
 	gameHUD.closePauseModal();
@@ -480,7 +479,6 @@ async function resetProgressDebug(): Promise<void> {
 
 	GameProgress.shared.resetToDefaults();
 	applyProgressAudioSettings(GameProgress.shared);
-	console.info('[GameProgress] reset via Alt+R');
 
 	pendingResultNextSceneId = null;
 	pendingResultLevelId = null;

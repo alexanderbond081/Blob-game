@@ -223,7 +223,8 @@
 					"data": {
 						"resolution": 2,
 						"autoGenerateMipmaps": true,
-						"scaleMode": "linear"
+						"scaleMode": "linear",
+						"cachePrefix": "blob/"
 					}
 				},
 				{
@@ -232,7 +233,8 @@
 					"data": {
 						"resolution": 2,
 						"autoGenerateMipmaps": true,
-						"scaleMode": "linear"
+						"scaleMode": "linear",
+						"cachePrefix": "blob-green/"
 					}
 				},
 				{
@@ -241,7 +243,8 @@
 					"data": {
 						"resolution": 2,
 						"autoGenerateMipmaps": true,
-						"scaleMode": "linear"
+						"scaleMode": "linear",
+						"cachePrefix": "blob-red/"
 					}
 				},
 				{
@@ -250,7 +253,8 @@
 					"data": {
 						"resolution": 2,
 						"autoGenerateMipmaps": true,
-						"scaleMode": "linear"
+						"scaleMode": "linear",
+						"cachePrefix": "blob-pink/"
 					}
 				},
 				{
