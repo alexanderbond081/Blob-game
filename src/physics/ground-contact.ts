@@ -16,7 +16,7 @@ export const WALKABLE_NORMAL_THRESHOLD = 0.5;
  * A circle on a 50° slope has |contact.x − center.x| = radius × sin(50°);
  * steeper / rim / cube-corner hits sit further out and are not support.
  */
-export const MAX_WALKABLE_SLOPE_DEG = 35;
+export const MAX_WALKABLE_SLOPE_DEG = 45;
 
 /** Minimum |support.x| for a contact to count as a vertical wall (~60° from floor). */
 export const WALL_NORMAL_THRESHOLD = 0.5;

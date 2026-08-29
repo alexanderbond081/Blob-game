@@ -20,7 +20,7 @@
 		{ "x": 490, "y": 500, "width": 100, "height": 30, "type": "leaf" },
 		{ "x": 380, "y": 380, "width": 100, "height": 30, "type": "leaf" },
 		{ "x": 270, "y": 260, "width": 100, "height": 30, "type": "leaf" },
-		{ "x": -110, "y": 150, "width": 290, "height": 100, "type": "ground" },
+		{ "x": -110, "y": 150, "width": 290, "height": 90, "type": "ground" },
 		{ "x": 1420, "y": 510, "width": 30, "height": 420, "type": "wall" },
 		{ "x": 820, "y": 280, "width": 230, "height": 30, "type": "leaf" },
 		{ "x": 1310, "y": 800, "width": 240, "height": 290, "type": "sticky" },
