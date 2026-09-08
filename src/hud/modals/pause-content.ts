@@ -12,7 +12,7 @@ const RESUME_BUTTON_SIZE = 100;
 const BUTTON_GAP = 36;
 /** Shift button row below vertical center so the title sits in the upper band. */
 const BUTTONS_Y = 28;
-const TITLE_Y = -78;
+const TITLE_Y = -74;
 
 /**
  * Pause modal body: "Paused" title + Home | Resume (Play art) | Restart.
@@ -57,7 +57,7 @@ export class PauseModalContent extends Container {
 		const panelSheet = await Assets.load<Spritesheet>('pause-panel-buttons');
 		const playSheet = await Assets.load<Spritesheet>('play-button');
 
-		this.title = createModalTitle('Paused', 44);
+		this.title = createModalTitle('Paused', 38);
 		this.addChild(this.title);
 
 		this.homeButton = UIButton.fromSpritesheet(

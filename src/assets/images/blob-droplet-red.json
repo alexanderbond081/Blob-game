@@ -6,7 +6,7 @@
 		"idle": ["droplet-idle"]
 	},
 	"meta": {
-	  "image": "droplet-blue.webp",
+	  "image": "droplet-red.webp",
 	  "scale": "1"
 	}
   }

@@ -164,9 +164,10 @@ export class GameProgress {
 			const parsed = parseState(JSON.parse(raw) as unknown);
 			progress.state = parsed ?? createDefaultState();
 			progress.ensureDefaultUnlockedSkins();
+			const capsDirty = progress.capAllCatalogCollected();
 			if (!parsed) {
 				progress.save();
-			} else if (progress.consumeSkinMigrationDirty()) {
+			} else if (progress.consumeSkinMigrationDirty() || capsDirty) {
 				progress.save();
 			}
 		} catch (error) {
@@ -204,7 +205,12 @@ export class GameProgress {
 	}
 
 	public getLevelProgress(levelId: string): LevelProgress {
-		return this.ensureLevel(levelId);
+		const level = this.ensureLevel(levelId);
+		if (this.capBestCollected(levelId, level)) {
+			this.save();
+		}
+
+		return level;
 	}
 
 	public unlock(levelId: string): void {
@@ -218,7 +224,9 @@ export class GameProgress {
 
 	public recordRunCollected(levelId: string, collected: number): void {
 		const level = this.ensureLevel(levelId);
-		level.bestCollected = Math.max(level.bestCollected, collected);
+		const cap = getLevelTotalFireflies(levelId);
+		const runCollected = Number.isFinite(collected) ? Math.max(0, Math.floor(collected)) : 0;
+		level.bestCollected = Math.min(cap, Math.max(level.bestCollected, runCollected));
 	}
 
 	public markLevelCompleted(levelId: string): void {
@@ -284,11 +292,43 @@ export class GameProgress {
 		return dirty;
 	}
 
+	/**
+	 * Level JSON can shrink while the save id stays the same. Cap the stored
+	 * best so the UI never shows 10/6 after fireflies were removed.
+	 */
+	private capBestCollected(levelId: string, level: LevelProgress): boolean {
+		const cap = getLevelTotalFireflies(levelId);
+		const raw = Number.isFinite(level.bestCollected) ? Math.floor(level.bestCollected) : 0;
+		const next = Math.min(Math.max(0, raw), cap);
+		if (next === level.bestCollected) {
+			return false;
+		}
+
+		level.bestCollected = next;
+		return true;
+	}
+
+	private capAllCatalogCollected(): boolean {
+		let dirty = false;
+		for (const scene of gameSceneCatalog) {
+			if (this.capBestCollected(scene.id, this.ensureLevel(scene.id))) {
+				dirty = true;
+			}
+		}
+
+		return dirty;
+	}
+
 	public getCarouselEntries(): LevelCarouselEntry[] {
 		const entries: LevelCarouselEntry[] = [];
+		let capsDirty = false;
 
 		for (const scene of gameSceneCatalog) {
 			const level = this.ensureLevel(scene.id);
+			if (this.capBestCollected(scene.id, level)) {
+				capsDirty = true;
+			}
+
 			entries.push({
 				id: scene.id,
 				title: scene.title,
@@ -297,6 +337,10 @@ export class GameProgress {
 				collected: level.bestCollected,
 				unlocked: level.unlocked,
 			});
+		}
+
+		if (capsDirty) {
+			this.save();
 		}
 
 		return entries;

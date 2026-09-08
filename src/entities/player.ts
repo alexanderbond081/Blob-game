@@ -38,6 +38,8 @@ const CROUCH_JUMP_VELOCITY = -14;
 const STICKY_CLING_MAX_SPEED_Y = Math.abs(JUMP_VELOCITY) * 0.8;
 /** Slow slide while clinging (px per physics frame). */
 const STICKY_SLIDE_SPEED_Y = 0.05;
+/** Cling slide while holding down / analog down (px per physics frame). */
+const STICKY_SLIDE_HOLD_SPEED_Y = 2.5;
 /** Small push into the wall so Matter keeps the contact while clinging. */
 const STICKY_HOLD_SPEED_X = 0.8;
 /** Wall jump vertical impulse = 4/5 of a normal jump. */
@@ -457,7 +459,7 @@ export class Player extends PhysicsBody {
 		const jumpLockedIn = keyJump || this.touchControls.jumpCommitted;
 
 		if (this.clinging) {
-			this.applyClingInput(moveX, jumpPressed, jumpAmount, onGround);
+			this.applyClingInput(moveX, jumpPressed, jumpAmount, onGround, this.resolveClingSlideDown(keyCrouch));
 			return;
 		}
 
@@ -557,7 +559,7 @@ export class Player extends PhysicsBody {
 		}
 
 		if (this.clinging) {
-			this.applyClingVelocity();
+			this.applyClingVelocity(this.resolveClingSlideDown(keyCrouch));
 			return;
 		}
 
@@ -583,6 +585,7 @@ export class Player extends PhysicsBody {
 		jumpPressed: boolean,
 		jumpAmount: number,
 		onGround: boolean,
+		slideDown: number,
 	): void {
 		let moveDirection = axisDirection(moveX);
 		const towardWall = this.clingSide === 'left' ? -1 : 1;
@@ -632,7 +635,7 @@ export class Player extends PhysicsBody {
 				return;
 			}
 
-			this.applyClingVelocity();
+			this.applyClingVelocity(slideDown);
 			return;
 		}
 
@@ -656,7 +659,7 @@ export class Player extends PhysicsBody {
 			this.clingPeelFramesLeft = 0;
 		}
 
-		this.applyClingVelocity();
+		this.applyClingVelocity(slideDown);
 	}
 
 	private tryStartCling(): void {
@@ -717,17 +720,25 @@ export class Player extends PhysicsBody {
 		return wallBody.bounds.min.y < (this.body.position.y - PLAYER_RADIUS / 2);
 	}
 
-	private applyClingVelocity(): void {
+	private applyClingVelocity(slideDown = 0): void {
 		if (!this.clingSide) {
 			return;
 		}
 
 		const holdX = this.clingSide === 'left' ? -STICKY_HOLD_SPEED_X : STICKY_HOLD_SPEED_X;
+		const axis = Math.max(0, Math.min(1, slideDown));
+		const slideY = STICKY_SLIDE_SPEED_Y
+			+ (STICKY_SLIDE_HOLD_SPEED_Y - STICKY_SLIDE_SPEED_Y) * axis;
 		this.facingRight = this.clingSide === 'left';
 		Body.setVelocity(this.body, {
 			x: holdX,
-			y: STICKY_SLIDE_SPEED_Y,
+			y: slideY,
 		});
+	}
+
+	/** Keyboard down is digital 1; touch analog is live moveY. Latched crouch is not a slide. */
+	private resolveClingSlideDown(keyCrouch: boolean): number {
+		return keyCrouch ? 1 : Math.max(0, this.touchControls.moveY);
 	}
 
 	private endCling(playUnstickSound = true): void {

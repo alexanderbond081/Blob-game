@@ -87,6 +87,27 @@
 			"name": "ui-elements",
 			"assets": [
 				{
+					"alias": "font-lemon",
+					"src": "assets/fonts/Lemon-Regular.ttf",
+					"data": {
+						"family": "Lemon"
+					}
+				},
+				{
+					"alias": "font-lemonada",
+					"src": "assets/fonts/Lemonada.ttf",
+					"data": {
+						"family": "Lemonada"
+					}
+				},
+				{
+					"alias": "font-nunito",
+					"src": "assets/fonts/Nunito.ttf",
+					"data": {
+						"family": "Nunito"
+					}
+				},
+				{
 					"alias": "sound-button",
 					"src": "assets/images/sound-button.json",
 					"data": {
@@ -211,6 +232,51 @@
 						"autoGenerateMipmaps": true,
 						"scaleMode": "linear"
 					}
+				},
+				{
+					"alias": "firefly-icon",
+					"src": "assets/images/firefly-icon.webp",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "grass-decor",
+					"src": "assets/images/grass-decor.webp",
+					"data": {
+						"resolution": 2.5,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "scull-icon",
+					"src": "assets/images/scull-icon.webp",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "star2-decor",
+					"src": "assets/images/star2-decor.webp",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "watch-icon",
+					"src": "assets/images/watch-icon.webp",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
 				}
 			]
 		},
@@ -262,7 +328,35 @@
 					"src": "assets/images/blob-droplet.json",
 					"data": {
 						"resolution": 2,
-						"scaleMode": "linear"
+						"scaleMode": "linear",
+						"cachePrefix": "blob-droplet/"
+					}
+				},
+				{
+					"alias": "blob-droplet-green",
+					"src": "assets/images/blob-droplet-green.json",
+					"data": {
+						"resolution": 2,
+						"scaleMode": "linear",
+						"cachePrefix": "blob-droplet-green/"
+					}
+				},
+				{
+					"alias": "blob-droplet-pink",
+					"src": "assets/images/blob-droplet-pink.json",
+					"data": {
+						"resolution": 2,
+						"scaleMode": "linear",
+						"cachePrefix": "blob-droplet-pink/"
+					}
+				},
+				{
+					"alias": "blob-droplet-red",
+					"src": "assets/images/blob-droplet-red.json",
+					"data": {
+						"resolution": 2,
+						"scaleMode": "linear",
+						"cachePrefix": "blob-droplet-red/"
 					}
 				},
 				{

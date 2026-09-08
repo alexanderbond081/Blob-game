@@ -140,7 +140,7 @@ Goal: a build good enough to publish on itch.io and send to Poki for publishing 
 - Touch follow-ups (not blockers): `pointerup` capture race vs Pixi up position; `touchend` identifier vs `pointerId`; `pointercancel` vs `touchcancel`; flick that pauses before lift; pause/blur leaving a committed jump; failed takeoff leaving a ground run — see [`plans/poki.md`](./plans/poki.md)
 - Portal entry (blob suck-in) animation before the result modal — deferred
 - More player kit still queued (double jump / flight, dash, glide) — see mechanics backlog
-- Platform plates and the spike saw are the ship look (optional later: tint / alpha; round the spike inner core). Spike killbox inset 6 px vs the drawn box. Stones / branches are opaque Graphics. Per-skin droplet assets deferred (catalog field ready)
+- Platform plates and the spike saw are the ship look (optional later: tint / alpha; round the spike inner core). Spike killbox inset 6 px vs the drawn box. Stones / branches are opaque Graphics. Death droplets follow the selected skin (`blob-droplet-*`)
 - Blob vs stones/branches: kinematic `setVelocity` (game feel) vs Matter mass is an open compromise. Side-probe ½-speed is the current stand-in; force-based player deferred (see mechanics backlog)
 - Bundle is heavier than an ideal Poki first download (`bundle.js` ~1.4 MB + music) — optimize before portal submit
 - Meadow sky/far/mid plates still need re-export to the bleed spec so portrait and wide iframes fully cover the pad ([`plans/poki.md`](plans/poki.md) → Viewport)

@@ -2,6 +2,8 @@
 export type PlayerControls = {
 	/** Horizontal axis, −1 = full left, +1 = full right. */
 	moveX: number;
+	/** Downward axis, 0 = idle, +1 = full down. Live analog; not a latch. */
+	moveY: number;
 	/** Jump axis this frame, 0 = idle, 1 = full jump. Impulse, not a hold-to-cut. */
 	jump: number;
 	crouch: boolean;
@@ -19,6 +21,7 @@ export const PLAYER_AXIS_DEADZONE = 0.2;
 
 export const createEmptyPlayerControls = (): PlayerControls => ({
 	moveX: 0,
+	moveY: 0,
 	jump: 0,
 	crouch: false,
 	jumpCommitted: false,

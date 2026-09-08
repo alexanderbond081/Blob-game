@@ -26,14 +26,13 @@
         {"name": "leaf", "id": 8, "_eid": "57377904", "x": -150, "y": 520, "width": 200, "height": 30},
         {"name": "leaf", "id": 9, "_eid": "57377904", "x": -100, "y": 810, "width": 150, "height": 30},
         {"name": "leaf", "id": 10, "_eid": "57377904", "x": -10, "y": 1110, "width": 60, "height": 30},
-        {"name": "ground", "id": 11, "_eid": "57405180", "x": 560, "y": 1380, "width": 90, "height": 80},
         {"name": "firefly", "id": 12, "_eid": "57574758", "x": 930, "y": 1400},
         {
           "name": "portal",
           "id": 14,
           "_eid": "57607701",
           "x": 1190,
-          "y": 1380,
+          "y": 1320,
           "values": {"slots": 1}
         },
         {"name": "leaf", "id": 15, "_eid": "57377904", "x": 1170, "y": 1020, "width": 130, "height": 30},
@@ -53,7 +52,9 @@
         {"name": "move-right", "id": 21, "_eid": "21541517", "x": 290, "y": 430},
         {"name": "jump-right", "id": 22, "_eid": "21594732", "x": 500, "y": 1180},
         {"name": "sticky", "id": 23, "_eid": "57409953", "x": -50, "y": -250, "width": 250, "height": 250},
-        {"name": "firefly", "id": 24, "_eid": "57574758", "x": 360, "y": 640}
+        {"name": "firefly", "id": 24, "_eid": "57574758", "x": 360, "y": 640},
+        {"name": "wall", "id": 25, "_eid": "57390486", "x": 570, "y": 1380, "width": 90, "height": 80},
+        {"name": "leaf", "id": 26, "_eid": "57377904", "x": 570, "y": 1380, "width": 90, "height": 30}
       ]
     }
   ]

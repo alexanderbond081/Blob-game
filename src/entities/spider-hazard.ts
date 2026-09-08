@@ -17,7 +17,10 @@ const LOOK_OUT_FRAME_SEC = 1;
 const WEB_WIDTH = 2;
 const WEB_COLOR = 0xffffff;
 const WEB_ALPHA = 0.88;
+/** How far the silk end sits below the sprite top (into the abdomen). */
 const ABDOMEN_INSET = 8;
+/** Extra length past the abdomen point so the sprite covers the line end. */
+const WEB_OVERLAP_Y = 8;
 
 type SpiderPhase = 'waitTop' | 'drop' | 'bounce' | 'lookOut' | 'climb';
 type SpiderAnim = 'idle' | 'look-out' | 'climb' | 'drop';
@@ -151,7 +154,7 @@ export class SpiderHazard extends PatrolHazard {
 		this.web.clear();
 		this.web
 			.moveTo(startX, startY)
-			.lineTo(0, this.abdomenLocalY)
+			.lineTo(0, this.abdomenLocalY + WEB_OVERLAP_Y)
 			.stroke({ width: WEB_WIDTH, color: WEB_COLOR, alpha: WEB_ALPHA, cap: 'round' });
 	}
 

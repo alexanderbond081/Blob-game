@@ -9,9 +9,9 @@ export type SkinCatalogEntry = {
 
 export const skinsCatalog: SkinCatalogEntry[] = [
 	{ id: 'default', displayName: 'Default', blobSheetAlias: 'blob', dropletAlias: 'blob-droplet' },
-	{ id: 'green', displayName: 'Green', blobSheetAlias: 'blob-green', dropletAlias: 'blob-droplet' },
-	{ id: 'pink', displayName: 'Pink', blobSheetAlias: 'blob-pink', dropletAlias: 'blob-droplet' },
-	{ id: 'red', displayName: 'Red', blobSheetAlias: 'blob-red', dropletAlias: 'blob-droplet' },
+	{ id: 'green', displayName: 'Green', blobSheetAlias: 'blob-green', dropletAlias: 'blob-droplet-green' },
+	{ id: 'pink', displayName: 'Pink', blobSheetAlias: 'blob-pink', dropletAlias: 'blob-droplet-pink' },
+	{ id: 'red', displayName: 'Red', blobSheetAlias: 'blob-red', dropletAlias: 'blob-droplet-red' },
 ];
 
 /** Demo/test UI: first three catalog skins start unlocked. */

@@ -15,9 +15,9 @@
       "gridCellsX": 150,
       "gridCellsY": 150,
       "entities": [
-        {"name": "ground", "id": 0, "_eid": "57405180", "x": -110, "y": 1440, "width": 1610, "height": 60},
+        {"name": "ground", "id": 0, "_eid": "57405180", "x": -110, "y": 1440, "width": 1660, "height": 60},
         {"name": "blob", "id": 16, "_eid": "57583892", "x": 760, "y": 640},
-        {"name": "ground", "id": 17, "_eid": "57405180", "x": 710, "y": 760, "width": 100, "height": 580},
+        {"name": "ground", "id": 17, "_eid": "57405180", "x": 710, "y": 960, "width": 110, "height": 380},
         {"name": "firefly", "id": 23, "_eid": "57574758", "x": 640, "y": 750},
         {"name": "firefly", "id": 24, "_eid": "57574758", "x": 200, "y": 1310},
         {
@@ -25,7 +25,7 @@
           "id": 25,
           "_eid": "57607701",
           "x": 930,
-          "y": 1110,
+          "y": 1090,
           "values": {"slots": 3}
         },
         {"name": "leaf", "id": 29, "_eid": "57377904", "x": 590, "y": 880, "width": 110, "height": 30},
@@ -37,13 +37,13 @@
         {"name": "firefly", "id": 37, "_eid": "57574758", "x": 1290, "y": 1260},
         {"name": "leaf", "id": 38, "_eid": "57377904", "x": 820, "y": 1220, "width": 230, "height": 30},
         {"name": "sticky", "id": 39, "_eid": "57409953", "x": 1310, "y": 700, "width": 240, "height": 290},
-        {"name": "leaf", "id": 40, "_eid": "57377904", "x": 1460, "y": 1190, "width": 80, "height": 30},
+        {"name": "leaf", "id": 40, "_eid": "57377904", "x": 1460, "y": 1190, "width": 100, "height": 30},
         {"name": "move-left", "id": 41, "_eid": "21593636", "x": 470, "y": 560},
         {"name": "jump-left", "id": 42, "_eid": "21590966", "x": 1030, "y": 990},
-        {"name": "leaf", "id": 43, "_eid": "57377904", "x": 700, "y": 730, "width": 120, "height": 30},
+        {"name": "leaf", "id": 43, "_eid": "57377904", "x": 700, "y": 730, "width": 580, "height": 30},
         {"name": "ground", "id": 44, "_eid": "57405180", "x": -110, "y": 830, "width": 160, "height": 420},
         {"name": "leaf", "id": 45, "_eid": "57377904", "x": -120, "y": 800, "width": 180, "height": 30},
-        {"name": "leaf", "id": 46, "_eid": "57377904", "x": 1330, "y": 1080, "width": 80, "height": 30},
+        {"name": "leaf", "id": 46, "_eid": "57377904", "x": 1310, "y": 1080, "width": 100, "height": 30},
         {"name": "wall", "id": 47, "_eid": "57390486", "x": -40, "y": 730, "width": 30, "height": 70},
         {
           "name": "spikes",
@@ -85,8 +85,8 @@
           "height": 30,
           "values": {"facing": "none", "length": 0.2}
         },
-        {"name": "ground", "id": 53, "_eid": "57405180", "x": 1210, "y": 1320, "width": 160, "height": 120},
-        {"name": "leaf", "id": 54, "_eid": "57377904", "x": 1370, "y": 1410, "width": 130, "height": 30},
+        {"name": "ground", "id": 53, "_eid": "57405180", "x": 1200, "y": 1320, "width": 190, "height": 120},
+        {"name": "leaf", "id": 54, "_eid": "57377904", "x": 1390, "y": 1410, "width": 160, "height": 30},
         {
           "name": "spikes",
           "id": 55,
@@ -97,21 +97,45 @@
           "height": 100,
           "values": {"facing": "none", "length": 0.5}
         },
-        {"name": "branch", "id": 56, "_eid": "73002720", "x": 760, "y": 1350, "width": 80, "height": 80, "originX": 40, "originY": 0, "rotation": 0},
         {"name": "move-right", "id": 57, "_eid": "21541517", "x": 480, "y": 1180},
         {"name": "firefly", "id": 58, "_eid": "57574758", "x": 970, "y": 1390},
+        {"name": "ground", "id": 61, "_eid": "57405180", "x": 710, "y": 760, "width": 560, "height": 200},
+        {"name": "leaf", "id": 62, "_eid": "57377904", "x": 1200, "y": 1320, "width": 190, "height": 30},
+        {"name": "stone", "id": 63, "_eid": "72670618", "x": 760, "y": 1390, "width": 80, "height": 80, "originX": 40, "originY": 40},
+        {"name": "wall", "id": 64, "_eid": "57390486", "x": 1000, "y": 420, "width": 30, "height": 310},
+        {"name": "leaf", "id": 65, "_eid": "57377904", "x": 970, "y": 370, "width": 90, "height": 50},
+        {"name": "leaf", "id": 66, "_eid": "57377904", "x": 1030, "y": 580, "width": 60, "height": 30},
+        {"name": "leaf", "id": 67, "_eid": "57377904", "x": 940, "y": 500, "width": 60, "height": 30},
         {
           "name": "spikes",
-          "id": 59,
+          "id": 68,
           "_eid": "57417469",
-          "x": 850,
-          "y": 790,
-          "width": 350,
-          "height": 30,
-          "values": {"facing": "up", "length": 0.7}
+          "x": 890,
+          "y": 480,
+          "width": 70,
+          "height": 70,
+          "values": {"facing": "none", "length": 0.5}
         },
-        {"name": "ground", "id": 61, "_eid": "57405180", "x": 850, "y": 820, "width": 350, "height": 50},
-        {"name": "leaf", "id": 62, "_eid": "57377904", "x": 1210, "y": 1320, "width": 160, "height": 30}
+        {
+          "name": "spikes",
+          "id": 69,
+          "_eid": "57417469",
+          "x": 1070,
+          "y": 560,
+          "width": 70,
+          "height": 70,
+          "values": {"facing": "none", "length": 0.5}
+        },
+        {
+          "name": "spikes",
+          "id": 70,
+          "_eid": "57417469",
+          "x": 940,
+          "y": 270,
+          "width": 150,
+          "height": 120,
+          "values": {"facing": "none", "length": 0.4}
+        }
       ]
     }
   ]

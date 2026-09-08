@@ -30,6 +30,24 @@ type StrokeMeasure = {
 	durationMs: number;
 };
 
+/**
+ * What a swipe is judged on. Amplitude runs from the anchor while speed and
+ * angle come from the release window only — a separate type so the two can not
+ * be quietly measured over the same span again.
+ */
+type SwipeMeasure = {
+	angle: number;
+	distance: number;
+	speed: number;
+};
+
+/** Speed and heading averaged over the window, plus the sample it started at. */
+type WindowVelocity = {
+	angle: number;
+	speed: number;
+	from: StrokeSample;
+};
+
 type Stroke = {
 	pointerId: number;
 	downX: number;
@@ -45,42 +63,83 @@ type Stroke = {
 	lastMoveTime: number;
 	consumed: boolean;
 	liveMoveX: number;
+	liveMoveY: number;
 	jumpGestureActive: boolean;
+	/** Where the fast phase began. Null while the finger is below the gate. */
+	flickAnchor: StrokeSample | null;
 	samples: StrokeSample[];
 };
 
 /** Degrees from ±X that are not a jump / crouch. Tune by feel. */
 const HORIZONTAL_DEADZONE_DEG = 33;
 /**
- * Horizontal swipe / dash is off. Until dash exists, a fast horizontal
- * flick latches run for RUN_LATCH_MS on pointer-up (not mid-stroke).
+ * Swipe recognition. One rule for jump / crouch / run on every measurement:
+ * far enough and fast enough. Speed decides when the gesture started, distance
+ * decides how far it went from there — independent quantities, so neither knob
+ * can be derived from the other.
  */
-const SWIPE_DISTANCE_PX = 75; //75;
-/** Slow post-settle swipes need this; short flicks use distance only. */
-const SWIPE_SPEED_PX_PER_SEC = 350; //350;
+const SWIPE_DISTANCE_PX = 80; //75;
+const SWIPE_SPEED_PX_PER_SEC = 500; //350;
+/**
+ * Speed that releases the amplitude anchor, as a share of the speed that plants
+ * it. Hysteresis is what keeps the anchor still: without it, jitter around the
+ * gate would re-plant the anchor every few samples and amplitude would never
+ * accumulate. A ratio, so retuning the speed gate carries the release with it.
+ */
+const FLICK_RELEASE_SPEED_RATIO = 0.75;
+
 /**
  * Follow the contact until it is still (fat-finger centroid jump) or this
  * timer elapses. Distance for a swipe is measured after that, not from raw down.
  */
 const SETTLE_MS = 40;
-const SETTLE_RADIUS_PX = 72;
 const SETTLE_SPEED_PX_PER_SEC = 250; //220;
 const SETTLE_MIN_MS = 16;
 const MIN_SPEED_DT_MS = 16;
-/** Fast lift: commit from the whole stroke even if settle chased the finger. */
-const FLICK_MAX_DURATION_MS = 160;
-const FLICK_DISTANCE_PX = 90;
+
 /**
- * fromDown may recover a flick only if post-settle travel is at least this.
- * Blocks centroid-only "jumps"; a real flick still has leftover motion after settle.
+ * Averaging window for speed and angle, and nothing else. Amplitude must never
+ * be measured over it: a windowed amplitude would make SWIPE_DISTANCE_PX divided
+ * by this window an implicit speed floor and leave SWIPE_SPEED_PX_PER_SEC dead.
+ * Without the window, speed would be the average since the settle origin, which
+ * can be seconds old and hides a finger that stopped before lifting.
  */
-const FLICK_RECOVER_MIN_PX = 48;
+const GESTURE_WINDOW_MS = 60;
+/**
+ * The contact centroid smears while the finger leaves the glass, so the tail
+ * is dropped before measuring. Short flicks must survive that cut, hence the
+ * floor: never trim past RELEASE_KEEP_MIN_MS of stroke, and at minimum drop
+ * only the final sample.
+ */
+const RELEASE_TRIM_MS = 5;
+const RELEASE_KEEP_MIN_MS = 20;
+
+/**
+ * Recovery lane. Settle can eat the first SETTLE_MS of a real flick, so a
+ * short stroke is re-measured from the raw contact point on lift. This is the
+ * only path with the centroid jump inside the measurement — set
+ * RECOVER_FROM_CONTACT to false to play without it and compare.
+ */
+const RECOVER_FROM_CONTACT: boolean = true;
+const RECOVER_MAX_DURATION_MS = 160;
+/** Post-settle travel proving the flick was real, not a centroid jump alone. */
+const RECOVER_MIN_POST_SETTLE_PX = 48;
+
+/**
+ * Contact rolled on touch-down and then parked — a tap, not a swipe. The
+ * window and the tail radius together act as a release-speed floor, so keep
+ * them separate from SETTLE_* and TAP_* even when the numbers happen to match.
+ */
+const CONTACT_ROLL_WINDOW_MS = 40;
+const CONTACT_ROLL_MAX_TAIL_PX = 28;
+const CONTACT_ROLL_MIN_TOTAL_PX = 35;
+
 const TAP_MAX_DISTANCE_PX = 28;
 const TAP_MAX_DURATION_MS = 280;
 const HOLD_CANCEL_MS = 500;
 /** Stand-in for dash: keep full run after a fast horizontal flick. */
 const RUN_LATCH_MS = 550;
-/** Finger speed that maps to moveX = ±1 during a slow drag. */
+/** Finger speed that maps to analog ±1 during a slow drag (moveX / moveY). */
 const DRAG_FULL_SPEED_PX_PER_SEC = 360;
 const DRAG_MIN_SPEED_PX_PER_SEC = 40;
 /** Drop live analog if no real movement arrived — off-screen drag keeps the pointer down. */
@@ -119,10 +178,11 @@ const GAMEPLAY_KEY_CODES = new Set([
  * block jump / run. Live analog uses the most recently moving drag; jump and
  * crouch commit from either finger. Latches are player state, not per-finger.
  *
- * Swipe up jumps (moveX from the angle lasts until a surface or a live drag);
- * swipe down latches crouch. A fast horizontal flick latches run for 0.5 s
- * until dash exists. Slow left/right drag is live analog and dies when the
- * finger is still or lifts.
+ * Swipe up jumps (moveX from the angle lasts until a surface or a live drag).
+ * Slow left/right drag is live analog moveX; slow down drag is live analog
+ * moveY. Both die when the finger is still or lifts — down analog does not
+ * latch. A fast horizontal flick latches run for 0.5 s until dash exists;
+ * a down flick latches crouch on lift (same threshold, not a mid-drag kill).
  * The first live analog sample clears jump-run so a still finger does not snap
  * back to the swipe course. Tap, a still press
  * (≥ 0.5 s), or any gameplay key clears latches when that contact is alone.
@@ -206,7 +266,9 @@ export class GestureTouchLayer extends Container {
 	public getControls(): PlayerControls {
 		this.refreshHoldCancel();
 		this.refreshRunLatch();
-		const liveMoveX = this.resolveLiveMoveX();
+		const live = this.pickLiveStroke();
+		const liveMoveX = live?.liveMoveX ?? 0;
+		const liveMoveY = live?.liveMoveY ?? 0;
 		if (liveMoveX !== 0) {
 			this.clearLatchedMoveX();
 			if (this.jumpCharge <= 0) {
@@ -215,6 +277,7 @@ export class GestureTouchLayer extends Container {
 		}
 
 		this.controls.moveX = liveMoveX !== 0 ? liveMoveX : this.latchedMoveX;
+		this.controls.moveY = liveMoveY;
 		this.controls.jump = this.jumpCharge;
 		this.controls.crouch = this.latchedCrouch;
 		this.controls.jumpCommitted = this.jumpCommitted;
@@ -252,6 +315,7 @@ export class GestureTouchLayer extends Container {
 		} else if (!feedback.onGround && this.wasOnGround) {
 			this.jumpCharge = 0;
 			this.jumpCommitted = false;
+			this.latchedCrouch = false;
 		}
 
 		// Jump-run may only persist in air. A committed swipe that never left
@@ -322,13 +386,13 @@ export class GestureTouchLayer extends Container {
 
 		const local = event.getLocalPosition(this);
 		if (this.isInHudReleaseBand(local.y)) {
-			this.finishStroke(stroke, performance.now(), true);
+			this.finishStroke(stroke, true);
 			return;
 		}
 
 		this.trackMove(stroke, local.x, local.y, performance.now());
 		if (this.isOutsidePlayfield(local.x, local.y)) {
-			stroke.liveMoveX = 0;
+			this.clearStrokeAnalog(stroke);
 		}
 	};
 
@@ -344,7 +408,7 @@ export class GestureTouchLayer extends Container {
 		stroke.lastY = local.y;
 		stroke.lastTime = now;
 		this.pushSample(stroke, local.x, local.y, now);
-		this.finishStroke(stroke, now, this.isInHudReleaseBand(local.y));
+		this.finishStroke(stroke, this.isInHudReleaseBand(local.y));
 	};
 
 	private readonly onGlobalPointerEnd = (event: PointerEvent): void => {
@@ -353,7 +417,7 @@ export class GestureTouchLayer extends Container {
 			return;
 		}
 
-		this.finishStroke(stroke, performance.now(), false);
+		this.finishStroke(stroke, false);
 	};
 
 	private readonly onGlobalTouchInterrupt = (): void => {
@@ -374,7 +438,7 @@ export class GestureTouchLayer extends Container {
 		this.jumpCharge = 0;
 		this.jumpCommitted = false;
 		for (const stroke of this.strokes) {
-			stroke.liveMoveX = 0;
+			this.clearStrokeAnalog(stroke);
 		}
 	};
 
@@ -400,35 +464,34 @@ export class GestureTouchLayer extends Container {
 		this.pushSample(stroke, x, y, now);
 
 		if (stroke.consumed) {
-			stroke.liveMoveX = 0;
+			this.clearStrokeAnalog(stroke);
 			return;
 		}
 
 		if (!stroke.originLocked && this.absorbSettle(stroke, x, y, now, speed)) {
-			stroke.liveMoveX = 0;
+			this.clearStrokeAnalog(stroke);
 			stroke.jumpGestureActive = false;
 			return;
 		}
 
 		stroke.originLocked = true;
 
-		const measure = this.measureFrom(
-			stroke.originX,
-			stroke.originY,
-			stroke.originTime,
-			x,
-			y,
-			now,
-		);
+		// No trim here: mid-slide there is no liftoff smear to drop. The anchor is
+		// moved only from this path, so the trimmed release end can never shift it.
+		const latest = stroke.samples[stroke.samples.length - 1];
+		const velocity = this.measureWindow(stroke, latest);
+		this.updateFlickAnchor(stroke, velocity);
+		const measure = this.measureSwipe(stroke, latest, velocity);
 		const jumpStroke = classifySwipe(measure.angle) === 'jump';
 		stroke.jumpGestureActive = jumpStroke;
 
-		if (this.tryCommitStroke(stroke, measure)) {
-			stroke.liveMoveX = 0;
+		if (this.tryCommitJump(stroke, measure)) {
+			this.clearStrokeAnalog(stroke);
 			return;
 		}
 
 		stroke.liveMoveX = jumpStroke ? 0 : this.resolveSlowDrag(velX, velY, speed);
+		stroke.liveMoveY = jumpStroke ? 0 : this.resolveSlowDragY(velX, velY, speed);
 	}
 
 	/**
@@ -449,20 +512,9 @@ export class GestureTouchLayer extends Container {
 		return true;
 	}
 
-	private commitSwipe(stroke: Stroke, angle: number): void {
+	private commitJump(stroke: Stroke, angle: number): void {
 		stroke.consumed = true;
-		stroke.liveMoveX = 0;
-
-		const kind = classifySwipe(angle);
-		if (kind === 'crouch') {
-			this.windupCancel = this.jumpCharge > 0;
-			this.latchedCrouch = true;
-			this.clearLatchedMoveX();
-			this.jumpCharge = 0;
-			this.jumpCommitted = false;
-			return;
-		}
-
+		this.clearStrokeAnalog(stroke);
 		this.latchedCrouch = false;
 		this.latchMoveX(jumpMoveXFromAngle(angle));
 		this.jumpCharge = jumpAxisFromAngle(angle);
@@ -470,13 +522,13 @@ export class GestureTouchLayer extends Container {
 		this.windupCancel = false;
 	}
 
-	private finishStroke(stroke: Stroke, now: number, fromHudBand: boolean): void {
+	private finishStroke(stroke: Stroke, fromHudBand: boolean): void {
 		if (!this.findStroke(stroke.pointerId)) {
 			return;
 		}
 
 		if (!stroke.consumed) {
-			this.recognizeStrokeEnd(stroke, now, fromHudBand);
+			this.recognizeStrokeEnd(stroke, fromHudBand);
 		}
 
 		this.dropStroke(stroke);
@@ -485,39 +537,47 @@ export class GestureTouchLayer extends Container {
 		}
 	}
 
-	private recognizeStrokeEnd(stroke: Stroke, now: number, fromHudBand: boolean): void {
+	private recognizeStrokeEnd(stroke: Stroke, fromHudBand: boolean): void {
 		const soleContact = this.strokes.length === 1;
+		const end = this.releaseEndSample(stroke);
 
-		if (this.isFatFingerTap(stroke, now)) {
-			if (soleContact) {
-				this.clearLatches();
-			}
-			return;
-		}
+		// Amplitude from the anchor, speed and angle from the release window. The
+		// two plain measures below stay whole-stroke for the recovery lane and the
+		// tap verdict, which ask about the contact rather than about the release.
+		const swipe = this.measureSwipe(stroke, end, this.measureWindow(stroke, end));
 
 		const fromOrigin = this.measureFrom(
 			stroke.originX,
 			stroke.originY,
 			stroke.originTime,
-			stroke.lastX,
-			stroke.lastY,
-			now,
+			end.x,
+			end.y,
+			end.time,
 		);
+
 		const fromDown = this.measureFrom(
 			stroke.downX,
 			stroke.downY,
 			stroke.downTime,
-			stroke.lastX,
-			stroke.lastY,
-			now,
+			end.x,
+			end.y,
+			end.time,
 		);
 
-		if (this.tryCommitStroke(stroke, fromOrigin)) {
+		if (this.tryCommitJump(stroke, swipe)) {
+			return;
+		}
+
+		if (this.tryCommitCrouch(stroke, swipe)) {
 			return;
 		}
 
 		if (this.canRecoverFlickFromDown(stroke, fromOrigin, fromDown)) {
-			if (this.tryCommitStroke(stroke, fromDown)) {
+			if (this.tryCommitJump(stroke, fromDown)) {
+				return;
+			}
+
+			if (this.tryCommitCrouch(stroke, fromDown)) {
 				return;
 			}
 
@@ -526,7 +586,14 @@ export class GestureTouchLayer extends Container {
 			}
 		}
 
-		if (this.tryCommitHorizontalRun(stroke, fromOrigin)) {
+		if (this.tryCommitHorizontalRun(stroke, swipe)) {
+			return;
+		}
+
+		if (this.isFatFingerTap(stroke, end)) {
+			if (soleContact) {
+				this.clearLatches();
+			}
 			return;
 		}
 
@@ -548,8 +615,8 @@ export class GestureTouchLayer extends Container {
 		}
 	}
 
-	private tryCommitStroke(stroke: Stroke, measure: StrokeMeasure): boolean {
-		if (classifySwipe(measure.angle) === 'horizontal') {
+	private tryCommitJump(stroke: Stroke, measure: SwipeMeasure): boolean {
+		if (classifySwipe(measure.angle) !== 'jump') {
 			return false;
 		}
 
@@ -557,21 +624,52 @@ export class GestureTouchLayer extends Container {
 			return false;
 		}
 
-		this.commitSwipe(stroke, measure.angle);
+		this.commitJump(stroke, measure.angle);
 		return true;
 	}
 
 	/**
-	 * Whole-stroke flick fallback. Settle can eat the first 40 ms of a real
-	 * swipe; fromDown puts that motion back. Require leftover travel in the
-	 * same direction so a contact-centroid jump is not a swipe.
+	 * Crouch latches on lift, like a horizontal run flick. Committing mid-drag
+	 * would kill live moveY — the swipe threshold is not a reason to stop analog.
+	 */
+	private tryCommitCrouch(stroke: Stroke, measure: SwipeMeasure): boolean {
+		if (classifySwipe(measure.angle) !== 'crouch') {
+			return false;
+		}
+
+		if (!this.meetsSwipeThreshold(measure)) {
+			return false;
+		}
+
+		stroke.consumed = true;
+		this.clearStrokeAnalog(stroke);
+		this.windupCancel = this.jumpCharge > 0;
+		this.clearLatchedMoveX();
+
+		if (this.wasOnGround) {
+			this.latchedCrouch = true;
+		}
+
+		this.jumpCharge = 0;
+		this.jumpCommitted = false;
+		return true;
+	}
+
+	/**
+	 * Whole-stroke flick fallback. Settle can eat the first SETTLE_MS of a real
+	 * swipe; the contact-point measure puts that motion back. Require leftover
+	 * travel in the same direction so a centroid jump alone is not a swipe.
 	 */
 	private canRecoverFlickFromDown(
 		stroke: Stroke,
 		fromOrigin: StrokeMeasure,
 		fromDown: StrokeMeasure,
 	): boolean {
-		if (fromDown.durationMs > FLICK_MAX_DURATION_MS) {
+		if (!RECOVER_FROM_CONTACT) {
+			return false;
+		}
+
+		if (fromDown.durationMs > RECOVER_MAX_DURATION_MS) {
 			return false;
 		}
 
@@ -579,14 +677,14 @@ export class GestureTouchLayer extends Container {
 			return true;
 		}
 
-		if (fromOrigin.distance < FLICK_RECOVER_MIN_PX) {
+		if (fromOrigin.distance < RECOVER_MIN_POST_SETTLE_PX) {
 			return false;
 		}
 
 		return classifySwipe(fromOrigin.angle) === classifySwipe(fromDown.angle);
 	}
 
-	private tryCommitHorizontalRun(stroke: Stroke, measure: StrokeMeasure): boolean {
+	private tryCommitHorizontalRun(stroke: Stroke, measure: SwipeMeasure): boolean {
 		if (classifySwipe(measure.angle) !== 'horizontal') {
 			return false;
 		}
@@ -596,43 +694,43 @@ export class GestureTouchLayer extends Container {
 		}
 
 		stroke.consumed = true;
-		stroke.liveMoveX = 0;
+		this.clearStrokeAnalog(stroke);
 		this.latchedCrouch = false;
 		this.latchMoveX(Math.cos(measure.angle) < 0 ? -1 : 1, RUN_LATCH_MS);
 		return true;
 	}
 
-	private meetsSwipeThreshold(measure: StrokeMeasure): boolean {
-		const flick = measure.durationMs <= FLICK_MAX_DURATION_MS;
-		if (flick) {
-			return measure.distance >= FLICK_DISTANCE_PX;
-		}
-
+	/**
+	 * Single gate for every gesture and every entry point. A duration-selected
+	 * fast branch used to sit here, but anything it accepted cleared this rule
+	 * too, so it could only ever reject — hence one continuous rule instead.
+	 */
+	private meetsSwipeThreshold(measure: SwipeMeasure): boolean {
 		return measure.distance >= SWIPE_DISTANCE_PX && measure.speed >= SWIPE_SPEED_PX_PER_SEC;
 	}
 
 	/** Centroid jumped, then the finger sat still — that is a tap, not a swipe. */
-	private isFatFingerTap(stroke: Stroke, now: number): boolean {
-		const duration = now - stroke.downTime;
-		if (duration <= SETTLE_MS) {
+	private isFatFingerTap(stroke: Stroke, end: StrokeSample): boolean {
+		const duration = end.time - stroke.downTime;
+		if (duration <= CONTACT_ROLL_WINDOW_MS) {
 			return false;
 		}
 
-		const tail = this.sampleAtOrBefore(stroke, now - SETTLE_MS);
-		const tailDist = Math.hypot(stroke.lastX - tail.x, stroke.lastY - tail.y);
-		const totalDist = Math.hypot(stroke.lastX - stroke.downX, stroke.lastY - stroke.downY);
-		return tailDist < TAP_MAX_DISTANCE_PX && totalDist >= SETTLE_RADIUS_PX * 0.5;
+		const tail = this.sampleAtOrBefore(stroke, end.time - CONTACT_ROLL_WINDOW_MS);
+		const tailDist = Math.hypot(end.x - tail.x, end.y - tail.y);
+		const totalDist = Math.hypot(end.x - stroke.downX, end.y - stroke.downY);
+		return tailDist < CONTACT_ROLL_MAX_TAIL_PX && totalDist >= CONTACT_ROLL_MIN_TOTAL_PX;
 	}
 
-	private resolveLiveMoveX(): number {
+	private pickLiveStroke(): Stroke | null {
 		const now = performance.now();
 		let best: Stroke | null = null;
 		for (const stroke of this.strokes) {
-			if (stroke.liveMoveX !== 0 && now - stroke.lastMoveTime >= LIVE_MOVE_STALE_MS) {
-				stroke.liveMoveX = 0;
+			if (now - stroke.lastMoveTime >= LIVE_MOVE_STALE_MS) {
+				this.clearStrokeAnalog(stroke);
 			}
 
-			if (stroke.liveMoveX === 0) {
+			if (stroke.liveMoveX === 0 && stroke.liveMoveY === 0) {
 				continue;
 			}
 
@@ -641,7 +739,7 @@ export class GestureTouchLayer extends Container {
 			}
 		}
 
-		return best?.liveMoveX ?? 0;
+		return best;
 	}
 
 	private refreshRunLatch(): void {
@@ -672,7 +770,7 @@ export class GestureTouchLayer extends Container {
 			}
 
 			stroke.consumed = true;
-			stroke.liveMoveX = 0;
+			this.clearStrokeAnalog(stroke);
 			if (soleContact) {
 				this.clearLatches();
 			}
@@ -689,6 +787,18 @@ export class GestureTouchLayer extends Container {
 		}
 
 		return clampAxis(velX / DRAG_FULL_SPEED_PX_PER_SEC);
+	}
+
+	private resolveSlowDragY(velX: number, velY: number, speed: number): number {
+		if (speed < DRAG_MIN_SPEED_PX_PER_SEC || velY <= 0) {
+			return 0;
+		}
+
+		if (Math.abs(velX) > Math.abs(velY) * 1.5) {
+			return 0;
+		}
+
+		return clampAxis(velY / DRAG_FULL_SPEED_PX_PER_SEC);
 	}
 
 	private isInHudReleaseBand(localY: number): boolean {
@@ -784,6 +894,108 @@ export class GestureTouchLayer extends Container {
 		return best;
 	}
 
+	/**
+	 * Endpoint for every measurement taken on release. The last samples carry
+	 * liftoff smear — direction the player never made — so they are cut. A short
+	 * flick would lose its whole body to that cut, so the trim stops at
+	 * RELEASE_KEEP_MIN_MS and in the worst case drops only the final sample.
+	 */
+	private releaseEndSample(stroke: Stroke): StrokeSample {
+		const samples = stroke.samples;
+		const last = samples[samples.length - 1];
+		if (samples.length < 3) {
+			return last;
+		}
+
+		const trimBefore = last.time - RELEASE_TRIM_MS;
+		const keepUntil = samples[0].time + RELEASE_KEEP_MIN_MS;
+		let trimmed: StrokeSample | null = null;
+		for (const sample of samples) {
+			if (sample.time > trimBefore) {
+				break;
+			}
+
+			if (sample.time >= keepUntil) {
+				trimmed = sample;
+			}
+		}
+
+		return trimmed ?? samples[samples.length - 2];
+	}
+
+	private measureWindow(stroke: Stroke, end: StrokeSample): WindowVelocity {
+		const windowStart = Math.max(stroke.originTime, end.time - GESTURE_WINDOW_MS);
+		const from = this.windowStartSample(stroke, windowStart, end);
+		const dx = end.x - from.x;
+		const dy = end.y - from.y;
+		const dtSec = Math.max(end.time - from.time, MIN_SPEED_DT_MS) / 1000;
+		return {
+			angle: Math.atan2(dy, dx),
+			speed: Math.hypot(dx, dy) / dtSec,
+			from,
+		};
+	}
+
+	/**
+	 * Plant the amplitude anchor where the fast phase began and leave it there.
+	 * The window start is the right spot: a crossing at the current sample means
+	 * the motion already happened across the window, and anchoring at the current
+	 * point would throw that travel away. Release is gated lower than set, so the
+	 * anchor survives jitter around the threshold instead of being re-planted.
+	 */
+	private updateFlickAnchor(stroke: Stroke, velocity: WindowVelocity): void {
+		if (!stroke.flickAnchor) {
+			if (velocity.speed >= SWIPE_SPEED_PX_PER_SEC) {
+				stroke.flickAnchor = velocity.from;
+			}
+			return;
+		}
+
+		if (velocity.speed < SWIPE_SPEED_PX_PER_SEC * FLICK_RELEASE_SPEED_RATIO) {
+			stroke.flickAnchor = null;
+		}
+	}
+
+	/**
+	 * Amplitude from the anchor, speed and angle from the window. Measuring
+	 * amplitude from the settle origin instead would let a long slow drag satisfy
+	 * SWIPE_DISTANCE_PX for the rest of the contact, leaving speed as the only
+	 * live threshold. No anchor means no fast phase, hence no amplitude.
+	 */
+	private measureSwipe(
+		stroke: Stroke,
+		end: StrokeSample,
+		velocity: WindowVelocity,
+	): SwipeMeasure {
+		const anchor = stroke.flickAnchor;
+		return {
+			angle: velocity.angle,
+			distance: anchor ? Math.hypot(end.x - anchor.x, end.y - anchor.y) : 0,
+			speed: velocity.speed,
+		};
+	}
+
+	/**
+	 * Oldest sample inside the window. Falls back to the newest one just outside
+	 * it, so a sparse report rate still yields a span instead of a zero.
+	 */
+	private windowStartSample(stroke: Stroke, windowStart: number, end: StrokeSample): StrokeSample {
+		let previous: StrokeSample | null = null;
+		for (const sample of stroke.samples) {
+			if (sample.time >= end.time) {
+				break;
+			}
+
+			if (sample.time >= windowStart) {
+				return sample;
+			}
+
+			previous = sample;
+		}
+
+		return previous ?? end;
+	}
+
 	private tryCapturePointer(event: FederatedPointerEvent): void {
 		const native = event.nativeEvent;
 		if (!(native instanceof PointerEvent)) {
@@ -809,7 +1021,7 @@ export class GestureTouchLayer extends Container {
 		this.jumpCommitted = false;
 		this.windupCancel = true;
 		for (const stroke of this.strokes) {
-			stroke.liveMoveX = 0;
+			this.clearStrokeAnalog(stroke);
 		}
 	}
 
@@ -821,6 +1033,11 @@ export class GestureTouchLayer extends Container {
 	private clearLatchedMoveX(): void {
 		this.latchedMoveX = 0;
 		this.runLatchUntil = 0;
+	}
+
+	private clearStrokeAnalog(stroke: Stroke): void {
+		stroke.liveMoveX = 0;
+		stroke.liveMoveY = 0;
 	}
 
 	/** Remove a slot without recognizing it — eviction must not count as a tap. */
@@ -854,7 +1071,9 @@ const createStroke = (pointerId: number, x: number, y: number, now: number): Str
 	lastMoveTime: now,
 	consumed: false,
 	liveMoveX: 0,
+	liveMoveY: 0,
 	jumpGestureActive: false,
+	flickAnchor: null,
 	samples: [{ x, y, time: now }],
 });
 
@@ -874,11 +1093,17 @@ const swipeElevation = (angle: number): number => {
 
 const jumpAxisFromAngle = (angle: number): number => {
 	const elevation = swipeElevation(angle);
-	if (elevation >= FULL_JUMP_ELEVATION_RAD) {
-		return TOUCH_JUMP_BOOST;
-	}
+	let jump = TOUCH_JUMP_BOOST;
+	//return jump;
 
-	return ((elevation / FULL_JUMP_ELEVATION_RAD) * TOUCH_JUMP_BOOST + TOUCH_JUMP_BOOST) / 2;
+	// Not approved!
+	// Visual difference between 35 and 45 degrees is not obvious, therefor lowering jump height is unexpected.
+	// it is better to make short-long slide difference someday.
+	if (elevation < FULL_JUMP_ELEVATION_RAD) {
+		jump = (elevation / FULL_JUMP_ELEVATION_RAD + 1.5) / 2.5 * TOUCH_JUMP_BOOST;
+	}
+	console.log(`swipe jump strength = ${jump},  elevation = ${elevation * 180 / Math.PI}`);
+	return jump;
 };
 
 /** 45° is a boosted full run; steeper swipes ease toward a vertical jump. */
@@ -886,7 +1111,8 @@ const jumpMoveXFromAngle = (angle: number): number => {
 	const sign = Math.cos(angle) < 0 ? -1 : 1;
 	const elevation = swipeElevation(angle);
 	if (elevation <= FULL_JUMP_ELEVATION_RAD) {
-		return sign * TOUCH_JUMP_BOOST;
+		//return sign * TOUCH_JUMP_BOOST;
+		return sign * (FULL_JUMP_ELEVATION_RAD / elevation + 4) / 5 * TOUCH_JUMP_BOOST;
 	}
 
 	const t = (Math.PI * 0.5 - elevation) / (Math.PI * 0.5 - FULL_JUMP_ELEVATION_RAD);

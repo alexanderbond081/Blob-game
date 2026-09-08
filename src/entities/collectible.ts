@@ -26,7 +26,6 @@ export type CollectibleLayers = {
  */
 export abstract class Collectible {
 	public readonly body: Body;
-	public readonly collectibleId: string;
 	public readonly collectibleType: string;
 	public collected = false;
 
@@ -40,7 +39,6 @@ export abstract class Collectible {
 			label: 'collectible',
 		});
 
-		this.collectibleId = data.id;
 		this.collectibleType = data.type;
 		this.baseX = data.x;
 		this.baseY = data.y;
@@ -71,10 +69,10 @@ export abstract class Collectible {
 		return Math.max(deltaTime, 0) / FRAME_HZ;
 	}
 
-	protected static hashPhase(id: string): number {
+	protected static hashPhase(seed: string): number {
 		let hash = 0;
-		for (let i = 0; i < id.length; i += 1) {
-			hash = (hash * 31 + id.charCodeAt(i)) | 0;
+		for (let i = 0; i < seed.length; i += 1) {
+			hash = (hash * 31 + seed.charCodeAt(i)) | 0;
 		}
 		return (Math.abs(hash) % 1000) / 1000 * Math.PI * 2;
 	}
@@ -96,7 +94,7 @@ export class SpriteCollectible extends Collectible {
 		this.sprite.anchor.set(0.5);
 		this.sprite.eventMode = 'none';
 		this.sprite.position.set(this.baseX, this.baseY);
-		this.bobPhase = Collectible.hashPhase(data.id);
+		this.bobPhase = Collectible.hashPhase(`${data.type}:${data.x}:${data.y}`);
 		void this.loadTexture(data.type);
 	}
 

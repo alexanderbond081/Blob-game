@@ -6,28 +6,29 @@ export const MODAL_TITLE_FILL = 0x4a2c14;
 /** Dark brown on graydirt OK buttons — cream washed out on phones. */
 export const MODAL_OK_LABEL_FILL = 0x4a2c14;
 
-const MODAL_TITLE_FONT = 'Arial, Helvetica, sans-serif';
+const MODAL_BUTTON_FONT = 'Nunito, Helvetica, sans-serif';
+const MODAL_TITLE_FONT = 'Nunito, Helvetica, sans-serif';
 
 const createModalTitleStyle = (fontSize: number): TextStyle => {
 	return new TextStyle({
 		fontFamily: MODAL_TITLE_FONT,
 		fontSize,
-		fontStyle: 'italic',
+		fontStyle: 'normal', // 'italic',
 		fontWeight: 'bold',
 		fill: MODAL_TITLE_FILL,
 		align: 'center',
-		stroke: { color: 0xf5e6c8, width: 4, join: 'round' },
+		stroke: { color: 0xf5e6c8, width: 1, join: 'round' },
 	});
 };
 
 const createModalOkLabelStyle = (): TextStyle => {
 	return new TextStyle({
-		fontFamily: MODAL_TITLE_FONT,
-		fontSize: 26,
-		fontWeight: 'bold',
+		fontFamily: MODAL_BUTTON_FONT,
+		fontSize: 22,
+		fontWeight: '900',
 		fill: MODAL_OK_LABEL_FILL,
 		align: 'center',
-		stroke: { color: 0xf5e6c8, width: 3, join: 'round' },
+		stroke: { color: 0xf5e6c8, width: 1, join: 'round' },
 	});
 };
 
@@ -45,7 +46,7 @@ export const createModalTitle = (label: string, fontSize = 42): Text => {
 
 export const createModalOkLabel = (): Text => {
 	const text = new Text({
-		text: 'Ok',
+		text: 'OK',
 		style: createModalOkLabelStyle(),
 		resolution: 2,
 		roundPixels: true,

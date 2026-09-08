@@ -47,7 +47,6 @@ const exitSchema = z.object({
 });
 
 const collectibleSchema = z.object({
-	id: z.string(),
 	x: z.number(),
 	y: z.number(),
 	type: z.string(),

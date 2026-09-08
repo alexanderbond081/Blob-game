@@ -1,0 +1,55 @@
+{
+	"id": "meadow-09",
+	"size": { "width": 1500, "height": 1500 },
+	"spawn": { "x": 120, "y": 550 },
+	"exit": { "x": 940, "y": 800, "slots": 6 },
+	"backgrounds": [
+		{ "id": "sky", "texture": "meadow-bg-sky", "parallax": 0 },
+		{ "id": "far", "texture": "meadow-bg-far", "parallax": 0.1 },
+		{ "id": "mid", "texture": "meadow-bg-mid", "parallax": 0.3 }
+	],
+	"hints": [
+		{ "kind": "crouchJump-right", "x": 480, "y": 350 }
+	],
+	"platforms": [
+		{ "type": "ground", "x": -90, "y": 50, "width": 1660, "height": 50 },
+		{ "type": "leaf", "x": 1300, "y": 280, "width": 140, "height": 30 },
+		{ "type": "leaf", "x": 500, "y": 390, "width": 200, "height": 30 },
+		{ "type": "leaf", "x": 70, "y": 440, "width": 110, "height": 30 },
+		{ "type": "wall", "x": 930, "y": 490, "width": 30, "height": 440 },
+		{ "type": "leaf", "x": 970, "y": 390, "width": 180, "height": 30 },
+		{ "type": "leaf", "x": 740, "y": 240, "width": 180, "height": 30 },
+		{ "type": "sticky", "x": 840, "y": 660, "width": 210, "height": 170 },
+		{ "type": "ground", "x": 70, "y": 170, "width": 150, "height": 120 },
+		{ "type": "ground", "x": 980, "y": 160, "width": 180, "height": 110 },
+		{ "type": "wall", "x": 1450, "y": 880, "width": 30, "height": 830 },
+		{ "type": "leaf", "x": 1490, "y": 500, "width": 150, "height": 30 },
+		{ "type": "leaf", "x": 1270, "y": 710, "width": 170, "height": 30 },
+		{ "type": "ground", "x": -90, "y": 660, "width": 160, "height": 610 },
+		{ "type": "leaf", "x": -100, "y": 690, "width": 180, "height": 30 },
+		{ "type": "wall", "x": -50, "y": 760, "width": 80, "height": 70 },
+		{ "type": "sticky", "x": 1390, "y": 1060, "width": 150, "height": 150 },
+		{ "type": "leaf", "x": 980, "y": 160, "width": 180, "height": 30 },
+		{ "type": "leaf", "x": 70, "y": 170, "width": 150, "height": 30 },
+		{ "type": "leaf", "x": 1410, "y": 910, "width": 110, "height": 30 }
+	],
+	"hazards": [
+		{ "type": "spikes", "x": -110, "y": 870, "width": 200, "height": 160, "length": 0.4 },
+		{ "type": "spikes", "x": -80, "y": 840, "width": 140, "height": 100, "length": 0.5 },
+		{ "type": "spikes", "x": 1360, "y": 1060, "width": 30, "height": 150, "facing": "left", "length": 0.8 },
+		{ "type": "spikes", "x": 1390, "y": 1090, "width": 150, "height": 30, "facing": "up", "length": 0.8 },
+		{ "type": "spikes", "x": 1540, "y": 1060, "width": 30, "height": 150, "facing": "right", "length": 0.8 },
+		{ "type": "spider", "from": { "x": 1370, "y": 650 }, "to": { "x": 1370, "y": 340 }, "speed": 70 }
+	],
+	"collectibles": [
+		{ "type": "firefly", "x": 830, "y": 300 },
+		{ "type": "firefly", "x": 600, "y": 450 },
+		{ "type": "firefly", "x": 140, "y": 240 },
+		{ "type": "firefly", "x": 1140, "y": 570 },
+		{ "type": "firefly", "x": 1370, "y": 340 },
+		{ "type": "firefly", "x": 1070, "y": 220 },
+		{ "type": "firefly", "x": 1350, "y": 750 },
+		{ "type": "firefly", "x": 1370, "y": 120 },
+		{ "type": "firefly", "x": 590, "y": 100 }
+	]
+}
