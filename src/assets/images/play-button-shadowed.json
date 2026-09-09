@@ -8,7 +8,7 @@
 		"off": ["play-off"]
 	},
 	"meta": {
-	  "image": "play-button-shadowed.webp",
+	  "image": "play-button-unshadowed.webp",
 	  "scale": "1"
 	}
   }

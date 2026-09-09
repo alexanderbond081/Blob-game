@@ -5,6 +5,7 @@ import { HighlightDecoration } from '../../components/highlight-decoration';
 import { IdleBounceAnimator } from '../../components/idle-bounce-animator';
 import { UIButton } from '../../components/ui-button';
 import { SoundManager } from '../../managers/sound-manager';
+import { loadModalDecorTextures, ModalDecorLayer } from './modal-decor';
 import { createModalTitle, formatRunTime } from './modal-title';
 
 const SIDE_BUTTON_SIZE = 75;
@@ -26,7 +27,24 @@ const STAT_CLUSTER_GAP = 16;
 const STAT_DIVIDER_HEIGHT = 34;
 /** Matches `CONTENT_PADDING` in `hud-modal.ts` — content origin is the panel centre. */
 const PANEL_EDGE_PAD = 28;
-const GRASS_INSET = 12;
+/** Static panel decor. `offsetX` / `offsetY` are from the named panel corner. `height` is logical. */
+const RESULT_DECOR_LAYOUT = [
+	{ texture: 'star1-decor', anchor: 'topLeft', offsetX: 70, offsetY: 52, height: 50, scaleX: 1, scaleY: 1, alpha: 0.8 },
+	{ texture: 'star1-decor', anchor: 'topRight', offsetX: -48, offsetY: 36, height: 36, scaleX: 1, scaleY: 1, alpha: 0.9 },
+	{ texture: 'star1-decor', anchor: 'topRight', offsetX: -80, offsetY: 86, height: 25, scaleX: 1, scaleY: 1, alpha: 0.7 },
+	{ texture: 'grass-decor', anchor: 'bottomLeft', offsetX: 39, offsetY: -52, height: 80, scaleX: 1, scaleY: 1, alpha: 1.0 },
+	{ texture: 'grass-decor', anchor: 'bottomRight', offsetX: -39, offsetY: -52, height: 80, scaleX: -1, scaleY: 1, alpha: 1.0 },
+] as const;
+
+const COMPLETE_DECOR_LAYOUT = [
+	{ texture: 'star2-decor', anchor: 'topLeft', offsetX: 42, offsetY: 42, height: 52, scaleX: 1, scaleY: 1, alpha: 0.9 },
+	{ texture: 'star1-decor', anchor: 'topLeft', offsetX: 65, offsetY: 125, height: 48, scaleX: 1, scaleY: 1, alpha: 0.6 },
+	{ texture: 'star1-decor', anchor: 'topRight', offsetX: -42, offsetY: 37, height: 36, scaleX: 1, scaleY: 1, alpha: 0.9 },
+	{ texture: 'star1-decor', anchor: 'topRight', offsetX: -108, offsetY: 102, height: 25, scaleX: 1, scaleY: 1, alpha: 0.7 },
+	{ texture: 'star2-decor', anchor: 'topRight', offsetX: -75, offsetY: 127, height: 35, scaleX: 1, scaleY: 1, alpha: 0.8 },
+	{ texture: 'grass-decor', anchor: 'bottomLeft', offsetX: 39, offsetY: -52, height: 80, scaleX: 1, scaleY: 1, alpha: 1.0 },
+	{ texture: 'grass-decor', anchor: 'bottomRight', offsetX: -39, offsetY: -52, height: 80, scaleX: -1, scaleY: 1, alpha: 1.0 },
+] as const;
 
 export type LevelResultStats = {
 	collected: number;
@@ -122,8 +140,8 @@ export class ResultModalContent extends Container {
 	private deathsCell!: StatCell;
 	private dividerLeft!: Graphics;
 	private dividerRight!: Graphics;
-	private grassLeft!: Sprite;
-	private grassRight!: Sprite;
+	private resultDecor!: ModalDecorLayer;
+	private completeDecor!: ModalDecorLayer;
 	private homeButton!: UIButton;
 	private continueButtonRoot!: Container;
 	private continueButton!: UIButton;
@@ -173,6 +191,8 @@ export class ResultModalContent extends Container {
 			this.continueButtonRoot.visible = true;
 		}
 
+		this.resultDecor.setVisible(!this.demoComplete);
+		this.completeDecor.setVisible(this.demoComplete);
 		this.layout();
 	}
 
@@ -209,18 +229,12 @@ export class ResultModalContent extends Container {
 		const fireflyIcon = await Assets.load<Texture>('firefly-icon');
 		const watchIcon = await Assets.load<Texture>('watch-icon');
 		const scullIcon = await Assets.load<Texture>('scull-icon');
-		const grassTexture = await Assets.load<Texture>('grass-decor');
 		const statStyle = createStatStyle();
-
-		this.grassLeft = new Sprite(grassTexture);
-		this.grassLeft.anchor.set(0, 1);
-		this.grassLeft.eventMode = 'none';
-		this.grassRight = new Sprite(grassTexture);
-		this.grassRight.anchor.set(0, 1);
-		this.grassRight.scale.x = -1;
-		this.grassRight.eventMode = 'none';
-		this.addChild(this.grassLeft);
-		this.addChild(this.grassRight);
+		const decorTextures = await loadModalDecorTextures([RESULT_DECOR_LAYOUT, COMPLETE_DECOR_LAYOUT]);
+		this.resultDecor = ModalDecorLayer.create(this, RESULT_DECOR_LAYOUT, decorTextures);
+		this.completeDecor = ModalDecorLayer.create(this, COMPLETE_DECOR_LAYOUT, decorTextures);
+		this.resultDecor.setVisible(true);
+		this.completeDecor.setVisible(false);
 
 		this.title = createModalTitle('Clear!', 44);
 		this.addChild(this.title);
@@ -290,7 +304,8 @@ export class ResultModalContent extends Container {
 		this.subtitle.y = DEMO_SUBTITLE_Y;
 
 		this.layoutStatsRow();
-		this.layoutGrass();
+		this.resultDecor.layout(this.panelWidth, this.panelHeight);
+		this.completeDecor.layout(this.panelWidth, this.panelHeight);
 
 		this.homeButton.y = this.demoComplete ? DEMO_BUTTONS_Y : BUTTONS_Y;
 		this.restartButton.y = this.demoComplete ? DEMO_BUTTONS_Y : BUTTONS_Y;
@@ -336,16 +351,6 @@ export class ResultModalContent extends Container {
 
 		this.deathsCell.root.x = x;
 		this.deathsCell.root.y = statsY;
-	}
-
-	private layoutGrass(): void {
-		const leftX = -this.panelWidth * 0.5 + GRASS_INSET;
-		const rightX = this.panelWidth * 0.5 - GRASS_INSET;
-		const y = this.panelHeight * 0.5 - GRASS_INSET;
-		this.grassLeft.x = leftX;
-		this.grassLeft.y = y;
-		this.grassRight.x = rightX;
-		this.grassRight.y = y;
 	}
 
 	private bindAction(button: UIButton, eventName: 'home' | 'continue' | 'restart'): void {

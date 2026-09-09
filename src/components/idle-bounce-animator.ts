@@ -56,6 +56,7 @@ export class IdleBounceAnimator {
 
 		this.restY = this.host.y;
 		this.running = true;
+		this.clearHostVisuals();
 		if (options?.introImmediately) {
 			this.playNudge();
 		} else {
@@ -163,6 +164,7 @@ export class IdleBounceAnimator {
 		const height = button.height;
 		this.bounce?.kill();
 		gsap.killTweensOf(button);
+		this.clearHostVisuals();
 		button.scale.set(1);
 		button.y = restY;
 		if (button instanceof UIButton) {
@@ -223,10 +225,25 @@ export class IdleBounceAnimator {
 		}
 
 		gsap.killTweensOf(button);
+		this.clearHostVisuals();
 		button.scale.set(1);
 		button.y = this.restY;
 		if (button instanceof UIButton) {
 			button.adjustScale(1, 1);
 		}
+	}
+
+	/**
+	 * Bounce `killTweensOf` can leave PixiPlugin ColorMatrix / tint from
+	 * HighlightDecoration (hover contrast, press tint) stuck on the CTA.
+	 */
+	private clearHostVisuals(): void {
+		const button = this.host;
+		if (!button) {
+			return;
+		}
+
+		button.filters = null;
+		button.tint = 0xffffff;
 	}
 }

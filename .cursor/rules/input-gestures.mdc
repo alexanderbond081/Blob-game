@@ -1,0 +1,13 @@
+---
+description: Pointer, touch, gesture and keyboard input rules
+globs: src/input/**/*.ts
+alwaysApply: false
+---
+
+# Input and gestures
+
+- A gesture is only correct when every phase works together: `start`, `move`, `end`, `cancel`, plus interruptions — pointer leaving the canvas, a second finger, window blur, pause, scene switch.
+- Before changing gesture logic, walk through each of those phases and interruption paths and state what happens in them. Do not patch a single phase in isolation.
+- Keyboard, mouse and touch paths must stay consistent: a behaviour change in one usually needs the mirrored change in the others.
+- Never leave a pointer captured, a listener attached or a pressed-key set populated after the gesture ends or the layer is destroyed.
+- Guard against edge cases explicitly: repeated `pointerdown` without `pointerup`, events arriving after destroy, and gestures still in flight when the game pauses.

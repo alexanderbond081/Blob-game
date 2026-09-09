@@ -1,0 +1,22 @@
+---
+description: How to modify existing code without causing regressions
+alwaysApply: true
+---
+
+# Changing existing code
+
+## Before editing
+
+- Read the file and trace its hidden dependencies and side effects before you change anything.
+- Highest-risk areas, in order: pointer/touch/gesture handlers, GSAP timelines and tweens, scene and component lifecycles (`init` / `destroy`), resize and layout, shared manager state.
+
+## While editing
+
+- Preserve or correctly adapt every pre-existing behaviour. Never delete or "simplify" working code unless explicitly asked to.
+- If you cannot predict how a change affects existing logic, ask first instead of writing speculative code.
+
+## After editing
+
+When the change touched GSAP animations, gestures or pointer input, resize and layout, scene state, or physics, finish with a short **What could have broken** list: the modules, UI elements or interactions worth testing by hand.
+
+Skip that list for low-risk edits such as constants, copy changes or isolated helpers.

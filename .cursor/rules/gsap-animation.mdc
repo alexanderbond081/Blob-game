@@ -1,0 +1,24 @@
+---
+description: GSAP tween and timeline lifecycle rules
+globs: src/components/**/*.ts,src/entities/**/*.ts,src/hud/**/*.ts,src/fx/**/*.ts
+alwaysApply: false
+---
+
+# GSAP animation
+
+- Store a reference to every tween or timeline that outlives a single frame. You cannot kill what you did not keep.
+- Kill each of them on `destroy()`, on resize, and on any state change that invalidates the animation. Never leave orphaned tweens running against a destroyed object.
+- Before starting a tween on properties that may already be animating, kill the previous tween on that target first.
+- If an animation is cancelled mid-flight, restore the properties it mutated (`revert()` or an explicit reset) so the object is not left half-animated.
+- `PixiPlugin` is registered once in `src/index.ts`. Do not register it again elsewhere.
+
+```typescript
+// ✅
+private hoverTween: gsap.core.Tween | null = null;
+
+public override destroy(options?: DestroyOptions): void {
+	this.hoverTween?.kill();
+	this.hoverTween = null;
+	super.destroy(options);
+}
+```

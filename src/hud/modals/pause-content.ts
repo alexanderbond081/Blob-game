@@ -5,6 +5,7 @@ import { HighlightDecoration } from '../../components/highlight-decoration';
 import { IdleBounceAnimator } from '../../components/idle-bounce-animator';
 import { UIButton } from '../../components/ui-button';
 import { SoundManager } from '../../managers/sound-manager';
+import { loadModalDecorTextures, ModalDecorLayer } from './modal-decor';
 import { createModalTitle } from './modal-title';
 
 const SIDE_BUTTON_SIZE = 75;
@@ -13,6 +14,14 @@ const BUTTON_GAP = 36;
 /** Shift button row below vertical center so the title sits in the upper band. */
 const BUTTONS_Y = 28;
 const TITLE_Y = -74;
+/** Matches `CONTENT_PADDING` in `hud-modal.ts` — content origin is the panel centre. */
+const PANEL_EDGE_PAD = 28;
+
+/** Static panel decor. `offsetX` / `offsetY` are from the named panel corner. `height` is logical. */
+const PAUSE_DECOR_LAYOUT = [
+	{ texture: 'spider-web-decor', anchor: 'topRight', offsetX: -43.5, offsetY: 41.5, height: 60, scaleX: 1, scaleY: 1, alpha: 0.45 },
+	{ texture: 'burdock-decor', anchor: 'bottomLeft', offsetX: 40, offsetY: -44, height: 62, scaleX: 1, scaleY: 1, alpha: 0.55 },
+] as const;
 
 /**
  * Pause modal body: "Paused" title + Home | Resume (Play art) | Restart.
@@ -20,11 +29,14 @@ const TITLE_Y = -74;
  */
 export class PauseModalContent extends Container {
 	private title!: ReturnType<typeof createModalTitle>;
+	private decor!: ModalDecorLayer;
 	private homeButton!: UIButton;
 	private resumeButtonRoot!: Container;
 	private resumeButton!: UIButton;
 	private restartButton!: UIButton;
 	private readonly playBounce = new IdleBounceAnimator(5, 22, 0.05);
+	private panelWidth = 400;
+	private panelHeight = 240;
 
 	private constructor() {
 		super();
@@ -44,7 +56,12 @@ export class PauseModalContent extends Container {
 		this.playBounce.stop();
 	}
 
-	public reflow(_contentWidth: number): void {
+	public reflow(contentWidth: number, panelHeight?: number): void {
+		this.panelWidth = contentWidth + PANEL_EDGE_PAD * 2;
+		if (panelHeight !== undefined) {
+			this.panelHeight = panelHeight;
+		}
+
 		this.layout();
 	}
 
@@ -56,6 +73,8 @@ export class PauseModalContent extends Container {
 	private async build(): Promise<void> {
 		const panelSheet = await Assets.load<Spritesheet>('pause-panel-buttons');
 		const playSheet = await Assets.load<Spritesheet>('play-button');
+		const decorTextures = await loadModalDecorTextures([PAUSE_DECOR_LAYOUT]);
+		this.decor = ModalDecorLayer.create(this, PAUSE_DECOR_LAYOUT, decorTextures);
 
 		this.title = createModalTitle('Paused', 38);
 		this.addChild(this.title);
@@ -98,6 +117,7 @@ export class PauseModalContent extends Container {
 	private layout(): void {
 		this.title.x = 0;
 		this.title.y = TITLE_Y;
+		this.decor.layout(this.panelWidth, this.panelHeight);
 
 		this.resumeButtonRoot.x = 0;
 		this.resumeButtonRoot.y = BUTTONS_Y;

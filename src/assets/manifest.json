@@ -190,7 +190,7 @@
 				},
 				{
 					"alias": "9slice-panel-old",
-					"src": "assets/images/9slice-bordered-paper-old.webp",
+					"src": "assets/images/9slice-bordered-paper-old-sun.webp",
 					"data": {
 						"resolution": 2,
 						"autoGenerateMipmaps": true,
@@ -226,7 +226,16 @@
 				},
 				{
 					"alias": "level-lock",
-					"src": "assets/images/level-lock-big.webp",
+					"src": "assets/images/level-lock.webp",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "burdock-decor",
+					"src": "assets/images/burdock-decor.webp",
 					"data": {
 						"resolution": 2,
 						"autoGenerateMipmaps": true,
@@ -246,7 +255,7 @@
 					"alias": "grass-decor",
 					"src": "assets/images/grass-decor.webp",
 					"data": {
-						"resolution": 2.5,
+						"resolution": 2,
 						"autoGenerateMipmaps": true,
 						"scaleMode": "linear"
 					}
@@ -254,6 +263,24 @@
 				{
 					"alias": "scull-icon",
 					"src": "assets/images/scull-icon.webp",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "spider-web-decor",
+					"src": "assets/images/spider-web-decor.webp",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "star1-decor",
+					"src": "assets/images/star1-decor.webp",
 					"data": {
 						"resolution": 2,
 						"autoGenerateMipmaps": true,

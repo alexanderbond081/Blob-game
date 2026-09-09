@@ -1,0 +1,64 @@
+---
+description: TypeScript code style for all source files
+alwaysApply: true
+---
+
+# TypeScript style
+
+- Write TypeScript, never plain JavaScript.
+- Comments in English only, and only for intent, trade-offs or constraints the code cannot express. Never narrate what a line does.
+- Terminate every statement with `;`.
+- Tabs for indentation, single quotes for strings.
+- `camelCase` for variables and methods, `UPPER_CASE` for constants, `PascalCase` for classes and types.
+- Declare an access modifier (`private` / `public` / `protected`) on every class member, including constructors.
+- Never use `any`, including `as any`. Type the real shape, or use `unknown` plus a narrowing guard.
+- Async work goes through `async/await`. Never chain `.then()`.
+
+## Classes vs arrow functions
+
+Anything that renders is a class; arrow functions are for utilities, helpers and `create*` factories.
+
+```typescript
+// ✅ display objects
+export class LevelHint extends Container { }
+
+// ✅ helper / factory
+export const createObstacle = (data: LevelObstacle): Obstacle => { };
+```
+
+## Imports
+
+Keep each import on one line, with named imports only.
+
+```typescript
+// ✅
+import { Container, Sprite, Texture } from 'pixi.js';
+import { LevelObstacle, LevelSpawn } from '../levels/level-schema';
+
+// ❌ multi-line named imports
+import {
+	Container,
+	Sprite,
+} from 'pixi.js';
+
+// ❌ namespace import
+import * as PIXI from 'pixi.js';
+```
+
+When a module exports many symbols, use several single-line imports from that same path grouped by topic — not one symbol per line. The only permitted `import * as PIXI` is in `src/index.ts`, which needs the namespace for `PixiPlugin.registerPIXI`.
+
+## Iteration
+
+- `.map()` / `.filter()` / `.reduce()` when the loop produces a value.
+- `for (const item of items)` for side effects, or when you need `break`, `continue` or `await`.
+- Never `.forEach()`.
+
+## Module state
+
+- No global variables: everything lives in ES modules and classes.
+- Mutable module-level state is allowed only inside a module that is explicitly a singleton or manager (`src/managers`, `src/platform`, `src/world/game-view.ts`, `src/index.ts`).
+- Never add new `globalThis.*` or `window.*` assignments.
+
+## Secrets
+
+A client bundle cannot hold a secret — everything shipped is public. Read platform IDs and public keys from `process.env` at build time, never hardcode them, and never put a private key or token into the client at all.

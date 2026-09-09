@@ -8,7 +8,7 @@
 		"restart": ["restart-button"]
 	},
 	"meta": {
-	  "image": "pause-panel-buttons-shadowed.webp",
+	  "image": "pause-panel-buttons-unshadowed.webp",
 	  "scale": "1"
 	}
   }

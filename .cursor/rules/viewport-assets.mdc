@@ -1,0 +1,26 @@
+---
+description: Design resolution, viewport scaling, backgrounds and 2x asset resolution
+globs: src/world/**/*.ts,src/assets/**/*.json,src/levels/**/*.ts
+alwaysApply: false
+---
+
+# Viewport and assets
+
+## Design size
+
+- Both orientations are in scope: landscape **960×540** (16:9) and portrait **540×960** (9:16). Code must work in either.
+- The canvas fills the iframe; the playfield is contain-scaled and centered inside it.
+- Never clip the view root — backgrounds are meant to draw into the letterbox.
+- HUD chrome pins to the iframe edges, not to the playfield edges.
+
+## Backgrounds
+
+- Screen-space layers, never stretched to fit.
+- Extra width is split left and right of the playfield.
+- Extra height goes to the top bleed first (`VIEW_BLEED = 240`, defined in `src/world/game-view.ts`), the remainder to the bottom.
+- Parallax has no edge clamp.
+- Concrete sizes: `plans/poki.md`, sections *Viewport / Aspect Ratio Approach* and *meadow-01 background sizes*.
+
+## Art is 2×
+
+Mark 2× textures in `src/assets/manifest.json` with `data.resolution: 2`, so `texture.width` and `texture.height` are already logical pixels. Do not additionally set `sprite.scale = 0.5` on those textures — that scales them down twice.

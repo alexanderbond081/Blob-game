@@ -1,0 +1,22 @@
+---
+description: Pixi.js v8 scene graph and display object conventions
+globs: src/scenes/**/*.ts,src/entities/**/*.ts,src/hud/**/*.ts,src/components/**/*.ts,src/fx/**/*.ts,src/world/**/*.ts
+alwaysApply: false
+---
+
+# Pixi.js v8 conventions
+
+- Display objects are classes that extend the imported Pixi type directly.
+
+```typescript
+// ✅
+export class UIButton extends Container { }
+
+// ❌ namespace form
+export class UIButton extends PIXI.Container { }
+```
+
+- Load assets through `Assets.init()` / `Assets.load()` and the manifest at `src/assets/manifest.json`. `new PIXI.Loader()` and `PIXI.sharedLoader` were removed in v8 and must never appear.
+- Use v8 APIs, not v7 ones — for example `graphics.rect(...).fill(...)`, not `beginFill()` / `endFill()`.
+- Anything a class creates it must release in `destroy()`: children, ticker callbacks, event listeners, tweens, filters, textures it owns.
+- New interactive objects set `eventMode` and use federated pointer events, rather than the legacy `interactive` flag.

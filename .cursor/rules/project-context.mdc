@@ -1,0 +1,39 @@
+---
+description: Project context, tech stack and scope boundaries for the Blob-game project
+alwaysApply: true
+---
+
+# Project: Blob-game
+
+HTML5 casual platformer built from short levels. Distribution targets: Poki, itch.io, CrazyGames.
+Write like an experienced HTML5 game developer: clean, modular, optimized, no outdated patterns.
+
+## Stack — do not introduce alternatives
+
+| Concern | Choice |
+| --- | --- |
+| Engine | Pixi.js v8 (`^8.19.0`) |
+| Language | TypeScript, `strict: true` |
+| Animation | GSAP 3 with `PixiPlugin` |
+| Bundler | Webpack 5 |
+| Linter / formatter / tests | none configured — style is enforced by these rules alone |
+
+## Source layout
+
+- `src/scenes` — scene roots and scene lifecycle
+- `src/entities` — player, obstacles, portals, hints
+- `src/hud` — HUD and modals
+- `src/components` — reusable Pixi widgets and helpers (not React components)
+- `src/world` — viewport, camera, layout
+- `src/physics` — bodies and collision helpers
+- `src/input` — keyboard cluster and gesture touch layer
+- `src/managers` — progress, sound, debug
+- `src/platform` — Poki SDK integration
+- `src/levels` — level JSON and loaders
+- `src/fx`, `src/assets` — effects, asset manifest and art
+
+## Scope boundary
+
+- Touch only the modules, files and classes the task requires.
+- Designing or reshaping the overall architecture is not your task. The architecture is intentionally incomplete in places — work within it, do not "fix" unrelated parts.
+- Reference specs live in `plans/poki.md`.
