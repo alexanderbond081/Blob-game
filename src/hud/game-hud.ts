@@ -332,7 +332,7 @@ export class GameHUD extends HUD {
 			height: PAUSE_MODAL_HEIGHT,
 			showOkButton: false,
 			closeOnBackdropTap: false,
-			panelAlias: '9slice-panel-old',
+			panelAlias: '9slice-panel-old-sun',
 		});
 		this.pauseContent = await PauseModalContent.create();
 		this.pauseModal.setContent(this.pauseContent);
@@ -353,7 +353,7 @@ export class GameHUD extends HUD {
 			height: RESULT_MODAL_HEIGHT,
 			showOkButton: false,
 			closeOnBackdropTap: false,
-			panelAlias: '9slice-panel-old',
+			panelAlias: '9slice-panel-old-sun',
 		});
 		this.resultContent = await ResultModalContent.create();
 		this.resultModal.setContent(this.resultContent);

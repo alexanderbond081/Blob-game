@@ -190,6 +190,15 @@
 				},
 				{
 					"alias": "9slice-panel-old",
+					"src": "assets/images/9slice-bordered-paper-old.webp",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "9slice-panel-old-sun",
 					"src": "assets/images/9slice-bordered-paper-old-sun.webp",
 					"data": {
 						"resolution": 2,
@@ -200,6 +209,24 @@
 				{
 					"alias": "9slice-panel-yellow",
 					"src": "assets/images/9slice-paper-yellow.webp",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "9slice-panel-raised-light",
+					"src": "assets/images/9slice-tile-paper-light.webp",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "9slice-panel-raised-gray",
+					"src": "assets/images/9slice-tile-paper-gray.webp",
 					"data": {
 						"resolution": 2,
 						"autoGenerateMipmaps": true,
@@ -227,6 +254,24 @@
 				{
 					"alias": "level-lock",
 					"src": "assets/images/level-lock.webp",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "arrow-icon",
+					"src": "assets/images/arrow-icon.webp",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "checked-icon",
+					"src": "assets/images/checked-icon.webp",
 					"data": {
 						"resolution": 2,
 						"autoGenerateMipmaps": true,

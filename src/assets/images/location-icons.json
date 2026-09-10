@@ -5,7 +5,8 @@
 	  "cave": { "frame": { "x": 480, "y": 0, "w": 240, "h": 240 } },
 	  "house": { "frame": { "x": 720, "y": 0, "w": 240, "h": 240 } },
 	  "forest": { "frame": { "x": 960, "y": 0, "w": 240, "h": 240 } },
-	  "mushroom": { "frame": { "x": 1200, "y": 0, "w": 240, "h": 240 } }
+	  "mushroom": { "frame": { "x": 1200, "y": 0, "w": 240, "h": 240 } },
+	  "highrass": { "frame": { "x": 1440, "y": 0, "w": 240, "h": 240 } }
 	},
 	"animations": {
 		"meadow": ["meadow"],
@@ -13,7 +14,8 @@
 		"cave": ["cave"],
 		"house": ["house"],
 		"forest": ["forest"],
-		"mushroom": ["mushroom"]
+		"mushroom": ["mushroom"],
+		"highrass": ["highrass"]
 	},
 	"meta": {
 	  "image": "location-icons.webp",

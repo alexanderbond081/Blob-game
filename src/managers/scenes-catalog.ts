@@ -14,6 +14,8 @@ export interface GameSceneCatalogEntry {
 	assetBundle: string;
 	/** Frame name inside the `location-icons` spritesheet. */
 	locationIcon: string;
+	/** Episode caption in the Progress modal; levels sharing an icon share this name. */
+	locationTitle: string;
 	createScene: (args?: GameSceneCreateArgs) => Scene;
 }
 
@@ -23,6 +25,7 @@ export const gameSceneCatalog: GameSceneCatalogEntry[] = [
 		title: 'Meadow',
 		assetBundle: 'meadow-scene',
 		locationIcon: 'meadow',
+		locationTitle: 'Meadow',
 		createScene: () => new PlatformLevelScene('meadow-01'),
 	},
 	{
@@ -30,6 +33,7 @@ export const gameSceneCatalog: GameSceneCatalogEntry[] = [
 		title: 'Meadow',
 		assetBundle: 'meadow-scene',
 		locationIcon: 'meadow',
+		locationTitle: 'Meadow',
 		createScene: () => new PlatformLevelScene('meadow-02'),
 	},
 	{
@@ -37,6 +41,7 @@ export const gameSceneCatalog: GameSceneCatalogEntry[] = [
 		title: 'Meadow',
 		assetBundle: 'meadow-scene',
 		locationIcon: 'meadow',
+		locationTitle: 'Meadow',
 		createScene: () => new PlatformLevelScene('meadow-03'),
 	},
 	{
@@ -44,6 +49,7 @@ export const gameSceneCatalog: GameSceneCatalogEntry[] = [
 		title: 'Meadow',
 		assetBundle: 'meadow-scene',
 		locationIcon: 'meadow',
+		locationTitle: 'Meadow',
 		createScene: () => new PlatformLevelScene('meadow-04'),
 	},
 	{
@@ -51,6 +57,7 @@ export const gameSceneCatalog: GameSceneCatalogEntry[] = [
 		title: 'Meadow',
 		assetBundle: 'meadow-scene',
 		locationIcon: 'meadow',
+		locationTitle: 'Meadow',
 		createScene: () => new PlatformLevelScene('meadow-05'),
 	},
 	{
@@ -58,6 +65,7 @@ export const gameSceneCatalog: GameSceneCatalogEntry[] = [
 		title: 'Meadow',
 		assetBundle: 'meadow-scene',
 		locationIcon: 'meadow',
+		locationTitle: 'Meadow',
 		createScene: () => new PlatformLevelScene('meadow-06'),
 	},
 	{
@@ -65,6 +73,7 @@ export const gameSceneCatalog: GameSceneCatalogEntry[] = [
 		title: 'Meadow',
 		assetBundle: 'meadow-scene',
 		locationIcon: 'meadow',
+		locationTitle: 'Meadow',
 		createScene: () => new PlatformLevelScene('meadow-07'),
 	},
 	{
@@ -72,6 +81,7 @@ export const gameSceneCatalog: GameSceneCatalogEntry[] = [
 		title: 'Meadow',
 		assetBundle: 'meadow-scene',
 		locationIcon: 'meadow',
+		locationTitle: 'Meadow',
 		createScene: () => new PlatformLevelScene('meadow-08'),
 	},
 	{
@@ -79,6 +89,7 @@ export const gameSceneCatalog: GameSceneCatalogEntry[] = [
 		title: 'Meadow',
 		assetBundle: 'meadow-scene',
 		locationIcon: 'meadow',
+		locationTitle: 'Meadow',
 		createScene: () => new PlatformLevelScene('meadow-09'),
 	},
 	{
@@ -86,14 +97,16 @@ export const gameSceneCatalog: GameSceneCatalogEntry[] = [
 		title: 'Meadow',
 		assetBundle: 'meadow-scene',
 		locationIcon: 'meadow',
+		locationTitle: 'Meadow',
 		createScene: () => new PlatformLevelScene('meadow-13'),
 	},
 	{
 		id: 'testlevel-00',
-		title: 'Forest',
+		title: 'Bonus Level',
 		// JSON currently shares meadow backgrounds; swap back to test-scene when those art assets return.
 		assetBundle: 'test-scene',
-		locationIcon: 'forest',
+		locationIcon: 'highrass',
+		locationTitle: 'Bonus Level',
 		createScene: () => new PlatformLevelScene('testlevel-00'),
 	},
 ];

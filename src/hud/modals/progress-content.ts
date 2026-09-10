@@ -1,21 +1,29 @@
-import { Assets, Container, DestroyOptions, Spritesheet } from 'pixi.js';
+import { Assets, Container, DestroyOptions, Spritesheet, Texture } from 'pixi.js';
 
-import { MAX_PROGRESS_EPISODES, collectEpisodeProgressSummaries } from '../../managers/progress-episodes';
-import { hubModalTitleY } from './hub-modal-layout';
-
-import { computeProgressGridLayout, progressGridSlotPosition } from './progress-grid-layout';
+import { VerticalScroller } from '../../components/vertical-scroller';
+import { collectEpisodeProgressSummaries } from '../../managers/progress-episodes';
+import { hubModalTitleY, isPortraitViewport } from './hub-modal-layout';
 import { createModalTitle } from './modal-title';
-import { ProgressEpisodeRow } from './progress-episode-row';
+import { ProgressEpisodeRow, ProgressStatIconTextures, ProgressTileTextures } from './progress-episode-row';
+import { computeProgressTileHeight, PROGRESS_TILE_GAP } from './progress-tile-layout';
+
+const LIST_SIDE_PAD = 8;
+const LIST_BOTTOM_PAD = 64;
+const LIST_BELOW_TITLE = 44;
+const LIST_MIN_HEIGHT = 120;
 
 /**
- * Progress hub modal: per-episode completion % and firefly totals on a fixed 6-slot grid.
+ * Progress hub modal: one scrollable paper tile per episode with completion bar and run totals.
  */
 export class ProgressModalContent extends Container {
 	private title!: ReturnType<typeof createModalTitle>;
-	private iconSheet!: Spritesheet;
-	private readonly episodeRows: ProgressEpisodeRow[] = [];
+	private tileTextures!: ProgressTileTextures;
+	private statIcons!: ProgressStatIconTextures;
+	private readonly scroller = new VerticalScroller();
+	private readonly tiles: ProgressEpisodeRow[] = [];
 	private panelHeight = 480;
 	private contentWidth = 400;
+	private portrait = false;
 
 	private constructor() {
 		super();
@@ -30,19 +38,26 @@ export class ProgressModalContent extends Container {
 	public refresh(): void {
 		const summaries = collectEpisodeProgressSummaries();
 
-		for (let slot = 0; slot < MAX_PROGRESS_EPISODES; slot += 1) {
-			const row = this.episodeRows[slot];
-			const summary = summaries[slot];
+		while (this.tiles.length < summaries.length) {
+			const tile = new ProgressEpisodeRow(this.tileTextures, this.statIcons);
+			this.tiles.push(tile);
+			this.scroller.content.addChild(tile);
+		}
 
+		for (let i = 0; i < this.tiles.length; i += 1) {
+			const tile = this.tiles[i];
+			const summary = summaries[i];
 			if (!summary) {
-				row.hideRow();
+				tile.visible = false;
 				continue;
 			}
 
-			row.setSummary(summary, this.iconSheet);
+			tile.visible = true;
+			tile.setSummary(summary);
 		}
 
-		this.applyGridLayout();
+		this.scroller.scrollToTop();
+		this.layoutList();
 	}
 
 	public reflow(
@@ -57,8 +72,12 @@ export class ProgressModalContent extends Container {
 			this.panelHeight = panelHeight;
 		}
 
+		this.portrait = viewportWidth !== undefined && viewportHeight !== undefined
+			? isPortraitViewport(viewportWidth, viewportHeight)
+			: this.panelHeight > this.contentWidth;
+
 		this.layoutTitle();
-		this.applyGridLayout();
+		this.layoutList();
 	}
 
 	public override destroy(options?: DestroyOptions): void {
@@ -66,17 +85,29 @@ export class ProgressModalContent extends Container {
 	}
 
 	private async build(): Promise<void> {
-		this.iconSheet = await Assets.load<Spritesheet>('location-icons');
+		const icons = await Assets.load<Spritesheet>('location-icons');
+		this.tileTextures = {
+			panelLight: await Assets.load<Texture>('9slice-panel-raised-light'),
+			panelGray: await Assets.load<Texture>('9slice-panel-raised-gray'),
+			icons,
+			status: {
+				complete: await Assets.load<Texture>('checked-icon'),
+				open: await Assets.load<Texture>('arrow-icon'),
+				locked: await Assets.load<Texture>('level-lock'),
+			},
+		};
+		this.statIcons = {
+			fireflies: await Assets.load<Texture>('firefly-icon'),
+			time: await Assets.load<Texture>('watch-icon'),
+			deaths: await Assets.load<Texture>('scull-icon'),
+		};
+
 		this.title = createModalTitle('Progress', 38);
 		this.addChild(this.title);
-
-		for (let slot = 0; slot < MAX_PROGRESS_EPISODES; slot += 1) {
-			const row = new ProgressEpisodeRow(this.iconSheet);
-			this.episodeRows.push(row);
-			this.addChild(row);
-		}
+		this.addChild(this.scroller);
 
 		this.layoutTitle();
+		this.refresh();
 	}
 
 	private layoutTitle(): void {
@@ -84,21 +115,32 @@ export class ProgressModalContent extends Container {
 		this.title.y = hubModalTitleY(this.panelHeight);
 	}
 
-	private applyGridLayout(): void {
-		// D1 needs only a stable grid direction (portrait vs landscape).
-		// We approximate portrait by panel geometry rather than tracking viewport.
-		const portrait = this.panelHeight > this.contentWidth;
-		const grid = computeProgressGridLayout(this.contentWidth, this.panelHeight, portrait);
+	private layoutList(): void {
+		const listWidth = Math.max(120, this.contentWidth - LIST_SIDE_PAD * 2);
+		const listTop = hubModalTitleY(this.panelHeight) + LIST_BELOW_TITLE;
+		const listBottom = this.panelHeight * 0.5 - LIST_BOTTOM_PAD;
+		const listHeight = Math.max(LIST_MIN_HEIGHT, listBottom - listTop);
 
-		for (let slot = 0; slot < MAX_PROGRESS_EPISODES; slot += 1) {
-			const row = this.episodeRows[slot];
-			if (!row.visible) {
+		this.scroller.x = -listWidth / 2;
+		this.scroller.y = listTop;
+		this.scroller.setViewport(listWidth, listHeight);
+
+		const tileHeight = computeProgressTileHeight(listWidth, this.portrait);
+		const step = tileHeight + PROGRESS_TILE_GAP;
+		let visibleCount = 0;
+
+		for (const tile of this.tiles) {
+			if (!tile.visible) {
 				continue;
 			}
 
-			const position = progressGridSlotPosition(slot, grid);
-			row.x = position.x;
-			row.y = position.y;
+			tile.setLayout(listWidth, tileHeight, this.portrait);
+			tile.x = listWidth / 2;
+			tile.y = visibleCount * step + tileHeight / 2;
+			visibleCount += 1;
 		}
+
+		const contentHeight = visibleCount > 0 ? visibleCount * step - PROGRESS_TILE_GAP : 0;
+		this.scroller.setContentHeight(contentHeight);
 	}
 }

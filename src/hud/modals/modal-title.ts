@@ -1,9 +1,9 @@
 import { Text, TextStyle } from 'pixi.js';
 
-/** Dark-brown italic titles on pause / result / hub modals. */
+/** Dark-brown titles on pause / result / hub modals. */
 export const MODAL_TITLE_FILL = 0x4a2c14;
 
-/** Dark brown on graydirt OK buttons — cream washed out on phones. */
+/** Dark brown on graydirt OK buttons. */
 export const MODAL_OK_LABEL_FILL = 0x4a2c14;
 
 const MODAL_BUTTON_FONT = 'Nunito, Helvetica, sans-serif';
