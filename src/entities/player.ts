@@ -16,6 +16,7 @@ import { PhysicsWorld } from '../physics/physics-world';
 import { PlayerJelly } from './player-jelly';
 import { PlayerState, resolvePlayerState } from './player-state';
 import { SoundManager } from '../managers/sound-manager';
+import { getPixelSnapScale } from '../world/game-view';
 
 export const PLAYER_RADIUS = 30;
 const BODY_DENSITY = 0.03; // 0.004,
@@ -335,11 +336,11 @@ export class Player extends PhysicsBody {
 	}
 
 	/**
-	 * Snap sprite to the same screen-pixel grid as the camera scroll.
+	 * Snap sprite to the same framebuffer-pixel grid as the camera scroll.
 	 * Avoids 1px left/right shimmer when camera rounds but the player does not.
 	 */
 	public alignDisplayToCameraPixels(cameraX: number, cameraY: number, renderScale: number): void {
-		const scale = renderScale > 0 ? renderScale : 1;
+		const scale = getPixelSnapScale(renderScale);
 		const worldX = this.display.position.x;
 		const worldY = this.display.position.y;
 		const screenX = Math.round((worldX - cameraX) * scale);

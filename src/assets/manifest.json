@@ -297,6 +297,15 @@
 					}
 				},
 				{
+					"alias": "firefly-icon-noglow",
+					"src": "assets/images/firefly-icon-noglow.webp",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
 					"alias": "grass-decor",
 					"src": "assets/images/grass-decor.webp",
 					"data": {

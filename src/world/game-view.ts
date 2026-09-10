@@ -65,6 +65,24 @@ let currentLayout: GameViewLayout = initialLayout();
 
 export const getGameView = (): GameViewLayout => currentLayout;
 
+/** Backing-store pixels per CSS pixel. Chrome/Firefox fold browser zoom into this. */
+export const getDevicePixelRatio = (): number => window.devicePixelRatio || 1;
+
+/**
+ * World/CSS units → framebuffer pixels. Camera and sprites snap to this grid
+ * so Ctrl+/− zoom does not coarsen motion to CSS pixels.
+ */
+export const getPixelSnapScale = (worldCssScale: number): number => {
+	const scale = worldCssScale > 0 ? worldCssScale : 1;
+	return scale * getDevicePixelRatio();
+};
+
+/** Place a CSS-pixel coordinate on the framebuffer pixel grid. */
+export const snapCssToDevicePixel = (cssValue: number): number => {
+	const dpr = getDevicePixelRatio();
+	return Math.round(cssValue * dpr) / dpr;
+};
+
 export const setGameView = (layout: GameViewLayout): void => {
 	currentLayout = layout;
 };

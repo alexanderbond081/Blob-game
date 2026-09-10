@@ -1,4 +1,5 @@
 import { Container } from 'pixi.js';
+import { getPixelSnapScale } from './game-view';
 
 export class GameCamera {
 	public x = 0;
@@ -63,21 +64,21 @@ export class GameCamera {
 		this.y = this.clamp(this.y, 0, maxY);
 	}
 
-	/** Snaps scroll to screen pixels to avoid sub-pixel shimmer under stage scale. */
+	/** Snaps scroll to framebuffer pixels (devicePixelRatio, including browser zoom). */
 	public applyToContainer(container: Container, renderScale = 1): void {
-		const scale = renderScale > 0 ? renderScale : 1;
+		const scale = getPixelSnapScale(renderScale);
 		const x = Math.round(this.x * scale) / scale;
 		const y = Math.round(this.y * scale) / scale;
 		container.position.set(-x, -y);
 	}
 
 	public getRenderX(renderScale = 1): number {
-		const scale = renderScale > 0 ? renderScale : 1;
+		const scale = getPixelSnapScale(renderScale);
 		return Math.round(this.x * scale) / scale;
 	}
 
 	public getRenderY(renderScale = 1): number {
-		const scale = renderScale > 0 ? renderScale : 1;
+		const scale = getPixelSnapScale(renderScale);
 		return Math.round(this.y * scale) / scale;
 	}
 

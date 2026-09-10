@@ -18,7 +18,7 @@ import { GameHUD } from './hud/game-hud';
 import { SoundManager } from './managers/sound-manager';
 import { bindGameDelayTicker, setGameDelayPaused } from './global-delay';
 import { startInputModeTracking } from './input/input-mode';
-import { computeGameView, getGameView, setGameView } from './world/game-view';
+import { computeGameView, getDevicePixelRatio, getGameView, setGameView, snapCssToDevicePixel } from './world/game-view';
 
 Filter.defaultOptions.resolution = 'inherit';
 gsap.registerPlugin(PixiPlugin);
@@ -60,8 +60,10 @@ const getClientSize = (): { width: number; height: number } => {
 };
 
 const applyStageScale = (): void => {
-	const dpr = window.devicePixelRatio || 1;
-	const { width: clientWidth, height: clientHeight } = getClientSize();
+	const dpr = getDevicePixelRatio();
+	const { width, height } = getClientSize();
+	const clientWidth = snapCssToDevicePixel(width);
+	const clientHeight = snapCssToDevicePixel(height);
 	const layout = computeGameView(clientWidth, clientHeight);
 	setGameView(layout);
 	Scene.setPlayfield(layout.viewWidth, layout.viewHeight);
@@ -70,8 +72,8 @@ const applyStageScale = (): void => {
 	app.renderer.resize(clientWidth, clientHeight);
 
 	viewRoot.scale.set(layout.scale);
-	viewRoot.x = layout.offsetX;
-	viewRoot.y = layout.offsetY;
+	viewRoot.x = snapCssToDevicePixel(layout.offsetX);
+	viewRoot.y = snapCssToDevicePixel(layout.offsetY);
 
 	hudLayer.scale.set(layout.scale);
 	hudLayer.x = 0;
@@ -190,7 +192,7 @@ async function initGame(): Promise<void> {
 		height: getGameView().viewHeight,
 		antialias: false,
 		autoDensity: true,
-		resolution: window.devicePixelRatio || 1,
+		resolution: getDevicePixelRatio(),
 	});
 	bindGameDelayTicker(app.ticker);
 	setGameDelayPaused(isGamePaused);

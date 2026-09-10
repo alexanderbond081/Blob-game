@@ -35,6 +35,13 @@ const TILE_ICON_SIZE = 120;
 const TILE_LOCK_HEIGHT = 88;
 const TILE_TEXT_RESOLUTION = 2;
 const TILE_TEXT_LOCKED_ALPHA = 0.72;
+const TILE_COUNT_ICON_SIZE = 26;
+const TILE_COUNT_ICON_GAP = 6;
+const TILE_SHADOW_COLOR = 0x000000;
+const TILE_SHADOW_ALPHA = 0.55;
+const TILE_SHADOW_BLUR = 2;
+const TILE_SHADOW_DISTANCE = 3;
+const TILE_SHADOW_ANGLE = Math.PI / 4;
 
 const ARROW_SIZE = 60;
 const ARROW_SIDE_OFFSET_X = 295;
@@ -67,11 +74,11 @@ const createTileTextStyle = (fontSize: number): TextStyle => {
 		fill: 0xffffff,
 		stroke: { color: 0x000000, width: 4, join: 'round' },
 		dropShadow: {
-			color: 0x000000,
-			alpha: 0.55,
-			blur: 2,
-			distance: 3,
-			angle: Math.PI / 4,
+			color: TILE_SHADOW_COLOR,
+			alpha: TILE_SHADOW_ALPHA,
+			blur: TILE_SHADOW_BLUR,
+			distance: TILE_SHADOW_DISTANCE,
+			angle: TILE_SHADOW_ANGLE,
 		},
 	});
 };
@@ -86,6 +93,19 @@ const createTileText = (value: string, fontSize: number, playable: boolean): Tex
 	text.anchor.set(0.5);
 	text.alpha = playable ? 1 : TILE_TEXT_LOCKED_ALPHA;
 	return text;
+};
+
+const createCountIconShadow = (icon: Sprite, playable: boolean): Sprite => {
+	const shadow = new Sprite(icon.texture);
+	shadow.anchor.copyFrom(icon.anchor);
+	shadow.width = icon.width;
+	shadow.height = icon.height;
+	shadow.tint = TILE_SHADOW_COLOR;
+	shadow.alpha = TILE_SHADOW_ALPHA * (playable ? 1 : TILE_TEXT_LOCKED_ALPHA);
+	shadow.x = icon.x + Math.cos(TILE_SHADOW_ANGLE) * TILE_SHADOW_DISTANCE;
+	shadow.y = icon.y + Math.sin(TILE_SHADOW_ANGLE) * TILE_SHADOW_DISTANCE;
+	shadow.eventMode = 'none';
+	return shadow;
 };
 
 const createTileFillGradient = (playable: boolean): FillGradient => {
@@ -122,6 +142,7 @@ class LevelTile extends Container {
 		levelNumber: number,
 		iconSheet: Spritesheet,
 		lockTexture: Texture,
+		fireflyTexture: Texture,
 		panels: LevelTilePanelTextures,
 	) {
 		super();
@@ -148,13 +169,33 @@ class LevelTile extends Container {
 			console.warn(`LevelCarousel: missing location icon "${entry.locationIcon}"`);
 		}
 
+		const countRow = new Container();
+		countRow.eventMode = 'none';
+		countRow.y = TILE_HEIGHT / 2 - 30;
+
+		const firefly = new Sprite(fireflyTexture);
+		firefly.anchor.set(0.5);
+		firefly.width = TILE_COUNT_ICON_SIZE;
+		firefly.height = TILE_COUNT_ICON_SIZE;
+		firefly.alpha = playable ? 1 : TILE_TEXT_LOCKED_ALPHA;
+		firefly.eventMode = 'none';
+
 		const countText = createTileText(
 			`${entry.collected} / ${entry.totalFireflies}`,
 			22,
 			playable,
 		);
-		countText.y = TILE_HEIGHT / 2 - 30;
-		this.addChild(countText);
+		countText.anchor.set(0, 0.5);
+
+		const clusterWidth = TILE_COUNT_ICON_SIZE + TILE_COUNT_ICON_GAP + countText.width;
+		firefly.x = -clusterWidth / 2 + TILE_COUNT_ICON_SIZE / 2;
+		firefly.y = -TILE_SHADOW_DISTANCE / 2;
+		countText.x = -clusterWidth / 2 + TILE_COUNT_ICON_SIZE + TILE_COUNT_ICON_GAP;
+
+		countRow.addChild(createCountIconShadow(firefly, playable));
+		countRow.addChild(firefly);
+		countRow.addChild(countText);
+		this.addChild(countRow);
 
 		if (!playable) {
 			const lock = new Sprite(lockTexture);
@@ -249,6 +290,7 @@ export class LevelCarousel extends Container {
 	public async init(): Promise<void> {
 		const iconSheet = await Assets.load<Spritesheet>('location-icons');
 		const lockTexture = await Assets.load<Texture>('level-lock');
+		const fireflyTexture = await Assets.load<Texture>('firefly-icon-noglow');
 		const arrowSheet = await Assets.load<Spritesheet>('list-buttons');
 		const panels: LevelTilePanelTextures = USE_TILE_NINE_SLICE_PANEL
 			? {
@@ -271,7 +313,7 @@ export class LevelCarousel extends Container {
 		this.addChild(this.tilesLayer);
 
 		for (const [index, entry] of this.entries.entries()) {
-			const tile = new LevelTile(entry, index + 1, iconSheet, lockTexture, panels);
+			const tile = new LevelTile(entry, index + 1, iconSheet, lockTexture, fireflyTexture, panels);
 			this.tiles.push(tile);
 			this.tilesLayer.addChild(tile);
 		}
