@@ -20,6 +20,43 @@ function _createGain(volume: number = 1): GainNode {
 	return bus;
 }
 
+const readBufferSource = (instance: object): AudioBufferSourceNode | null => {
+	if (!('_source' in instance)) {
+		return null;
+	}
+
+	const source = instance._source;
+	if (!(source instanceof AudioBufferSourceNode)) {
+		return null;
+	}
+
+	return source;
+};
+
+/**
+ * @pixi/sound resume recreates the AudioBufferSourceNode with loopStart equal
+ * to the pause offset. A full-track loop must wrap to 0 (loopEnd 0 = buffer end).
+ */
+const restoreFullTrackLoop = (alias: string): void => {
+	if (!alias || !sound.exists(alias)) {
+		return;
+	}
+
+	for (const instance of sound.find(alias).instances) {
+		if (!instance.loop) {
+			continue;
+		}
+
+		const source = readBufferSource(instance);
+		if (source === null) {
+			continue;
+		}
+
+		source.loopStart = 0;
+		source.loopEnd = 0;
+	}
+};
+
 export class SoundManager {
 	private static _musicVolume: number = 0.6;
 	private static _ambienceVolume: number = 0.8;
@@ -91,6 +128,8 @@ export class SoundManager {
 			sound.pauseAll();
 		} else {
 			sound.resumeAll();
+			restoreFullTrackLoop(this.musicAlias);
+			restoreFullTrackLoop(this.ambientAlias);
 		}
 	}
 

@@ -1,6 +1,8 @@
 import { gsap } from 'gsap';
 import { Container, DestroyOptions, FederatedPointerEvent, FederatedWheelEvent, Graphics, Rectangle } from 'pixi.js';
 
+import { normalizeWheelDelta } from './wheel-delta';
+
 /** Overscroll follows the finger at this fraction before snapping back. */
 const RUBBER_FACTOR = 0.35;
 const SETTLE_DURATION = 0.3;
@@ -147,7 +149,7 @@ export class VerticalScroller extends Container {
 		}
 
 		this.stopSettle();
-		this.offset = clamp(this.offset + event.deltaY, 0, this.maxOffset);
+		this.offset = clamp(this.offset + normalizeWheelDelta(event), 0, this.maxOffset);
 		this.applyOffset();
 		event.preventDefault();
 	};

@@ -124,7 +124,7 @@ export class PlatformLevelScene extends Scene {
 			clinging: this.levelRoot.player.isClinging,
 			dying: this.levelRoot.player.isDying,
 			onGround: this.levelRoot.player.isOnGround(),
-		});
+		}, deltaTime);
 		this.levelRoot.player.update(deltaTime);
 		this.levelRoot.droplets.update(deltaTime);
 		this.levelRoot.portal.update(deltaTime);

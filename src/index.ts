@@ -11,7 +11,7 @@ import { findGameScene } from './managers/scenes-catalog';
 import { GameProgress } from './managers/game-progress';
 import { LevelExitEvent, PlatformLevelScene } from './scenes/platform-level-scene';
 import { logBuildInfo } from './version';
-import { initPlatform, platformCommercialBreak, platformGameplayStart, platformGameplayStop, platformLoadingFinished, setPlatformHooks, syncPageVisibility } from './platform/platform';
+import { initPlatform, isFullscreenControlAllowed, platformCommercialBreak, platformGameplayStart, platformGameplayStop, platformLoadingFinished, setPlatformHooks, syncPageVisibility } from './platform/platform';
 
 import './global-delay';
 import { GameHUD } from './hud/game-hud';
@@ -654,7 +654,9 @@ function onKeyDown(event: KeyboardEvent): void {
 
 	if (event.code === 'KeyF') {
 		event.preventDefault();
-		if (event.repeat) return;
+		if (event.repeat || !isFullscreenControlAllowed()) {
+			return;
+		}
 		void toggleFullscreen();
 		return;
 	}

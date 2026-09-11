@@ -70,8 +70,14 @@ export const hasPortalSdk = (): boolean => {
 	return BUILD_INFO.channel === 'poki' || BUILD_INFO.channel === 'crazygames';
 };
 
-/** Poki renders its own fullscreen control in the portal frame; ours would duplicate it. */
-export const isFullscreenControlAllowed = (): boolean => BUILD_INFO.channel !== 'poki';
+/**
+ * Poki has its own fullscreen control. Itch already launches mobile games
+ * fullscreen and locks orientation on that host document — our button would
+ * requestFullscreen on the iframe and drop their lock.
+ */
+export const isFullscreenControlAllowed = (): boolean => {
+	return BUILD_INFO.channel !== 'poki' && BUILD_INFO.channel !== 'itch';
+};
 
 export const isGameplaySessionActive = (): boolean => isInGameplay;
 
@@ -97,6 +103,7 @@ export const initPlatform = async (): Promise<void> => {
 
 	isInitialized = true;
 	bindVisibilityPause();
+	bindItchOrientationUnlock();
 
 	if (BUILD_INFO.channel === 'poki') {
 		try {
@@ -265,6 +272,43 @@ const endAdBreak = (): void => {
  */
 export const syncPageVisibility = (): void => {
 	setPauseReason('hidden', document.visibilityState === 'hidden');
+};
+
+/**
+ * Itch locks mobile orientation to the embed aspect when it enters fullscreen.
+ * Unlock silently so the game can reflow 16:9 ↔ 9:16. Retry: their lock races
+ * our first call, and "Restore game" locks again.
+ */
+const ITCH_ORIENTATION_UNLOCK_DELAYS_MS = [0, 150, 500, 1500];
+
+const unlockHostOrientation = (): void => {
+	try {
+		screen.orientation?.unlock();
+	} catch {
+		// Missing API, not fullscreen yet, or the host forbids it.
+	}
+};
+
+const bindItchOrientationUnlock = (): void => {
+	if (BUILD_INFO.channel !== 'itch') {
+		return;
+	}
+
+	document.addEventListener('fullscreenchange', unlockHostOrientation);
+	document.addEventListener('visibilitychange', () => {
+		if (document.visibilityState === 'visible') {
+			unlockHostOrientation();
+		}
+	});
+
+	for (const delayMs of ITCH_ORIENTATION_UNLOCK_DELAYS_MS) {
+		if (delayMs === 0) {
+			unlockHostOrientation();
+			continue;
+		}
+
+		window.setTimeout(unlockHostOrientation, delayMs);
+	}
 };
 
 const bindVisibilityPause = (): void => {

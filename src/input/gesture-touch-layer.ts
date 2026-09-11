@@ -92,7 +92,7 @@ const FLICK_RELEASE_SPEED_RATIO = 0.75;
  * Follow the contact until it is still (fat-finger centroid jump) or this
  * timer elapses. Distance for a swipe is measured after that, not from raw down.
  */
-const SETTLE_MS = 40;
+const SETTLE_MS = 35;
 const SETTLE_SPEED_PX_PER_SEC = 250; //220;
 const SETTLE_MIN_MS = 16;
 const MIN_SPEED_DT_MS = 16;
@@ -104,15 +104,15 @@ const MIN_SPEED_DT_MS = 16;
  * Without the window, speed would be the average since the settle origin, which
  * can be seconds old and hides a finger that stopped before lifting.
  */
-const GESTURE_WINDOW_MS = 60;
+const GESTURE_WINDOW_MS = 105;
 /**
  * The contact centroid smears while the finger leaves the glass, so the tail
  * is dropped before measuring. Short flicks must survive that cut, hence the
  * floor: never trim past RELEASE_KEEP_MIN_MS of stroke, and at minimum drop
  * only the final sample.
  */
-const RELEASE_TRIM_MS = 5;
-const RELEASE_KEEP_MIN_MS = 20;
+const RELEASE_TRIM_MS = 16;
+const RELEASE_KEEP_MIN_MS = 35;
 
 /**
  * Recovery lane. Settle can eat the first SETTLE_MS of a real flick, so a
@@ -139,6 +139,14 @@ const TAP_MAX_DURATION_MS = 280;
 const HOLD_CANCEL_MS = 500;
 /** Stand-in for dash: keep full run after a fast horizontal flick. */
 const RUN_LATCH_MS = 550;
+/**
+ * After jump-run first touches the floor, keep pushing this long so a corner
+ * or pedestal lip can still suck the blob on. Game time (ticker deltaTime /
+ * TICKER_HZ), not display frames — 30 Hz and 144 Hz travel the same ~10 px.
+ */
+const JUMP_RUN_LAND_HOLD_MS = 35;
+/** Pixi ticker: deltaTime 1 = one frame at this Hz. */
+const TICKER_HZ = 60;
 /** Finger speed that maps to analog ±1 during a slow drag (moveX / moveY). */
 const DRAG_FULL_SPEED_PX_PER_SEC = 360;
 const DRAG_MIN_SPEED_PX_PER_SEC = 40;
@@ -210,6 +218,8 @@ export class GestureTouchLayer extends Container {
 	private windupCancel = false;
 	private wasClinging = false;
 	private wasOnGround = false;
+	/** Elapsed game seconds of the post-landing run hold; −1 if inactive. */
+	private landHoldElapsedSec = -1;
 
 	public constructor(options: GestureTouchLayerOptions) {
 		super();
@@ -289,10 +299,11 @@ export class GestureTouchLayer extends Container {
 	}
 
 	/**
-	 * Clears latched jump-run on cling / landing, and everything on death.
+	 * Clears latched jump-run on cling / confirmed landing, and everything on death.
 	 * Call after the physics step so cling can start from contact this frame.
+	 * @param deltaTime Pixi ticker deltaTime (1 = one frame at TICKER_HZ).
 	 */
-	public notePlayerState(feedback: GesturePlayerFeedback): void {
+	public notePlayerState(feedback: GesturePlayerFeedback, deltaTime: number): void {
 		if (feedback.dying) {
 			this.clearLatches();
 			this.dropAllStrokes();
@@ -309,14 +320,21 @@ export class GestureTouchLayer extends Container {
 		}
 
 		if (feedback.onGround && !this.wasOnGround) {
-			this.clearLatchedMoveX();
 			this.jumpCharge = 0;
 			this.jumpCommitted = false;
+			// Don't kill jump-run on the first contact: a corner/lip needs a
+			// few more physics steps of push to match a held keyboard key.
+			if (!feedback.clinging && this.latchedMoveX !== 0) {
+				this.landHoldElapsedSec = 0;
+			}
 		} else if (!feedback.onGround && this.wasOnGround) {
 			this.jumpCharge = 0;
 			this.jumpCommitted = false;
 			this.latchedCrouch = false;
+			this.landHoldElapsedSec = -1;
 		}
+
+		this.tickLandHold(feedback, deltaTime);
 
 		// Jump-run may only persist in air. A committed swipe that never left
 		// the ground (cancelled wind-up, lost capture) must not keep walking.
@@ -327,6 +345,7 @@ export class GestureTouchLayer extends Container {
 			&& !this.jumpCommitted
 			&& this.jumpCharge <= 0
 			&& this.runLatchUntil <= 0
+			&& this.landHoldElapsedSec < 0
 		) {
 			this.clearLatchedMoveX();
 		}
@@ -752,6 +771,26 @@ export class GestureTouchLayer extends Container {
 		}
 	}
 
+	/**
+	 * Confirm the floor before dropping jump-run. Lost contact aborts the hold
+	 * so a corner graze does not steal air control.
+	 */
+	private tickLandHold(feedback: GesturePlayerFeedback, deltaTime: number): void {
+		if (this.landHoldElapsedSec < 0) {
+			return;
+		}
+
+		if (!feedback.onGround || feedback.clinging) {
+			this.landHoldElapsedSec = -1;
+			return;
+		}
+
+		this.landHoldElapsedSec += Math.max(deltaTime, 0) / TICKER_HZ;
+		if (this.landHoldElapsedSec * 1000 >= JUMP_RUN_LAND_HOLD_MS) {
+			this.clearLatchedMoveX();
+		}
+	}
+
 	private refreshHoldCancel(): void {
 		const now = performance.now();
 		const soleContact = this.strokes.length === 1;
@@ -1026,6 +1065,7 @@ export class GestureTouchLayer extends Container {
 	}
 
 	private latchMoveX(moveX: number, durationMs = 0): void {
+		this.landHoldElapsedSec = -1;
 		this.latchedMoveX = moveX;
 		this.runLatchUntil = durationMs > 0 ? performance.now() + durationMs : 0;
 	}
@@ -1033,6 +1073,7 @@ export class GestureTouchLayer extends Container {
 	private clearLatchedMoveX(): void {
 		this.latchedMoveX = 0;
 		this.runLatchUntil = 0;
+		this.landHoldElapsedSec = -1;
 	}
 
 	private clearStrokeAnalog(stroke: Stroke): void {

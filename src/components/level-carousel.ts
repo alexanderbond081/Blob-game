@@ -1,5 +1,5 @@
 import { gsap } from 'gsap';
-import { Assets, Container, DestroyOptions, FederatedPointerEvent, FillGradient, Graphics, NineSliceSprite, Rectangle, Sprite, Spritesheet, Text, TextStyle, Texture } from 'pixi.js';
+import { Assets, Container, DestroyOptions, FederatedPointerEvent, FederatedWheelEvent, FillGradient, Graphics, NineSliceSprite, Rectangle, Sprite, Spritesheet, Text, TextStyle, Texture } from 'pixi.js';
 
 import { isCarouselLevelPlayable, LevelCarouselEntry } from '../managers/game-progress';
 import { SoundManager } from '../managers/sound-manager';
@@ -7,6 +7,7 @@ import { bindDebouncedTap } from './debounced-tap';
 import { HighlightDecoration } from './highlight-decoration';
 import { playLockDeniedShake } from './lock-denied-shake';
 import { UIButton } from './ui-button';
+import { normalizeWheelDelta } from './wheel-delta';
 
 const TILE_WIDTH = 160;
 const TILE_HEIGHT = 220;
@@ -59,6 +60,10 @@ const STEP_COMMIT_FRACTION = 0.3;
 /** Index units per millisecond that count as a flick. */
 const FLICK_VELOCITY = 0.004;
 const EDGE_RUBBER_FACTOR = 0.35;
+/** One notch / accumulated trackpad swipe steps the reel by one tile. */
+const WHEEL_STEP_THRESHOLD = 40;
+/** Silence that ends a wheel gesture; leftover travel must not bias the next one. */
+const WHEEL_GESTURE_GAP_MS = 200;
 
 export type CarouselArrowLayout = 'sides' | 'below';
 
@@ -274,6 +279,8 @@ export class LevelCarousel extends Container {
 	private lastPointerTime = 0;
 	private dragVelocity = 0;
 	private snapTween: gsap.core.Tween | null = null;
+	private wheelAcc = 0;
+	private lastWheelAt = 0;
 
 	public constructor(entries: LevelCarouselEntry[], initialIndex: number = 0) {
 		super();
@@ -400,7 +407,39 @@ export class LevelCarousel extends Container {
 		this.dragArea.on('pointerup', this.onDragEnd);
 		this.dragArea.on('pointerupoutside', this.onDragEnd);
 		this.dragArea.on('pointercancel', this.onDragCancel);
+		this.dragArea.on('wheel', this.onWheel);
 	}
+
+	private readonly onWheel = (event: FederatedWheelEvent): void => {
+		if (this.isDragging || this.entries.length <= 1) {
+			return;
+		}
+
+		event.preventDefault();
+
+		const delta = normalizeWheelDelta(event);
+		if (delta === 0) {
+			return;
+		}
+
+		// Travel banked by an earlier gesture, or in the opposite direction, would
+		// otherwise decide the sign of this step.
+		const now = performance.now();
+		const staleGesture = now - this.lastWheelAt > WHEEL_GESTURE_GAP_MS;
+		if (staleGesture || Math.sign(delta) !== Math.sign(this.wheelAcc)) {
+			this.wheelAcc = 0;
+		}
+
+		this.lastWheelAt = now;
+		this.wheelAcc += delta;
+
+		if (Math.abs(this.wheelAcc) < WHEEL_STEP_THRESHOLD) {
+			return;
+		}
+
+		this.wheelAcc = 0;
+		this.stepBy(Math.sign(delta));
+	};
 
 	private readonly onDragStart = (event: FederatedPointerEvent): void => {
 		this.snapTween?.kill();
