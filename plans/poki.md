@@ -290,9 +290,10 @@ Pixi = draw yourself + pick physics package. Phaser/Defold = gameplay kit includ
 - [x] Physics for v1 → **Matter.js** (custom AABB only for death droplet FX)
 - [x] UI hub + pause loop (menu carousel, Pause Home/Resume/Restart, platform session + commercialBreak on intent to play)
 - [x] Level catalog + portal exit chain + GameProgress save (A2); level-clear modal (C)
-- [x] Progress / Customize HudModals (stage D; OK dismiss) + skins catalog applied in-level
+- [x] Progress / Customize HudModals (stage D; OK dismiss) + skins catalog applied in-level. Progress list: scrollable paper tiles (name, % bar, fireflies / time / deaths, status); Coming Soon placeholders for `stream` / `cave` / `house` / `forest` / `mushroom`
 - [x] Portal unlock by firefly rim slots + door / vortex art (stage E #1). Blob fly-in animation deferred
-- [x] Moving hazards (caterpillar / spider / mosquito) on fixed rails (stage E #3). Place on demo levels while authoring E4
+- [x] Moving hazards (caterpillar / spider / mosquito) on fixed rails (stage E #3). Demo placement: caterpillar `meadow-04`, spider `meadow-09`, mosquito `bonus-level`
+- [x] 10 playable catalog levels (stage E #4): `meadow-01`–`09` + `bonus-level`. Difficulty curve can still be tuned in playtest
 - [x] Portrait / rotate / odd iframe sizes → **done** (540×960 camera, menu reflow, HUD on iframe, sky center + far/mid floor). Remaining: re-export meadow bg plates to the bleed spec; optional pull-back zoom if 540-wide is too tight
 - [x] Rewarded help → **stage F**; shape still open (flight vs teleport to portal)
 - [x] Mobile background freeze: sync platform `hidden` on `pageshow` / `focus` / first pointer / Page Lifecycle freeze-resume, not only `visibilitychange`. Does **not** clear HUD Pause (`isPaused`)
@@ -305,16 +306,16 @@ Pixi = draw yourself + pick physics package. Phaser/Defold = gameplay kit includ
 
 ### Stage E — playable demo (ship to itch, submit to Poki)
 
-Ordered by dependency: anything that changes level rules lands before the levels are authored.
+Catalog set is in (`meadow-01`–`09` + `bonus-level`). Leftover E items: portal fly-in (deferred), hint leftovers, Poki submit prerequisites.
 
 | # | Task | Depends on / notes |
 |---|------|--------------------|
 | 1 | Portal unlock by fireflies + door art | **Done.** Locked until `exit.slots` fireflies dock on the rim; door tweens out, vortex spins. Extra flies fade into the centre |
 | 2 | Portal entry animation + SFX before the result modal | Enter SFX (`portal-enter`) is in. **Blob fly-in / suck-in animation deferred** — result modal still fires on overlap |
-| 3 | Enemies: moving hazards (caterpillar / spider / mosquito), fixed paths | **Done (runtime).** Live in `hazards[]` (`from` / `to` centres + `speed`), not a separate `enemies[]`. Sensor kill volumes share the spike death path. Remaining: author onto the 10 demo levels |
-| 4 | 10 levels, progressive difficulty | After 3. Authoring is **Ogmo 3** entity layers → runtime JSON (Y flipped on load). Meadow layouts in-repo; `meadow-13` has first authored `stone` / `branch`. Ogmo stone `width` → `size`; branch `rotation` is radians — see [`player-mechanics-backlog.md`](./player-mechanics-backlog.md) |
+| 3 | Enemies: moving hazards (caterpillar / spider / mosquito), fixed paths | **Done (runtime + demo placement).** Live in `hazards[]` (`from` / `to` centres + `speed`), not a separate `enemies[]`. Sensor kill volumes share the spike death path. Demo set: caterpillar `meadow-04`, spider `meadow-09`, mosquito `bonus-level`. More rails as layouts need them |
+| 4 | 10 levels, progressive difficulty | **Done (catalog).** Playable: `meadow-01`–`09` + `bonus-level`. Authoring is **Ogmo 3** entity layers → runtime JSON (Y flipped on load). Ogmo stone `width` → `size`; branch `rotation` is radians — see [`player-mechanics-backlog.md`](./player-mechanics-backlog.md). Curve can still be tuned in playtest |
 | 5 | Touch controls rework | **Done (playable).** Gesture-first; comfortable on phone after settle / flick-on-up / no false jump-run. Jump / crouch swipes; jump side-speed lasts until landing or cling. Horizontal swipe deferred until dash (then: on release + speed threshold, no run latch). Slow drag is live analog. Tap, 0.5 s hold, or any gameplay key cancels. Full jump height from 45° up; ~33° deadzone. Top HUD band (~72 px) **intentionally** ends the stroke (chrome / pause). Flick vs slow-swipe distances tuned. Remaining polish: [Touch follow-ups](#touch-follow-ups) |
-| 6 | Hints for existing mechanics only | **Playback done** (move / jump / crouch / crouch-jump). Remaining: place posters while authoring levels. Plan: [`e6-level-hints.md`](./e6-level-hints.md) |
+| 6 | Hints for existing mechanics only | **Playback done.** Posters on `meadow-01`–`03`, `05`, `06`, `08`, `09`. Remaining: `crouch` hide-only if a low gap needs it; cling via `jump-*` on sticky layouts (`meadow-07`). Plan: [`e6-level-hints.md`](./e6-level-hints.md) |
 | 7 | Demo outro screen after the last level | **Done (UI).** Same result modal in `demoComplete` mode: title "Demo complete!" + "Thanks for playing!", last-run stats, Home + Restart (no Play). **Todo later:** celebratory music/SFX + VFX (sparks, glowing pollen, happy blob, fairies — TBD) |
 | 8 | Poki submission prerequisites | `gameLoadingFinished`, no external links, incognito / no-`localStorage` path, first-download size, 60 FPS on mid-range mobile |
 

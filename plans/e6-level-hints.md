@@ -1,6 +1,6 @@
 # Stage E6 — In-level control hints
 
-**Status:** playback done for shipped kit including crouch (2026-08-20); remaining work is authoring while levels are built.  
+**Status:** playback done for shipped kit including crouch (2026-08-20); posters placed on most demo levels (2026-09). Remaining: hide-only `crouch` and cling teaching on sticky layouts.  
 **Owner:** separate implementation pass. Do not mix with touch follow-ups, PWA/iOS chrome, or E3 enemies.  
 Related: [`poki.md`](./poki.md) stage E #6, [`player-mechanics-backlog.md`](./player-mechanics-backlog.md).
 
@@ -66,15 +66,15 @@ No `width` / `height` / `id` in v1. Size comes from `kind`. JSON is authored by 
 
 | `kind` | Keyboard loop | Touch loop | Status |
 |--------|-----------------|------------|--------|
-| `move-right` | → / D | finger slides L-R | **Done** — meadow-01 |
-| `move-left` | ← / A | finger slides R-L | **Done** — meadow-03 |
-| `jump-right` | ↑+→ / W+D | swipe up-right | **Done** — meadow-01 |
+| `move-right` | → / D | finger slides L-R | **Done** — meadow-01, meadow-03 |
+| `move-left` | ← / A | finger slides R-L | **Done** — meadow-03, meadow-06 |
+| `jump-right` | ↑+→ / W+D | swipe up-right | **Done** — meadow-01, meadow-08 |
 | `jump-left` | ↑+← / W+A | swipe up-left | **Done** — meadow-02, meadow-03 |
-| `crouchJump-right` | ↓ (`HINT_KEY_SHORT_SEC`) then ↑+→ | swipe down, fade, swipe up-right | **Done** — meadow-04 |
-| `crouchJump-left` | ↓ then ↑+← | swipe down, fade, swipe up-left | **Done** (code); not placed |
+| `crouchJump-right` | ↓ (`HINT_KEY_SHORT_SEC`) then ↑+→ | swipe down, fade, swipe up-right | **Done** — meadow-05, meadow-06, meadow-09 |
+| `crouchJump-left` | ↓ then ↑+← | swipe down, fade, swipe up-left | **Done** — meadow-06 |
 | `crouch` | ↓ / S | swipe down | **Done** (code); place when a low gap needs hide |
 | `jump` | ↑ | swipe up | stub — only if a level needs a straight hop |
-| `cling-right` / `cling-left` | use jump-dir | use jump-dir | not a separate poster |
+| `cling-right` / `cling-left` | use jump-dir | use jump-dir | not a separate poster; sticky `meadow-07` still has no jump poster |
 | `dash` / `glide` / `flight` | stub | stub | backlog (mechanics not shipped) |
 
 ## Runtime wiring
@@ -89,7 +89,7 @@ No `width` / `height` / `id` in v1. Size comes from `kind`. JSON is authored by 
 ## Files
 
 - `src/levels/level-schema.ts`, `src/levels/level-loader.ts`
-- `src/levels/levels/meadow-01.json` … `meadow-04.json`
+- `src/levels/levels/meadow-01.json` … `meadow-09.json` (posters on 01–03, 05, 06, 08, 09)
 - `src/input/input-mode.ts`
 - `src/entities/hints/` (`level-hint.ts`, `move-hint.ts`, `jump-hint.ts`, `crouch-hint.ts`, `crouch-jump-hint.ts`, `touch-pointer.ts`, `keyboard-cluster.ts`, `hint-layout.ts`, `create-level-hint.ts`)
 - `src/world/level-root.ts`
@@ -110,7 +110,7 @@ No `width` / `height` / `id` in v1. Size comes from `kind`. JSON is authored by 
 
 ## Test plan
 
-- [x] Old levels without `hints` still load (`meadow-13`, `testlevel-00`).
+- [x] Old levels without `hints` still load (`meadow-04`, `meadow-07`, `bonus-level`).
 - [x] Poster is behind leaves/blob, above parallax; plate has no stroke.
 - [x] Keyboard: keycaps blink; mouse-clicking HUD does **not** switch to touch art.
 - [x] Touch: swipe loops; WASD/arrows/Space switch to keyboard art.
@@ -123,6 +123,6 @@ No `width` / `height` / `id` in v1. Size comes from `kind`. JSON is authored by 
 
 Engine for the shipped kit is in. Left:
 
-1. **Authoring** while building levels: place posters where the player actually learns the move (`crouch`, `crouchJump-left`, cling via `jump-*` at sticky walls).
+1. **Authoring leftovers:** hide-only `crouch` if a low gap needs it; cling via `jump-*` on sticky `meadow-07` (and any later cling rooms). `meadow-04` / `meadow-07` currently have no posters.
 2. **Optional:** straight `jump` up only if a layout cannot be taught by jump-left/right.
-3. **Mark E6 done** in [`poki.md`](./poki.md) / README when the demo set’s posters are placed.
+3. **Mark E6 done** in [`poki.md`](./poki.md) / README when those leftovers are placed or explicitly skipped.

@@ -291,7 +291,7 @@ Collision shapes and entity spawns come from Ogmo **entity layers**, not from gu
 
 ## Prototype status (vertical slice)
 
-Shipped in-repo (not full MVP): meadow JSON levels authored in Ogmo (`meadow-01`, `meadow-02`), Matter player (cling, crouch/hide + crouch jump, spikes + death droplets), moving insects (`caterpillar` / `spider` / `mosquito` on `hazards[]` rails — runtime done, not yet placed on the 10 demo levels), fireflies that fill portal rim slots and open the door/vortex, dual parallax, keyboard + touch, **landscape/portrait rotate + odd iframe sizes**, hub UI (Progress / Customize / pause / clear), portal SDK adapters. **Not yet:** blob fly-in into the open portal (deferred), episode gating (start as walk-only), pollen relics, gold fireflies, crowns, NG+, origin/ending beats. Runtime stays Zod-validated JSON; Ogmo is the layout editor. Meadow bleed plates still need re-export.
+Shipped in-repo (not full MVP): **10 playable catalog levels** (`meadow-01`–`09` + `bonus-level`) authored in Ogmo, Matter player (cling, crouch/hide + crouch jump, spikes + death droplets), moving insects (`caterpillar` / `spider` / `mosquito` on `hazards[]` rails — on the demo set: `meadow-04` / `meadow-09` / `bonus-level`), fireflies that fill portal rim slots and open the door/vortex, dual parallax, keyboard + touch, **landscape/portrait rotate + odd iframe sizes**, hub UI (scrollable Progress tiles + Customize / pause / clear), portal SDK adapters. **Not yet:** blob fly-in into the open portal (deferred), episode gating (start as walk-only), pollen relics, gold fireflies, crowns, NG+, origin/ending beats. Runtime stays Zod-validated JSON; Ogmo is the layout editor. Meadow bleed plates still need re-export.
 
 ---
 
@@ -303,10 +303,10 @@ A smaller milestone than the MVP above: a build worth publishing on itch.io and 
 
 - [x] Portal opens on a firefly threshold, with door / vortex art  
 - [ ] Portal entry animation before the result modal (**deferred**)  
-- [x] Moving enemies exist (caterpillar / spider / mosquito on fixed paths) and share the death pipeline. Remaining: place on demo levels  
-- [ ] 10 levels with a readable difficulty curve  
+- [x] Moving enemies exist (caterpillar / spider / mosquito on fixed paths) and share the death pipeline. Demo placement: `meadow-04` / `meadow-09` / `bonus-level`  
+- [x] 10 playable catalog levels (`meadow-01`–`09` + `bonus-level`); difficulty curve can still be tuned in playtest  
 - [x] Touch controls are genuinely playable on a phone (gesture-first, no on-screen buttons). Event-order polish still open — [`poki.md`](./poki.md) Touch follow-ups  
-- [ ] Hints teach the mechanics that ship in the demo — spec [`e6-level-hints.md`](./e6-level-hints.md)  
+- [ ] Hints teach the mechanics that ship in the demo — posters on most meadow levels; leftovers in [`e6-level-hints.md`](./e6-level-hints.md)  
 - [x] Outro screen after the last level points at the full version — result modal `demoComplete` (Home / Restart). Celebratory SFX/VFX deferred  
 - [ ] Poki submission prerequisites pass (see [`poki.md`](./poki.md))  
 

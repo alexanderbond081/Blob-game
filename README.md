@@ -2,7 +2,7 @@
 
 Casual HTML5 platformer: a glowing blob jumps across leaves and collects fireflies. Short Poki-style levels, landscape **960×540** / portrait **540×960**.
 
-**Status:** playable vertical slice / portfolio prototype — main menu with level carousel, Ogmo-authored meadow levels, sticky walls, hazards/death, crouch/hide + crouch jump, fireflies that fill the portal, pause → Home / Resume / Restart. Not yet submitted to portals.
+**Status:** playable vertical slice / portfolio prototype — main menu with level carousel, **10 playable levels** (`meadow-01`–`09` + `bonus-level`), sticky walls, hazards/death, crouch/hide + crouch jump, fireflies that fill the portal, pause → Home / Resume / Restart. Not yet submitted to portals.
 
 Built with **Pixi.js v8**, **Matter.js**, **TypeScript**, **Webpack 5**.
 
@@ -35,8 +35,8 @@ Touch is gesture-first (no on-screen buttons). Horizontal swipes are ignored unt
 
 ## What’s in this build
 
-- Main menu hub: background, level carousel, Play, Progress / Customize modals
-- Progress modal: episode summaries (completion % + fireflies) on a fixed grid
+- Main menu hub: background, level carousel (drag / arrows / keys / wheel), Play, Progress / Customize modals
+- Progress modal: scrollable episode tiles (paper 9-slice, landscape / portrait layout) — location name, completion bar, fireflies / best time / deaths, status icon (check / arrow / lock). Future locations (`stream`, `cave`, `house`, `forest`, `mushroom`) show **Coming Soon** + lock
 - Customize modal: skin grid, lock feedback, selection saved; applied on next level start
 - Pause modal (gameplay): Home → menu (no ad break); Resume / Restart → `commercialBreak` when an ad actually starts, then gameplay
 - Matter.js physics, walkable ground detection (slopes-ready normals)
@@ -44,8 +44,8 @@ Touch is gesture-first (no on-screen buttons). Horizontal swipes are ignored unt
 - **Orientation + iframe sizes:** live rotate between landscape **960×540** (16:9) and portrait **540×960** (9:16); any host size contain-scales the playfield and fills letterbox with backgrounds (HUD on iframe edges)
 - Blob player: run / jump / crouch wind-up, jelly squash, facing + hang sprites; colored skins via `skins-catalog`
 - **Sticky walls** (`label: "sticky-wall"`): air cling, slow slide, peel-off stretch, wall-jump
-- **Hazards** (`hazards[]`): `spikes` — solid AABB kill volumes; generated isosceles saw inside the box ([`src/entities/spike-outline.ts`](src/entities/spike-outline.ts)); optional `facing` (`up` / `down` / `left` / `right`; **`none` or omit** = all four sides — Ogmo always writes the field) and `length` (0–1 tooth height). Killbox is inset **6 px** from the drawn AABB (same art). Moving insects (`caterpillar` / `spider` / `mosquito`) — sensor kill volumes on a `from`–`to` rail + `speed`; same death path as spikes. Placement on the 10 demo levels still pending.
-- **Obstacles** (`obstacles[]`): dynamic walkable props (`stone` / `branch`) — push, fall, roll; they do not kill. Stone `size` is **diameter**. Ogmo: stone `width` → `size` (ignore `originX` / `originY`). Branch: unrotated Ogmo rect is vertical (`width` = thickness, `height` = length); `rotation` is **radians** (0 = hanging down); `x,y` = pivot end; authoring `angle` = `-90 - deg(rotation)`. Loader still Y-flips and **negates** branch angle. Fall-cull same slack as the blob. Spikes are solid for them; fireflies / portal / patrol insects are sensors (pass through). Density / friction retune in [`src/entities/obstacle.ts`](src/entities/obstacle.ts). First authored pieces: `meadow-13` + `testlevel-00`.
+- **Hazards** (`hazards[]`): `spikes` — solid AABB kill volumes; generated isosceles saw inside the box ([`src/entities/spike-outline.ts`](src/entities/spike-outline.ts)); optional `facing` (`up` / `down` / `left` / `right`; **`none` or omit** = all four sides — Ogmo always writes the field) and `length` (0–1 tooth height). Killbox is inset **6 px** from the drawn AABB (same art). Moving insects (`caterpillar` / `spider` / `mosquito`) — sensor kill volumes on a `from`–`to` rail + `speed`; same death path as spikes. On the demo set: caterpillar `meadow-04`, spider `meadow-09`, mosquito `bonus-level`.
+- **Obstacles** (`obstacles[]`): dynamic walkable props (`stone` / `branch`) — push, fall, roll; they do not kill. Stone `size` is **diameter**. Ogmo: stone `width` → `size` (ignore `originX` / `originY`). Branch: unrotated Ogmo rect is vertical (`width` = thickness, `height` = length); `rotation` is **radians** (0 = hanging down); `x,y` = pivot end; authoring `angle` = `-90 - deg(rotation)`. Loader still Y-flips and **negates** branch angle. Fall-cull same slack as the blob. Spikes are solid for them; fireflies / portal / patrol insects are sensors (pass through). Density / friction retune in [`src/entities/obstacle.ts`](src/entities/obstacle.ts). On the demo set: stone `meadow-03` / `bonus-level`, branch `meadow-06`. Sandbox JSON (`meadow-13`, `testlevel-00`) is not in the carousel.
 - **Blob vs obstacles:** run/jump stay synthetic (`Body.setVelocity` every frame) — that is why Matter `density` / `friction` barely change a shove from the blob (player `friction` is 0, so pair friction with the blob is 0). A full force-based player was tried and **rolled back** (broke walking on inclined sticks; objects on the head became free “balloons”). Current mass stand-in: **½ move speed** while a SAT side-probe hits an `obstacle` (feet+4 px to below the crown; not platforms). Probe uses real polygons, not AABBs — a rotated branch AABB had been slowing both uphill and downhill. True mass coupling is deferred.
 - **Death:** shared kill path (hazard / fall) → optional `burst` anim → droplet splash → pause → respawn (empty burst frame OK; no forced hide of last frame)
 - **Crouch / hide:** hold ↓ / `S` / down swipe; blend-in squat + alpha; collider half-height; release → 12-frame ease-in then micro-hop; crouch-jump grace 18 frames; jump from any crouch skips squat wind-up, uses `CROUCH_JUMP_VELOCITY` and a lower-pitched jump SFX
@@ -54,7 +54,7 @@ Touch is gesture-first (no on-screen buttons). Horizontal swipes are ignored unt
 - Top icon HUD: fullscreen (non-Poki), pause (gameplay), separate music / SFX mute
 - Platform SDK bridge: `gameLoadingFinished`, `gameplayStart` / `Stop`, `commercialBreak` / rewarded hooks ([`src/platform/platform.ts`](src/platform/platform.ts))
 
-Level data: JSON + Zod ([`src/levels/`](src/levels/)) — `platforms`, `hazards`, `obstacles`, `collectibles`, spawn, size, backgrounds, exit portal. Layouts are blocked in **[Ogmo 3](https://ogmo-editor-3.github.io/)** (`*-ogmo.json`); Y is flipped on load (`authorY` from the level bottom). **Ogmo stone `width` → runtime `size` (diameter).** **Ogmo branch `rotation` is radians**; see schema comment in [`src/levels/level-schema.ts`](src/levels/level-schema.ts).
+Level data: JSON + Zod ([`src/levels/`](src/levels/)) — `platforms`, `hazards`, `obstacles`, `collectibles`, spawn, size, backgrounds, exit portal. Playable catalog: **`meadow-01`–`09` + `bonus-level`**. Layouts are blocked in **[Ogmo 3](https://ogmo-editor-3.github.io/)** (`*-ogmo.json`); Y is flipped on load (`authorY` from the level bottom). **Ogmo stone `width` → runtime `size` (diameter).** **Ogmo branch `rotation` is radians**; see schema comment in [`src/levels/level-schema.ts`](src/levels/level-schema.ts).
 
 ## Goals
 
@@ -94,12 +94,12 @@ Production builds write `dist/BUILD.txt` (version, channel, git meta). Upload th
 | Path | Role |
 |------|------|
 | `src/scenes/` | Loading, main menu, platform level |
-| `src/components/` | Level carousel and shared UI bits |
+| `src/components/` | Level carousel, vertical scroller, shared UI bits |
 | `src/entities/` | Player, fireflies, portal, hazards, obstacles |
 | `src/fx/` | Death droplet pool and other short-lived VFX |
 | `src/physics/` | Matter world, static bodies, ground / wall contact |
 | `src/world/` | Camera, parallax, level root |
-| `src/levels/` | Zod schema + JSON levels (`meadow-01` / `meadow-02`) + Ogmo sources |
+| `src/levels/` | Zod schema + JSON levels (`meadow-01`–`09`, `bonus-level`) + Ogmo sources |
 | `src/input/` | Shared analog controls + gesture touch layer |
 | `src/hud/` | Icon HUD + modals (pause, result, Progress, Customize) |
 | `src/managers/` | Scenes catalog, skins catalog, GameProgress, sound |
@@ -127,10 +127,10 @@ Goal: a build good enough to publish on itch.io and send to Poki for publishing 
 |---|------|-------|
 | 1 | Portal unlock by fireflies + door art | **Done.** Locked until `exit.slots` fireflies dock on the rim; door opens to a spinning vortex |
 | 2 | Portal entry animation + SFX before the result modal | Enter SFX is in; **blob fly-in animation deferred**. Result modal still fires on overlap |
-| 3 | Enemies: moving hazards (caterpillar / spider / mosquito) on fixed paths | **Done (runtime).** Same `hazards[]` + death path; `from` / `to` body centres + `speed`. Art + spider look-out cycle in. Remaining: place on demo levels (Ogmo node optional); spider rail endpoints may still need a pass |
-| 4 | 10 levels with a progressive difficulty curve | After 1 and 3. Engine unblocks authoring |
+| 3 | Enemies: moving hazards (caterpillar / spider / mosquito) on fixed paths | **Done (runtime + demo placement).** Same `hazards[]` + death path; `from` / `to` body centres + `speed`. Art + spider look-out cycle in. Demo set: caterpillar `meadow-04`, spider `meadow-09`, mosquito `bonus-level`. More rails as layouts need them |
+| 4 | 10 levels with a progressive difficulty curve | **Done (catalog).** `meadow-01`–`09` + `bonus-level`. Curve can still be tuned in playtest |
 | 5 | Touch controls rework | **Done (playable).** Gesture layer: settle + flick-on-up, jump/crouch swipes, analog axes from angle, tap / 0.5 s / key cancel. Horizontal swipe deferred until dash. Remaining event-order polish in [`plans/poki.md`](./plans/poki.md) → Touch follow-ups |
-| 6 | Hints for the mechanics that already exist | **Playback done** (move / jump / crouch / crouch-jump). Place on levels while authoring. Plan: [`plans/e6-level-hints.md`](./plans/e6-level-hints.md) |
+| 6 | Hints for the mechanics that already exist | **Playback done**; posters on `meadow-01`–`03`, `05`, `06`, `08`, `09` (move / jump / crouch-jump). Remaining: `crouch` hide-only if a low gap needs it; cling via `jump-*` on sticky layouts (`meadow-07`). Plan: [`plans/e6-level-hints.md`](./plans/e6-level-hints.md) |
 | 7 | Demo outro screen after the last level | **Done (UI).** Result modal `demoComplete` when no next level. Celebratory SFX/VFX deferred |
 | 8 | Poki submission prerequisites | Requirements checklist, first-download size, 60 FPS on mid-range mobile, no-`localStorage` (incognito) path |
 
