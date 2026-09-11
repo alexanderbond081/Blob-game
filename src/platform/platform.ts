@@ -276,10 +276,15 @@ export const syncPageVisibility = (): void => {
 
 /**
  * Itch locks mobile orientation to the embed aspect when it enters fullscreen.
- * Unlock silently so the game can reflow 16:9 ↔ 9:16. Retry: their lock races
- * our first call, and "Restore game" locks again.
+ * Unlock silently so the game can reflow 16:9 ↔ 9:16.
+ *
+ * "Restore game" runs on the parent itch.io page (cross-origin). The iframe
+ * often never gets `fullscreenchange` / `visibilitychange`; the real signals
+ * are resize (iframe jumps back to the screen) and `orientation.change` (their
+ * lock). Delayed retries beat the race with their `lock()` after each wake.
  */
 const ITCH_ORIENTATION_UNLOCK_DELAYS_MS = [0, 150, 500, 1500];
+const itchUnlockTimers: number[] = [];
 
 const unlockHostOrientation = (): void => {
 	try {
@@ -289,17 +294,11 @@ const unlockHostOrientation = (): void => {
 	}
 };
 
-const bindItchOrientationUnlock = (): void => {
-	if (BUILD_INFO.channel !== 'itch') {
-		return;
+const scheduleItchOrientationUnlock = (): void => {
+	for (const timer of itchUnlockTimers) {
+		window.clearTimeout(timer);
 	}
-
-	document.addEventListener('fullscreenchange', unlockHostOrientation);
-	document.addEventListener('visibilitychange', () => {
-		if (document.visibilityState === 'visible') {
-			unlockHostOrientation();
-		}
-	});
+	itchUnlockTimers.length = 0;
 
 	for (const delayMs of ITCH_ORIENTATION_UNLOCK_DELAYS_MS) {
 		if (delayMs === 0) {
@@ -307,8 +306,28 @@ const bindItchOrientationUnlock = (): void => {
 			continue;
 		}
 
-		window.setTimeout(unlockHostOrientation, delayMs);
+		itchUnlockTimers.push(window.setTimeout(unlockHostOrientation, delayMs));
 	}
+};
+
+const bindItchOrientationUnlock = (): void => {
+	if (BUILD_INFO.channel !== 'itch') {
+		return;
+	}
+
+	document.addEventListener('fullscreenchange', scheduleItchOrientationUnlock);
+	document.addEventListener('visibilitychange', () => {
+		if (document.visibilityState === 'visible') {
+			scheduleItchOrientationUnlock();
+		}
+	});
+	window.addEventListener('pageshow', scheduleItchOrientationUnlock);
+	window.addEventListener('focus', scheduleItchOrientationUnlock);
+	window.addEventListener('resize', scheduleItchOrientationUnlock);
+	window.visualViewport?.addEventListener('resize', scheduleItchOrientationUnlock);
+	screen.orientation?.addEventListener('change', scheduleItchOrientationUnlock);
+
+	scheduleItchOrientationUnlock();
 };
 
 const bindVisibilityPause = (): void => {
