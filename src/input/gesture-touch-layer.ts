@@ -1143,7 +1143,7 @@ const jumpAxisFromAngle = (angle: number): number => {
 	if (elevation < FULL_JUMP_ELEVATION_RAD) {
 		jump = (elevation / FULL_JUMP_ELEVATION_RAD + 1.5) / 2.5 * TOUCH_JUMP_BOOST;
 	}
-	console.log(`swipe jump strength = ${jump},  elevation = ${elevation * 180 / Math.PI}`);
+	//console.log(`swipe jump strength = ${jump},  elevation = ${elevation * 180 / Math.PI}`);
 	return jump;
 };
 

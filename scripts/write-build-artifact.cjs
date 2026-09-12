@@ -24,7 +24,7 @@ const uploadHints = {
 const uploadHint = uploadHints[buildInfo.channel] ?? uploadHints.release;
 
 const buildText = [
-	'Fairy Blob build',
+	'Albo the Blob build',
 	'================',
 	`Version:  ${buildInfo.version}`,
 	`Channel:  ${buildInfo.channel}`,

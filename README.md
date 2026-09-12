@@ -1,4 +1,4 @@
-# Fairy Blob
+# Albo the Blob
 
 Casual HTML5 platformer: a glowing blob jumps across leaves and collects fireflies. Short Poki-style levels, landscape **960×540** / portrait **540×960**.
 

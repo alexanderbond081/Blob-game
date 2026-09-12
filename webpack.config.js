@@ -56,7 +56,7 @@ module.exports = (_env, argv) => ({
 	plugins: [
 		new HtmlWebpackPlugin({
 			template: 'src/index.html',
-			title: 'Fairy Blob',
+			title: 'Albo the Blob',
 			favicon: 'src/favicon.ico',
 			platformChannel: channel,
 			platformSdkScripts,

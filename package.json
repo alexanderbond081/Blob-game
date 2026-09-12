@@ -1,6 +1,6 @@
 {
   "name": "fairy-blob",
-  "version": "0.4.0",
+  "version": "0.4.2",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -36,5 +36,5 @@
     "pixi.js": "^8.19.0",
     "zod": "^4.4.3"
   },
-  "description": "Fairy Blob — casual HTML5 leaf-jumper (Pixi.js)"
+  "description": "Albo the Blob — casual HTML5 leaf-jumper (Pixi.js)"
 }

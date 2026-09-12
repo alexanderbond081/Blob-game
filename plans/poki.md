@@ -9,7 +9,7 @@ Personal notes from research (2026). Audience: future HTML5 casual game (≈ Pok
 - Casual web game close to content on [Poki.com](https://poki.com/) (light platformer / physics feel).
 - Similar games exist; unique design direction possible.
 - Target platforms initially: **Poki**, optionally **CrazyGames**.
-- **This repo (Fairy Blob):** Pixi.js v8 + TypeScript + Matter.js + Webpack 5 — see [`poki-2d-platformer-concept.md`](./poki-2d-platformer-concept.md) and [`../README.md`](../README.md).
+- **This repo (Albo the Blob):** Pixi.js v8 + TypeScript + Matter.js + Webpack 5 — see [`poki-2d-platformer-concept.md`](./poki-2d-platformer-concept.md) and [`../README.md`](../README.md).
 - Alternatives still valid for other titles: Defold / Construct / Phaser.
 
 ---
@@ -285,7 +285,7 @@ Pixi = draw yourself + pick physics package. Phaser/Defold = gameplay kit includ
 
 ## Open Decisions (for later)
 
-- [x] Stack for Fairy Blob → **Pixi DIY + Matter** (not Defold/Phaser)
+- [x] Stack for Albo the Blob → **Pixi DIY + Matter** (not Defold/Phaser)
 - [x] Orientation for v1 → **landscape 16:9 + portrait 9:16**, live rotate, contain into any iframe (bg in letterbox, HUD on iframe)
 - [x] Physics for v1 → **Matter.js** (custom AABB only for death droplet FX)
 - [x] UI hub + pause loop (menu carousel, Pause Home/Resume/Restart, platform session + commercialBreak on intent to play)

@@ -31,7 +31,7 @@ export const formatBuildLabel = (): string => {
 };
 
 export const logBuildInfo = (): void => {
-	console.info(`[Fairy Blob] ${formatBuildLabelFull()} (built ${BUILD_INFO.builtAt})`);
+	console.info(`[Albo the Blob] ${formatBuildLabelFull()} (built ${BUILD_INFO.builtAt})`);
 };
 
 const VERSION_TEXT_FILL = '#D9B978';

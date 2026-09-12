@@ -1,4 +1,4 @@
-# Concept — Mystical Blob 2D Platformer (Fairy Blob)
+# Concept — Mystical Blob 2D Platformer (Albo the Blob)
 
 Personal game concept for a casual HTML5 release (Poki / CrazyGames).  
 Platform notes (SDK, size limits, engines): see `poki.md`.
