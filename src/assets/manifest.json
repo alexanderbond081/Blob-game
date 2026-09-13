@@ -526,7 +526,7 @@
 					}
 				},
 				{
-					"alias": "spider-sheet",
+					"alias": "spider",
 					"src": "assets/images/spider.json",
 					"data": {
 						"resolution": 2,

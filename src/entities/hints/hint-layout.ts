@@ -8,17 +8,17 @@ export const HINT_PAD = 16;
 export const HINT_KEY_GAP = 0;
 export const HINT_LABEL_COLOR = 0x333333;
 export const HINT_TRAIL_COLOR = 0xbfbfbf;
-export const HINT_TRAIL_WIDTH = 8;
+export const HINT_TRAIL_WIDTH = 12; //8;
 export const HINT_TRAIL_LIFETIME_SEC = 0.45;
 
 /** Matches player `MOVE_SPEED_X` at 60 Hz. */
-export const HINT_MOVE_SPEED = 250;
-export const HINT_JUMP_SPEED = HINT_MOVE_SPEED * 1.7;
-export const HINT_CYCLE_PAUSE_SEC = 1.5;
+export const HINT_MOVE_SPEED = 200;
+export const HINT_JUMP_SPEED = HINT_MOVE_SPEED * 2;
+export const HINT_CYCLE_PAUSE_SEC = 1.2; //1.5;
 /** Gap between the two crouch-jump touch slides, after the hand has faded out. */
 export const HINT_SLIDE_GAP_SEC = 0.0;
-export const HINT_PRESS_PX = 5;
-export const HINT_HAND_FADE_IN_SEC = 0.15;
+export const HINT_PRESS_PX = 6; //5;
+export const HINT_HAND_FADE_IN_SEC = 0.22; //0.15;
 export const HINT_HAND_FADE_OUT_SEC = 0.45;
 export const HINT_CONTACT_FADE_SEC = 0.08;
 export const HINT_KEY_IDLE_SEC = 0.5;

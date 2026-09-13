@@ -26,7 +26,7 @@ Levels are small: always-on loops are acceptable; do not persist `seenHints` in 
 - Plate size is **fixed per `kind`** in code (`hint-layout.ts`), not in JSON.
 - Keyboard: white `key-unpressed` / `key-pressed` @2x (100×100 source) + dark labels. Cycle per scheme: idle → press → release, then optional fade/gap, swap arrows/WASD. Timings in `hint-layout.ts` (`HINT_KEY_*`, `HINT_SCHEME_*`). No Space on the poster (reserved for a future dash).
 - Touch: `touch-hand` as a mouse-style pointer (no rotation; hotspot = fingertip). Contact ring + **8px** `#bfbfbf` trail with round caps; the tail fades first (comet).
-- Walk / jump swipe speeds and loop pause: `HINT_MOVE_SPEED`, `HINT_JUMP_SPEED`, `HINT_CYCLE_PAUSE_SEC`. Crouch-jump splits the two slides with hand fade + `HINT_SLIDE_GAP_SEC`.
+- Walk / jump swipe speeds and loop pause: `HINT_MOVE_SPEED`, `HINT_JUMP_SPEED`, `HINT_CYCLE_PAUSE_SEC`. Crouch and the down-slide of crouch-jump use **jump speed + `power2.in`**, not walk pace (gesture crouch needs a flick). Crouch-jump splits the two slides with hand fade + `HINT_SLIDE_GAP_SEC`.
 - Gamepad: slot in `InputMode`; **do not implement** until a gamepad path exists.
 
 ### Behaviour

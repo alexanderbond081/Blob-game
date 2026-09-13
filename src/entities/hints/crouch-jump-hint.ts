@@ -8,7 +8,6 @@ import {
 	HINT_HAND_FADE_OUT_SEC,
 	HINT_JUMP_SPEED,
 	HINT_KEY_SHORT_SEC,
-	HINT_MOVE_SPEED,
 	HINT_PRESS_PX,
 	HINT_SLIDE_GAP_SEC,
 	HintAxis,
@@ -38,7 +37,7 @@ export class CrouchJumpHint extends LevelHint {
 		const bottomY = range.maxY;
 		const pressedTopY = topY + HINT_PRESS_PX;
 		const pressedBottomY = bottomY + HINT_PRESS_PX;
-		const crouchSec = Math.abs(pressedBottomY - pressedTopY) / HINT_MOVE_SPEED;
+		const crouchSec = Math.abs(pressedBottomY - pressedTopY) / HINT_JUMP_SPEED;
 		const jumpSec = Math.hypot(jumpEndX - topX, pressedTopY - pressedBottomY) / HINT_JUMP_SPEED;
 
 		this.tip.x = topX;
@@ -70,7 +69,7 @@ export class CrouchJumpHint extends LevelHint {
 			this.setSamplingTrail(true);
 			this.pointer.sampleTrail(this.tip.x, this.tip.y);
 		});
-		timeline.to(this.tip, { y: pressedBottomY, duration: crouchSec, ease: 'none' });
+		timeline.to(this.tip, { y: pressedBottomY, duration: crouchSec, ease: 'power2.in' });
 		timeline.call(() => {
 			this.setSamplingTrail(false);
 		});

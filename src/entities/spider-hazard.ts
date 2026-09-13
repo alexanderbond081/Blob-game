@@ -3,7 +3,7 @@ import { AnimatedSprite, Container, Graphics, Spritesheet, Texture } from 'pixi.
 import { LevelPatrolHazard } from '../levels/level-schema';
 import { PatrolHazard, requireHazardSheet } from './patrol-hazard';
 
-const SHEET_ALIAS = 'spider-sheet';
+const SHEET_ALIAS = 'spider';
 const HITBOX_INSET = 0.65;
 /** Pause at the top of the web before dropping. */
 const WAIT_TOP_SEC = 0.9;

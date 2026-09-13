@@ -79,6 +79,13 @@ const HORIZONTAL_DEADZONE_DEG = 33;
  * can be derived from the other.
  */
 const SWIPE_DISTANCE_PX = 80; //75;
+/**
+ * Mid-stroke jump only (trackMove). Lift still uses SWIPE_DISTANCE_PX, so a
+ * short flick that ends with pointerup is not punished. A longer bar while the
+ * finger is down lets a crooked analog drag leave the jump sector before it
+ * commits — the path that cannot wait for lift.
+ */
+const SWIPE_COMMIT_DISTANCE_PX = 100; //120;
 const SWIPE_SPEED_PX_PER_SEC = 500; //350;
 /**
  * Speed that releases the amplitude anchor, as a share of the speed that plants
@@ -106,12 +113,11 @@ const MIN_SPEED_DT_MS = 16;
  */
 const GESTURE_WINDOW_MS = 105;
 /**
- * The contact centroid smears while the finger leaves the glass, so the tail
- * is dropped before measuring. Short flicks must survive that cut, hence the
- * floor: never trim past RELEASE_KEEP_MIN_MS of stroke, and at minimum drop
- * only the final sample.
+ * Liftoff smear is dropped from the gesture window, not from the raw track.
+ * Cap is ~one sample at 30 Hz; a larger last-gap is lag, not smear — keep it.
+ * Remaining span after a cut must stay >= RELEASE_KEEP_MIN_MS.
  */
-const RELEASE_TRIM_MS = 16;
+const RELEASE_TRIM_MS = 35;
 const RELEASE_KEEP_MIN_MS = 35;
 
 /**
@@ -145,6 +151,13 @@ const RUN_LATCH_MS = 550;
  * TICKER_HZ), not display frames — 30 Hz and 144 Hz travel the same ~10 px.
  */
 const JUMP_RUN_LAND_HOLD_MS = 35;
+/**
+ * After commitJump, floor edges must not drop jump-run or start land hold.
+ * Game time, same clock as land hold. When this elapses on the floor, land
+ * hold starts.
+ */
+const JUMP_RUN_HOLD_MS = 80;
+
 /** Pixi ticker: deltaTime 1 = one frame at this Hz. */
 const TICKER_HZ = 60;
 /** Finger speed that maps to analog ±1 during a slow drag (moveX / moveY). */
@@ -220,6 +233,8 @@ export class GestureTouchLayer extends Container {
 	private wasOnGround = false;
 	/** Elapsed game seconds of the post-landing run hold; −1 if inactive. */
 	private landHoldElapsedSec = -1;
+	/** Elapsed game seconds since commitJump; −1 if inactive. */
+	private jumpHoldElapsedSec = -1;
 
 	public constructor(options: GestureTouchLayerOptions) {
 		super();
@@ -324,7 +339,11 @@ export class GestureTouchLayer extends Container {
 			this.jumpCommitted = false;
 			// Don't kill jump-run on the first contact: a corner/lip needs a
 			// few more physics steps of push to match a held keyboard key.
-			if (!feedback.clinging && this.latchedMoveX !== 0) {
+			if (
+				!feedback.clinging
+				&& this.latchedMoveX !== 0
+				&& this.jumpHoldElapsedSec < 0
+			) {
 				this.landHoldElapsedSec = 0;
 			}
 		} else if (!feedback.onGround && this.wasOnGround) {
@@ -334,6 +353,7 @@ export class GestureTouchLayer extends Container {
 			this.landHoldElapsedSec = -1;
 		}
 
+		this.tickJumpHold(feedback, deltaTime);
 		this.tickLandHold(feedback, deltaTime);
 
 		// Jump-run may only persist in air. A committed swipe that never left
@@ -346,6 +366,7 @@ export class GestureTouchLayer extends Container {
 			&& this.jumpCharge <= 0
 			&& this.runLatchUntil <= 0
 			&& this.landHoldElapsedSec < 0
+			&& this.jumpHoldElapsedSec < 0
 		) {
 			this.clearLatchedMoveX();
 		}
@@ -495,16 +516,18 @@ export class GestureTouchLayer extends Container {
 
 		stroke.originLocked = true;
 
-		// No trim here: mid-slide there is no liftoff smear to drop. The anchor is
-		// moved only from this path, so the trimmed release end can never shift it.
-		const latest = stroke.samples[stroke.samples.length - 1];
-		const velocity = this.measureWindow(stroke, latest);
+		const span = this.pickGestureSpan(stroke);
+		if (!span) {
+			return;
+		}
+
+		const velocity = this.velocityFromSpan(span.from, span.end);
 		this.updateFlickAnchor(stroke, velocity);
-		const measure = this.measureSwipe(stroke, latest, velocity);
+		const measure = this.measureSwipe(stroke, span.end, velocity);
 		const jumpStroke = classifySwipe(measure.angle) === 'jump';
 		stroke.jumpGestureActive = jumpStroke;
 
-		if (this.tryCommitJump(stroke, measure)) {
+		if (this.tryCommitJump(stroke, measure, SWIPE_COMMIT_DISTANCE_PX)) {
 			this.clearStrokeAnalog(stroke);
 			return;
 		}
@@ -536,6 +559,7 @@ export class GestureTouchLayer extends Container {
 		this.clearStrokeAnalog(stroke);
 		this.latchedCrouch = false;
 		this.latchMoveX(jumpMoveXFromAngle(angle));
+		this.jumpHoldElapsedSec = 0;
 		this.jumpCharge = jumpAxisFromAngle(angle);
 		this.jumpCommitted = true;
 		this.windupCancel = false;
@@ -558,29 +582,35 @@ export class GestureTouchLayer extends Container {
 
 	private recognizeStrokeEnd(stroke: Stroke, fromHudBand: boolean): void {
 		const soleContact = this.strokes.length === 1;
-		const end = this.releaseEndSample(stroke);
+		const last = stroke.samples[stroke.samples.length - 1];
+		if (!last) {
+			return;
+		}
 
-		// Amplitude from the anchor, speed and angle from the release window. The
-		// two plain measures below stay whole-stroke for the recovery lane and the
-		// tap verdict, which ask about the contact rather than about the release.
-		const swipe = this.measureSwipe(stroke, end, this.measureWindow(stroke, end));
+		const span = this.pickGestureSpan(stroke);
+
+		// Recovery / tap still use the raw lift: they ask about the contact.
+		// Swipe speed and angle use the filtered span (window, then dense tail).
+		const swipe = span
+			? this.measureSwipe(stroke, span.end, this.velocityFromSpan(span.from, span.end))
+			: { angle: 0, distance: 0, speed: 0 };
 
 		const fromOrigin = this.measureFrom(
 			stroke.originX,
 			stroke.originY,
 			stroke.originTime,
-			end.x,
-			end.y,
-			end.time,
+			last.x,
+			last.y,
+			last.time,
 		);
 
 		const fromDown = this.measureFrom(
 			stroke.downX,
 			stroke.downY,
 			stroke.downTime,
-			end.x,
-			end.y,
-			end.time,
+			last.x,
+			last.y,
+			last.time,
 		);
 
 		if (this.tryCommitJump(stroke, swipe)) {
@@ -590,7 +620,8 @@ export class GestureTouchLayer extends Container {
 		if (this.tryCommitCrouch(stroke, swipe)) {
 			return;
 		}
-
+		/** I'm not sure if this really works and we need it **/
+		/*
 		if (this.canRecoverFlickFromDown(stroke, fromOrigin, fromDown)) {
 			if (this.tryCommitJump(stroke, fromDown)) {
 				return;
@@ -603,13 +634,13 @@ export class GestureTouchLayer extends Container {
 			if (this.tryCommitHorizontalRun(stroke, fromDown)) {
 				return;
 			}
-		}
+		}*/
 
 		if (this.tryCommitHorizontalRun(stroke, swipe)) {
 			return;
 		}
 
-		if (this.isFatFingerTap(stroke, end)) {
+		if (this.isFatFingerTap(stroke, last)) {
 			if (soleContact) {
 				this.clearLatches();
 			}
@@ -634,12 +665,12 @@ export class GestureTouchLayer extends Container {
 		}
 	}
 
-	private tryCommitJump(stroke: Stroke, measure: SwipeMeasure): boolean {
+	private tryCommitJump(stroke: Stroke, measure: SwipeMeasure, distance = SWIPE_DISTANCE_PX): boolean {
 		if (classifySwipe(measure.angle) !== 'jump') {
 			return false;
 		}
 
-		if (!this.meetsSwipeThreshold(measure)) {
+		if (!this.meetsSwipeThreshold(measure, distance)) {
 			return false;
 		}
 
@@ -724,8 +755,8 @@ export class GestureTouchLayer extends Container {
 	 * fast branch used to sit here, but anything it accepted cleared this rule
 	 * too, so it could only ever reject — hence one continuous rule instead.
 	 */
-	private meetsSwipeThreshold(measure: SwipeMeasure): boolean {
-		return measure.distance >= SWIPE_DISTANCE_PX && measure.speed >= SWIPE_SPEED_PX_PER_SEC;
+	private meetsSwipeThreshold(measure: SwipeMeasure, swipeDistance = SWIPE_DISTANCE_PX): boolean {
+		return measure.distance >= swipeDistance && measure.speed >= SWIPE_SPEED_PX_PER_SEC;
 	}
 
 	/** Centroid jumped, then the finger sat still — that is a tap, not a swipe. */
@@ -776,7 +807,7 @@ export class GestureTouchLayer extends Container {
 	 * so a corner graze does not steal air control.
 	 */
 	private tickLandHold(feedback: GesturePlayerFeedback, deltaTime: number): void {
-		if (this.landHoldElapsedSec < 0) {
+		if (this.landHoldElapsedSec < 0 || this.jumpHoldElapsedSec >= 0) {
 			return;
 		}
 
@@ -788,6 +819,31 @@ export class GestureTouchLayer extends Container {
 		this.landHoldElapsedSec += Math.max(deltaTime, 0) / TICKER_HZ;
 		if (this.landHoldElapsedSec * 1000 >= JUMP_RUN_LAND_HOLD_MS) {
 			this.clearLatchedMoveX();
+		}
+	}
+
+	/**
+	 * Keep jump-run through squat / lip contact after commit. Floor-based
+	 * clears wait until this elapses; then land hold may start.
+	 */
+	private tickJumpHold(feedback: GesturePlayerFeedback, deltaTime: number): void {
+		if (this.jumpHoldElapsedSec < 0) {
+			return;
+		}
+
+		if (feedback.clinging) {
+			this.jumpHoldElapsedSec = -1;
+			return;
+		}
+
+		this.jumpHoldElapsedSec += Math.max(deltaTime, 0) / TICKER_HZ;
+		if (this.jumpHoldElapsedSec * 1000 < JUMP_RUN_HOLD_MS) {
+			return;
+		}
+
+		this.jumpHoldElapsedSec = -1;
+		if (feedback.onGround && this.latchedMoveX !== 0) {
+			this.landHoldElapsedSec = 0;
 		}
 	}
 
@@ -934,37 +990,50 @@ export class GestureTouchLayer extends Container {
 	}
 
 	/**
-	 * Endpoint for every measurement taken on release. The last samples carry
-	 * liftoff smear — direction the player never made — so they are cut. A short
-	 * flick would lose its whole body to that cut, so the trim stops at
-	 * RELEASE_KEEP_MIN_MS and in the worst case drops only the final sample.
+	 * Crop to GESTURE_WINDOW_MS from the latest sample, then drop a dense tail.
+	 * One point cannot make an angle. Three or fewer samples are left intact
+	 * (fast flicks). A last-gap wider than RELEASE_TRIM_MS is lag — keep last.
 	 */
-	private releaseEndSample(stroke: Stroke): StrokeSample {
+	private pickGestureSpan(stroke: Stroke): { from: StrokeSample; end: StrokeSample } | null {
 		const samples = stroke.samples;
-		const last = samples[samples.length - 1];
-		if (samples.length < 3) {
-			return last;
+		if (samples.length <= 1) {
+			return null;
 		}
 
-		const trimBefore = last.time - RELEASE_TRIM_MS;
-		const keepUntil = samples[0].time + RELEASE_KEEP_MIN_MS;
-		let trimmed: StrokeSample | null = null;
-		for (const sample of samples) {
-			if (sample.time > trimBefore) {
+		const last = samples[samples.length - 1];
+		if (samples.length <= 3) {
+			return { from: samples[0], end: last };
+		}
+
+		const windowStart = Math.max(stroke.originTime, last.time - GESTURE_WINDOW_MS);
+		const from = this.windowStartSample(stroke, windowStart, last);
+		const prev = samples[samples.length - 2];
+		if (last.time - prev.time > RELEASE_TRIM_MS) {
+			return { from, end: last };
+		}
+
+		let end = last;
+		for (let index = samples.length - 2; index >= 0; index -= 1) {
+			const candidate = samples[index];
+			if (candidate === from || candidate.time < from.time) {
 				break;
 			}
 
-			if (sample.time >= keepUntil) {
-				trimmed = sample;
+			if (last.time - candidate.time > RELEASE_TRIM_MS) {
+				break;
 			}
+
+			if (candidate.time - from.time < RELEASE_KEEP_MIN_MS) {
+				break;
+			}
+
+			end = candidate;
 		}
 
-		return trimmed ?? samples[samples.length - 2];
+		return { from, end };
 	}
 
-	private measureWindow(stroke: Stroke, end: StrokeSample): WindowVelocity {
-		const windowStart = Math.max(stroke.originTime, end.time - GESTURE_WINDOW_MS);
-		const from = this.windowStartSample(stroke, windowStart, end);
+	private velocityFromSpan(from: StrokeSample, end: StrokeSample): WindowVelocity {
 		const dx = end.x - from.x;
 		const dy = end.y - from.y;
 		const dtSec = Math.max(end.time - from.time, MIN_SPEED_DT_MS) / 1000;
@@ -1066,6 +1135,7 @@ export class GestureTouchLayer extends Container {
 
 	private latchMoveX(moveX: number, durationMs = 0): void {
 		this.landHoldElapsedSec = -1;
+		this.jumpHoldElapsedSec = -1;
 		this.latchedMoveX = moveX;
 		this.runLatchUntil = durationMs > 0 ? performance.now() + durationMs : 0;
 	}
@@ -1074,6 +1144,7 @@ export class GestureTouchLayer extends Container {
 		this.latchedMoveX = 0;
 		this.runLatchUntil = 0;
 		this.landHoldElapsedSec = -1;
+		this.jumpHoldElapsedSec = -1;
 	}
 
 	private clearStrokeAnalog(stroke: Stroke): void {
@@ -1143,7 +1214,7 @@ const jumpAxisFromAngle = (angle: number): number => {
 	if (elevation < FULL_JUMP_ELEVATION_RAD) {
 		jump = (elevation / FULL_JUMP_ELEVATION_RAD + 1.5) / 2.5 * TOUCH_JUMP_BOOST;
 	}
-	//console.log(`swipe jump strength = ${jump},  elevation = ${elevation * 180 / Math.PI}`);
+	//console.log(` ...   angle = ${Math.round(elevation * 180 / Math.PI)}, str = ${Math.round(jump * 100) / 100}`);
 	return jump;
 };
 
@@ -1153,9 +1224,12 @@ const jumpMoveXFromAngle = (angle: number): number => {
 	const elevation = swipeElevation(angle);
 	if (elevation <= FULL_JUMP_ELEVATION_RAD) {
 		//return sign * TOUCH_JUMP_BOOST;
-		return sign * (FULL_JUMP_ELEVATION_RAD / elevation + 4) / 5 * TOUCH_JUMP_BOOST;
+		let x_speed = sign * (FULL_JUMP_ELEVATION_RAD / elevation + 4) / 5 * TOUCH_JUMP_BOOST;
+		//console.log(`jump X speed = ${Math.round(x_speed * 100) / 100}`);
+		return x_speed; //sign * (FULL_JUMP_ELEVATION_RAD / elevation + 4) / 5 * TOUCH_JUMP_BOOST;
 	}
 
 	const t = (Math.PI * 0.5 - elevation) / (Math.PI * 0.5 - FULL_JUMP_ELEVATION_RAD);
+	//console.log(`jump X speed = ${Math.round((t * Math.max(0, t) * TOUCH_JUMP_BOOST) * 100) / 100}`);
 	return sign * Math.max(0, t) * TOUCH_JUMP_BOOST;
 };

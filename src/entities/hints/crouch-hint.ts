@@ -6,7 +6,7 @@ import {
 	HINT_CYCLE_PAUSE_SEC,
 	HINT_HAND_FADE_IN_SEC,
 	HINT_HAND_FADE_OUT_SEC,
-	HINT_MOVE_SPEED,
+	HINT_JUMP_SPEED,
 	HINT_PRESS_PX,
 	JUMP_HINT_SIZE,
 } from './hint-layout';
@@ -26,7 +26,7 @@ export class CrouchHint extends LevelHint {
 		const bottomY = range.maxY;
 		const pressedTopY = topY + HINT_PRESS_PX;
 		const pressedBottomY = bottomY + HINT_PRESS_PX;
-		const slideSec = Math.abs(pressedBottomY - pressedTopY) / HINT_MOVE_SPEED;
+		const slideSec = Math.abs(pressedBottomY - pressedTopY) / HINT_JUMP_SPEED;
 
 		this.tip.x = midX;
 		this.tip.y = topY;
@@ -57,7 +57,7 @@ export class CrouchHint extends LevelHint {
 			this.setSamplingTrail(true);
 			this.pointer.sampleTrail(this.tip.x, this.tip.y);
 		});
-		timeline.to(this.tip, { y: pressedBottomY, duration: slideSec, ease: 'none' });
+		timeline.to(this.tip, { y: pressedBottomY, duration: slideSec, ease: 'power2.in' });
 		timeline.call(() => {
 			this.setSamplingTrail(false);
 		});
