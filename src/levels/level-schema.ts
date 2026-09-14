@@ -118,6 +118,8 @@ const obstacleSchema = z.discriminatedUnion('type', [stoneObstacleSchema, branch
 export const hintKindSchema = z.enum([
 	'move-right',
 	'move-left',
+	'run-right',
+	'run-left',
 	'jump-right',
 	'jump-left',
 	'jump',

@@ -109,13 +109,13 @@
         {"name": "firefly", "id": 58, "_eid": "57574758", "x": 170, "y": 990},
         {"name": "firefly", "id": 59, "_eid": "57574758", "x": 680, "y": 840},
         {"name": "ground", "id": 60, "_eid": "57405180", "x": 1190, "y": 1410, "width": 60, "height": 40},
-        {"name": "move-left", "id": 61, "_eid": "21593636", "x": 1120, "y": 950},
         {"name": "firefly", "id": 62, "_eid": "57574758", "x": 1280, "y": 1040},
         {"name": "ground", "id": 63, "_eid": "57405180", "x": 710, "y": 1380, "width": 70, "height": 70},
         {"name": "ground", "id": 64, "_eid": "57405180", "x": 80, "y": 1050, "width": 150, "height": 130},
         {"name": "leaf", "id": 65, "_eid": "57377904", "x": 80, "y": 1050, "width": 150, "height": 30},
         {"name": "leaf", "id": 66, "_eid": "57377904", "x": 230, "y": 1180, "width": 480, "height": 30},
-        {"name": "branch", "id": 67, "_eid": "73002720", "x": 1260, "y": 1090, "width": 90, "height": 90, "originX": 45, "originY": 0, "rotation": 0}
+        {"name": "branch", "id": 67, "_eid": "73002720", "x": 1260, "y": 1090, "width": 90, "height": 90, "originX": 45, "originY": 0, "rotation": 0},
+        {"name": "run-left", "id": 68, "_eid": "37268215", "x": 1120, "y": 950}
       ]
     }
   ]

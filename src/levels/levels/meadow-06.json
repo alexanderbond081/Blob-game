@@ -11,7 +11,7 @@
 	"hints": [
 		{ "kind": "crouchJump-left", "x": 740, "y": 410 },
 		{ "kind": "crouchJump-right", "x": 110, "y": 770 },
-		{ "kind": "move-left", "x": 1120, "y": 550 }
+		{ "kind": "run-left", "x": 1120, "y": 550 }
 	],
 	"platforms": [
 		{ "type": "ground", "x": -120, "y": 50, "width": 1710, "height": 50 },

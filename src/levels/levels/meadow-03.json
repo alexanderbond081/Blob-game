@@ -11,7 +11,7 @@
 	"hints": [
 		{ "kind": "move-left", "x": 470, "y": 940 },
 		{ "kind": "jump-left", "x": 1030, "y": 510 },
-		{ "kind": "move-right", "x": 480, "y": 320 }
+		{ "kind": "run-right", "x": 480, "y": 320 }
 	],
 	"platforms": [
 		{ "type": "ground", "x": -110, "y": 60, "width": 1660, "height": 60 },

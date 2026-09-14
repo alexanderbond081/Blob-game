@@ -1,6 +1,7 @@
 import { Container, FederatedPointerEvent, Rectangle } from 'pixi.js';
 
 import { clampAxis, createEmptyPlayerControls, PlayerControls } from './player-controls';
+import { SoundManager } from '../managers/sound-manager';
 
 export type GestureTouchLayerOptions = {
 	width: number;
@@ -620,24 +621,27 @@ export class GestureTouchLayer extends Container {
 		if (this.tryCommitCrouch(stroke, swipe)) {
 			return;
 		}
-		/** I'm not sure if this really works and we need it **/
-		/*
+
+		if (this.tryCommitHorizontalRun(stroke, swipe)) {
+			return;
+		}
+
+		/** Handles fast-short swipes (common when the player is nervous or naturally high-strung) **/
 		if (this.canRecoverFlickFromDown(stroke, fromOrigin, fromDown)) {
 			if (this.tryCommitJump(stroke, fromDown)) {
+				// SoundManager.playSound('firefly-collect3'); //debug
 				return;
 			}
 
 			if (this.tryCommitCrouch(stroke, fromDown)) {
+				// SoundManager.playSound('firefly-collect3'); //debug
 				return;
 			}
 
 			if (this.tryCommitHorizontalRun(stroke, fromDown)) {
+				// SoundManager.playSound('firefly-collect3'); //debug
 				return;
 			}
-		}*/
-
-		if (this.tryCommitHorizontalRun(stroke, swipe)) {
-			return;
 		}
 
 		if (this.isFatFingerTap(stroke, last)) {
