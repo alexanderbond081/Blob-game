@@ -54,34 +54,30 @@ Pause behaviour must keep working: platform ads already pause `gsap.globalTimeli
 
 ### 3. Renderer init flags (no visual change)
 
-In [`src/index.ts`](../src/index.ts) `app.init`:
+**Done (2026-09-15):** `preference: 'webgl'` and `powerPreference: 'high-performance'` on `app.init` in [`src/index.ts`](../src/index.ts). `antialias: false` and uncapped `devicePixelRatio` unchanged.
 
 - `preference: 'webgl'` — do not let Pixi pick WebGPU on Firefox.
 - `powerPreference: 'high-performance'` — prefer the discrete GPU when the OS offers one.
 
-Keep `antialias: false`. Do **not** cap `devicePixelRatio` in this pass (sharpness is part of the look; Chrome on M20 already holds 60 uncapped).
-
 ### 4. Hint poster blink on loop restart
 
-The whole control tile — including the **50% plate** — sometimes flashes for a frame when the gesture loop wraps. Seen on **desktop Chrome**, so this is a real bug, not a Firefox fillrate issue.
+**Done (2026-09-15):** keyboard wrap no longer plants `.set(cluster, { alpha: 0 })` when `HINT_SCHEME_FADE_SEC = 0` (`playKeyboardCycle` / `appendKeyboardScheme` in [`src/entities/hints/level-hint.ts`](../src/entities/hints/level-hint.ts)). Stencil mask removed — inset is `getSwipeRange` / `HINT_PAD`. Touch loops were already clean. Blink gone on desktop Chrome. Keyboard ↔ touch swap and ads not exercised yet (no device / not that stage); each mode works on its own.
+
+The whole control tile — including the **50% plate** — sometimes flashed for a frame when the gesture loop wrapped. Seen on **desktop Chrome**, so this was a real bug, not a Firefox fillrate issue.
 
 Trace how the poster is built and how `repeat: -1` restarts:
 
-- Construction in [`src/entities/hints/level-hint.ts`](../src/entities/hints/level-hint.ts): plate `Graphics`, stencil `maskGfx` (kept in the display list on purpose — `renderable=false` made Pixi v8 clip everything), masked content, touch vs keyboard layers.
+- Construction: plate `Graphics`, touch vs keyboard layers. No stencil — inset is `getSwipeRange` / `HINT_PAD`.
 - Touch loops in `move` / `run` / `jump` / `crouch` / `crouch-jump`: `gsap.timeline({ repeat: -1, onRepeat })` resets the trail on wrap (`resetTrail()` → `Graphics.clear()`), then the timeline `set`s hand/contact alpha and tip pose again.
-- Keyboard loop (`playKeyboardCycle`) `set`s cluster `alpha: 0` at the start of each repeat. That should not touch the plate — if the plate still blinks in keyboard mode, the cause is the poster root / mask, not the keys.
+- Keyboard loop: with `HINT_SCHEME_FADE_SEC = 0`, do **not** `.set(cluster, { alpha: 0 })` on wrap — that was the empty frame. Scheme swap is in place; fade/gap only if those constants are > 0.
 
-Likely suspects (confirm, do not shotgun): a one-frame stencil miss when the mask or trail geometry is rebuilt; GSAP `onRepeat` racing the first `set` of the next cycle; accidentally tweening the `LevelHint` container (plate is a child); `Graphics.clear()` hitch that flashes the translucent plate.
-
-Fix the restart so the plate never drops out. Do not hide the blink by fading the whole poster. Ship look stays ([`e6-level-hints.md`](./e6-level-hints.md)): 50% rounded plate, content clipped to it, looping forever.
+Do not hide a blink by fading the whole poster. Ship look stays ([`e6-level-hints.md`](./e6-level-hints.md)): 50% rounded plate, looping forever.
 
 ### 5. Hint swipe trail — continuous line, no live primitives
 
-[`src/entities/hints/touch-pointer.ts`](../src/entities/hints/touch-pointer.ts) `SwipeTrail` is a `Graphics` rebuilt **every GSAP ticker frame**: `filter` points, `clear()`, then a new `stroke()` + `circle()` **per sample**. That is create/destroy of GPU geometry on the fly, and it is a prime suspect for item 4’s flash (`onRepeat` → `resetTrail()`).
+**Done (2026-09-15):** `SwipeTrail` in [`src/entities/hints/touch-pointer.ts`](../src/entities/hints/touch-pointer.ts) draws **one** `stroke` from the oldest living sample to the newest (`points[0]` → last). Timed point list stays: tail shortens as samples expire (`HINT_TRAIL_LIFETIME_SEC`), which follows variable swipe easing without a speed rewrite. Still `clear()` + one round-cap stroke per ticker frame — cheap enough vs the old N segments + joint dots. Mesh / comet taper deferred unless the look is questioned later.
 
-- Check init and sampling: `setSamplingTrail`, `sampleTrail` (skip if under 1 px), `HINT_TRAIL_LIFETIME_SEC`, `gsap.ticker.add` in `LevelHint`.
-- Prefer **one continuous ribbon** (single polyline / mesh) whose tail fades, not N independent segments. Reuse the same object; do not `clear()` into an empty graph every frame if the path can be updated in place.
-- Keep the comet look: `#bfbfbf`, current `HINT_TRAIL_WIDTH`, round caps, tail dies first. Hand + contact sprites stay as they are.
+Hand + contact sprites, `#bfbfbf`, `HINT_TRAIL_WIDTH`, sampling skip under 1 px — unchanged. Ticker / `redraw` stay on: the trail is on screen most of the touch-poster cycle.
 
 ---
 
@@ -114,9 +110,19 @@ These were discussed and rejected as not worth the game:
 - Hint posters and portal door/vortex keep looping during user Pause; freeze during platform ad / tab hidden; resume after ad without needing a second GSAP RAF.
 - No obvious “double speed” after a hitch (lagSmoothing off).
 
-## Hand-check after items 4–5
+## Hand-check after item 3
 
-- Loop wrap on every shipped `kind` (touch and keyboard): plate alpha stays put; no one-frame flash of the whole tile.
-- Input-mode swap (keyboard ↔ touch) still kills the old timeline and does not leave a stuck trail or a blank plate.
-- Trail is a fading comet during the swipe and is gone during `HINT_CYCLE_PAUSE_SEC`; it does not leak outside the rounded plate.
-- Pause modal: hint GSAP still runs (same as portal); ads still freeze it.
+- Game still boots; look and sharpness match the previous init (`antialias` off, DPR uncapped).
+- Firefox uses WebGL, not WebGPU (no sudden renderer swap).
+
+## Hand-check after item 4
+
+- Loop wrap on every shipped `kind` (touch and keyboard): plate alpha stays put; no one-frame flash of the whole tile. **Checked — blink gone.**
+- Input-mode swap (keyboard ↔ touch) still kills the old timeline and does not leave a blank plate. **Deferred — no device; each mode works separately.**
+- Pause modal: hint GSAP still runs (same as portal); ads still freeze it. **Ads deferred — not that stage.**
+
+## Hand-check after item 5
+
+- Touch posters (`move` / `run` / `jump` / `crouch` / `crouch-jump`): one smooth stroke, tail shortens, no joint blobs. Fade + thin after the finger lifts; gone during `HINT_CYCLE_PAUSE_SEC`.
+- Trail stays inside the plate by swipe range (no stencil). `resetTrail` on loop wrap / second crouch-jump slide does not leave a stuck line.
+- Keyboard mode and input-mode swap still do not leave a trail on screen.

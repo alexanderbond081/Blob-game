@@ -154,7 +154,7 @@ const bindPlatformPause = (): void => {
 const bindGsapToPixiTicker = (): void => {
 	gsap.ticker.lagSmoothing(0);
 	gsap.ticker.sleep();
-	gsap.ticker.wake = (): void => {};
+	gsap.ticker.wake = (): void => { };
 
 	app.ticker.add(() => {
 		gsap.ticker.tick();
@@ -212,6 +212,8 @@ async function initGame(): Promise<void> {
 		antialias: false,
 		autoDensity: true,
 		resolution: getDevicePixelRatio(),
+		preference: 'webgl',
+		powerPreference: 'high-performance',
 	});
 	bindGameDelayTicker(app.ticker);
 	setGameDelayPaused(isGamePaused);

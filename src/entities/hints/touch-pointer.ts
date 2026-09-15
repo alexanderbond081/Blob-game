@@ -43,26 +43,23 @@ class SwipeTrail extends Graphics {
 			return;
 		}
 
-		const radius = HINT_TRAIL_WIDTH * 0.5;
-		for (let i = 0; i < this.points.length; i += 1) {
-			const point = this.points[i];
+		const last = this.points.length - 1;
+		if (last > 0) {
+			const point = this.points[last];
 			const alpha = Math.max(0, 1 - (now - point.born) / HINT_TRAIL_LIFETIME_SEC);
-			if (i > 0) {
-				const prev = this.points[i - 1];
-				this.moveTo(prev.x, prev.y);
-				this.lineTo(point.x, point.y);
-				this.stroke({
-					width: HINT_TRAIL_WIDTH,
-					color: HINT_TRAIL_COLOR,
-					alpha,
-					cap: 'round',
-					join: 'round',
-				});
-			}
-
-			this.circle(point.x, point.y, radius);
-			this.fill({ color: HINT_TRAIL_COLOR, alpha });
+			const width = HINT_TRAIL_WIDTH * (alpha + 1) / 2;
+			const prev = this.points[0];
+			this.moveTo(prev.x, prev.y);
+			this.lineTo(point.x, point.y);
+			this.stroke({
+				width: width,
+				color: HINT_TRAIL_COLOR,
+				alpha,
+				cap: 'round',
+				join: 'round',
+			});
 		}
+
 	}
 }
 

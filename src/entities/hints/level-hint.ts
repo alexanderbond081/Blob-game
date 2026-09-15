@@ -3,7 +3,7 @@ import { Container, DestroyOptions, Graphics } from 'pixi.js';
 
 import { getInputMode, InputMode, subscribeInputMode } from '../../input/input-mode';
 import { HintSize, HINT_CORNER_RADIUS, HINT_KEY_HOLD_SEC, HINT_KEY_IDLE_SEC, HINT_KEY_RELEASE_SEC, HINT_PLATE_ALPHA, HINT_PLATE_COLOR, HINT_SCHEME_FADE_SEC, HINT_SCHEME_GAP_SEC } from './hint-layout';
-import { KeySlot, KeyboardCluster } from './keyboard-cluster';
+import { KeyScheme, KeySlot, KeyboardCluster } from './keyboard-cluster';
 import { TouchPointer } from './touch-pointer';
 
 type TipPose = {
@@ -22,7 +22,6 @@ export abstract class LevelHint extends Container {
 	protected readonly cluster: KeyboardCluster;
 	protected readonly tip: TipPose = { x: 0, y: 0 };
 
-	private readonly maskGfx: Graphics;
 	private readonly unsubscribeInput: () => void;
 	private samplingTrail = false;
 	private touchTimeline: gsap.core.Timeline | null = null;
@@ -40,24 +39,12 @@ export abstract class LevelHint extends Container {
 		plate.eventMode = 'none';
 		this.addChild(plate);
 
-		this.maskGfx = new Graphics()
-			.roundRect(0, 0, size.width, size.height, HINT_CORNER_RADIUS)
-			.fill(0xffffff);
-		this.maskGfx.eventMode = 'none';
-		// Do not set renderable=false: Pixi v8 stencil then collects nothing and clips all art.
-		this.addChild(this.maskGfx);
-
-		const content = new Container();
-		content.eventMode = 'none';
-		content.mask = this.maskGfx;
-		this.addChild(content);
-
 		this.touchLayer = new Container();
 		this.touchLayer.eventMode = 'none';
 		this.pointer = new TouchPointer();
 		this.touchLayer.addChild(this.pointer);
 		this.touchLayer.visible = false;
-		content.addChild(this.touchLayer);
+		this.addChild(this.touchLayer);
 
 		this.keyboardLayer = new Container();
 		this.keyboardLayer.eventMode = 'none';
@@ -68,7 +55,7 @@ export abstract class LevelHint extends Container {
 		);
 		this.keyboardLayer.addChild(this.cluster);
 		this.keyboardLayer.visible = false;
-		content.addChild(this.keyboardLayer);
+		this.addChild(this.keyboardLayer);
 
 		this.unsubscribeInput = subscribeInputMode((mode) => {
 			this.applyInputMode(mode);
@@ -112,24 +99,35 @@ export abstract class LevelHint extends Container {
 		prelude?: { slots: readonly KeySlot[]; durationSec: number },
 	): gsap.core.Timeline {
 		const timeline = gsap.timeline({ repeat: -1 });
-		timeline.set(this.cluster, { alpha: 0 });
-		timeline.call(() => {
-			this.cluster.setScheme('arrows');
-			this.cluster.setPressed([]);
-		});
-		timeline.to(this.cluster, { alpha: 1, duration: HINT_SCHEME_FADE_SEC });
-		this.appendSchemeHold(timeline, held, prelude);
-		timeline.to(this.cluster, { alpha: 0, duration: HINT_SCHEME_FADE_SEC });
-		this.hold(timeline, HINT_SCHEME_GAP_SEC);
-		timeline.call(() => {
-			this.cluster.setScheme('wasd');
-			this.cluster.setPressed([]);
-		});
-		timeline.to(this.cluster, { alpha: 1, duration: HINT_SCHEME_FADE_SEC });
-		this.appendSchemeHold(timeline, held, prelude);
-		timeline.to(this.cluster, { alpha: 0, duration: HINT_SCHEME_FADE_SEC });
-		this.hold(timeline, HINT_SCHEME_GAP_SEC);
+		// duration 0 still plants a .set(alpha: 0) at t=0; GSAP repeat then shows that empty frame.
+		this.cluster.alpha = HINT_SCHEME_FADE_SEC > 0 ? 0 : 1;
+		this.appendKeyboardScheme(timeline, 'arrows', held, prelude);
+		this.appendKeyboardScheme(timeline, 'wasd', held, prelude);
 		return timeline;
+	}
+
+	private appendKeyboardScheme(
+		timeline: gsap.core.Timeline,
+		scheme: KeyScheme,
+		held: readonly KeySlot[],
+		prelude?: { slots: readonly KeySlot[]; durationSec: number },
+	): void {
+		timeline.call(() => {
+			this.cluster.setScheme(scheme);
+			this.cluster.setPressed([]);
+		});
+		if (HINT_SCHEME_FADE_SEC > 0) {
+			timeline.to(this.cluster, { alpha: 1, duration: HINT_SCHEME_FADE_SEC });
+		}
+
+		this.appendSchemeHold(timeline, held, prelude);
+		if (HINT_SCHEME_FADE_SEC > 0) {
+			timeline.to(this.cluster, { alpha: 0, duration: HINT_SCHEME_FADE_SEC });
+		}
+
+		if (HINT_SCHEME_GAP_SEC > 0) {
+			this.hold(timeline, HINT_SCHEME_GAP_SEC);
+		}
 	}
 
 	private appendSchemeHold(

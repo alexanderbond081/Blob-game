@@ -18,7 +18,7 @@ Levels are small: always-on loops are acceptable; do not persist `seenHints` in 
 - Hints sit **in front of** screen-space parallax (`sky` / `far` / `mid` are siblings **under** `worldRoot` in `PlatformLevelScene`).
 - Author geometry so leaves/walls do not cover the poster (layout, not engine clipping).
 - **Not** a screen-space HUD overlay. **Not** above the blob.
-- Content is **masked** to the rounded plate so the hand never draws outside.
+- Hand / trail stay inside the plate by **layout** (`getSwipeRange`, `HINT_PAD`, sprite size) — no stencil mask. If something pokes past the round rect, fix the range, not the renderer.
 
 ### Look
 
@@ -81,7 +81,7 @@ No `width` / `height` / `id` in v1. Size comes from `kind`. JSON is authored by 
 
 1. Parse `hints` (default `[]`).
 2. `LevelRoot` adds a hints layer **first** (before platforms).
-3. `LevelHint` plate + masked content; `MoveHint` / `JumpHint` / `CrouchHint` / `CrouchJumpHint` own GSAP loops.
+3. `LevelHint` plate + touch/keyboard layers; `MoveHint` / `JumpHint` / `CrouchHint` / `CrouchJumpHint` own GSAP loops.
 4. Subscribe to input-mode; swap / restart the matching timeline.
 5. `PlatformLevelScene.update` does not tick hints — GSAP owns the loop.
 6. Gesture layer stays **above** the world. Hints are not interactive.
