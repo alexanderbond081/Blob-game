@@ -1,6 +1,7 @@
 import { Bodies } from 'matter-js';
 import { Container, Graphics } from 'pixi.js';
 
+import { bakeStaticGraphics } from '../components/bake-static-graphics';
 import { PlatformType } from '../levels/level-schema';
 import { PLATFORM_BODY_LABEL, setPlatformType } from './ground-contact';
 import { PhysicsBody } from './physics-body';
@@ -60,6 +61,7 @@ export class StaticBody extends PhysicsBody {
 			.stroke({ color: style.outline, width: OUTLINE_WIDTH, alpha: 1 });
 
 		container.addChild(graphics);
+		bakeStaticGraphics(graphics);
 		container.pivot.set(options.width * 0.5, options.height * 0.5);
 
 		return container;

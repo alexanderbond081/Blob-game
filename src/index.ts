@@ -137,8 +137,27 @@ const bindPlatformPause = (): void => {
 		onResume: () => {
 			isPlatformPaused = false;
 			gsap.globalTimeline.resume();
-			gsap.ticker.wake();
+			// GSAP is driven by Pixi's ticker — do not wake GSAP's own RAF.
 		},
+	});
+};
+
+/**
+ * One animation clock: advance GSAP from Pixi's RAF.
+ * Runs every frame (including user/UI pause) so HUD / modal tweens keep moving;
+ * platform ads still freeze everything via `globalTimeline.pause()`.
+ *
+ * Tweens and `ticker.add` call `wake()`, which would start GSAP's own RAF.
+ * Sleep once, then no-op `wake` so we never pay `cancelAnimationFrame` per frame.
+ * `tick()` (not bare `updateRoot`) still fires `gsap.ticker.add` (hint trail).
+ */
+const bindGsapToPixiTicker = (): void => {
+	gsap.ticker.lagSmoothing(0);
+	gsap.ticker.sleep();
+	gsap.ticker.wake = (): void => {};
+
+	app.ticker.add(() => {
+		gsap.ticker.tick();
 	});
 };
 
@@ -196,6 +215,7 @@ async function initGame(): Promise<void> {
 	});
 	bindGameDelayTicker(app.ticker);
 	setGameDelayPaused(isGamePaused);
+	bindGsapToPixiTicker();
 	const gameContainer = document.getElementById('game-container');
 	if (!gameContainer) {
 		throw new Error('Missing #game-container');

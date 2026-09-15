@@ -30,6 +30,6 @@ export abstract class PhysicsBody {
 	}
 
 	public destroy(options?: DestroyOptions): void {
-		this.display.destroy(options);
+		this.display.destroy(options ?? { children: true });
 	}
 }

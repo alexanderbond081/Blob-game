@@ -1,6 +1,7 @@
 import { Bodies, Body } from 'matter-js';
 import { Container, Graphics } from 'pixi.js';
 
+import { bakeStaticGraphics } from '../components/bake-static-graphics';
 import { LevelSpikeHazard } from '../levels/level-schema';
 import { PhysicsBody } from '../physics/physics-body';
 import { buildSpikePolygon } from './spike-outline';
@@ -85,6 +86,7 @@ export class SpikeHazard extends Hazard {
 			.fill({ color: HAZARD_FILL, alpha: FILL_ALPHA })
 			.stroke({ color: HAZARD_OUTLINE, width: OUTLINE_WIDTH, alpha: 1, join: 'round' });
 		container.addChild(graphics);
+		bakeStaticGraphics(graphics);
 		container.pivot.set(data.width * 0.5, data.height * 0.5);
 
 		return container;

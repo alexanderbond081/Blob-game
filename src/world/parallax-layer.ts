@@ -8,6 +8,9 @@ export type ParallaxLayerOptions = {
 	parallaxFactor: number;
 	viewportWidth: number;
 	viewportHeight: number;
+	/** Full iframe in playfield pixels (view + letterbox pads). Used by center/sky cover. */
+	screenWidth?: number;
+	screenHeight?: number;
 	/** Level height in world pixels — used for Y parallax vs the world floor. */
 	levelHeight: number;
 	/**
@@ -22,6 +25,9 @@ export type ParallaxLayerOptions = {
  *
  * Floor layers pin the painted horizon to the playfield bottom. Extra
  * height goes up; extra width is split left/right of the playfield.
+ *
+ * Center (sky / parallax 0): native size when the plate covers the iframe;
+ * otherwise uniform scale-up so letterbox does not show the clear color.
  */
 export class ParallaxLayer extends Container {
 	private readonly sprite: Sprite;
@@ -29,6 +35,8 @@ export class ParallaxLayer extends Container {
 	private readonly anchor: ParallaxAnchor;
 	private viewportWidth: number;
 	private viewportHeight: number;
+	private screenWidth: number;
+	private screenHeight: number;
 	private readonly levelHeight: number;
 	private originX = 0;
 	private originY = 0;
@@ -42,6 +50,8 @@ export class ParallaxLayer extends Container {
 		this.anchor = options.anchor ?? 'floor';
 		this.viewportWidth = options.viewportWidth;
 		this.viewportHeight = options.viewportHeight;
+		this.screenWidth = options.screenWidth ?? options.viewportWidth;
+		this.screenHeight = options.screenHeight ?? options.viewportHeight;
 		this.levelHeight = options.levelHeight;
 		this.sprite = new Sprite(Texture.EMPTY);
 		this.sprite.eventMode = 'none';
@@ -50,9 +60,16 @@ export class ParallaxLayer extends Container {
 		void this.loadTexture(options.textureAlias);
 	}
 
-	public setViewport(viewportWidth: number, viewportHeight: number): void {
+	public setViewport(
+		viewportWidth: number,
+		viewportHeight: number,
+		screenWidth: number = viewportWidth,
+		screenHeight: number = viewportHeight,
+	): void {
 		this.viewportWidth = viewportWidth;
 		this.viewportHeight = viewportHeight;
+		this.screenWidth = screenWidth;
+		this.screenHeight = screenHeight;
 		this.layoutSprite();
 		this.update(this.lastCameraX, this.lastCameraY);
 	}
@@ -95,13 +112,24 @@ export class ParallaxLayer extends Container {
 
 		const tileWidth = this.sprite.texture.width;
 		const tileHeight = this.sprite.texture.height;
-		this.originX = (this.viewportWidth - tileWidth) * 0.5;
 
 		if (this.anchor === 'center') {
-			this.originY = (this.viewportHeight - tileHeight) * 0.5;
+			// Scale up only when the plate is smaller than the iframe (beyond ~24:9 / 9:24).
+			const scale = Math.max(
+				1,
+				this.screenWidth / tileWidth,
+				this.screenHeight / tileHeight,
+			);
+			this.sprite.scale.set(scale);
+			const drawWidth = tileWidth * scale;
+			const drawHeight = tileHeight * scale;
+			this.originX = (this.viewportWidth - drawWidth) * 0.5;
+			this.originY = (this.viewportHeight - drawHeight) * 0.5;
 			return;
 		}
 
+		this.sprite.scale.set(1);
+		this.originX = (this.viewportWidth - tileWidth) * 0.5;
 		this.originY = this.viewportHeight - tileHeight;
 	}
 }

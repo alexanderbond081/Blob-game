@@ -65,13 +65,16 @@ export class PlatformLevelScene extends Scene {
 			levelData.size.height,
 		);
 
+		const view = getGameView();
 		this.parallaxLayers = [];
 		for (const layer of levelData.backgrounds) {
 			const parallax = new ParallaxLayer({
 				textureAlias: layer.texture,
 				parallaxFactor: layer.parallax,
-				viewportWidth: this.designWidth,
-				viewportHeight: this.designHeight,
+				viewportWidth: view.viewWidth,
+				viewportHeight: view.viewHeight,
+				screenWidth: view.screenWidth,
+				screenHeight: view.screenHeight,
 				levelHeight: levelData.size.height,
 				anchor: layer.id === 'sky' || layer.parallax === 0 ? 'center' : 'floor',
 			});
@@ -84,7 +87,6 @@ export class PlatformLevelScene extends Scene {
 		this.worldRoot.addChild(this.levelRoot);
 		this.centerCameraOnPlayer();
 
-		const view = getGameView();
 		this.touchLayer = new GestureTouchLayer({
 			width: this.designWidth,
 			height: this.designHeight,
@@ -159,7 +161,12 @@ export class PlatformLevelScene extends Scene {
 		const view = getGameView();
 		this.camera?.setViewport(view.viewWidth, view.viewHeight);
 		for (const layer of this.parallaxLayers) {
-			layer.setViewport(view.viewWidth, view.viewHeight);
+			layer.setViewport(
+				view.viewWidth,
+				view.viewHeight,
+				view.screenWidth,
+				view.screenHeight,
+			);
 		}
 		this.touchLayer?.setViewSize(
 			view.viewWidth,

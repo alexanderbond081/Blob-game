@@ -21,7 +21,11 @@ const pointSchema = z.object({
 });
 
 const backgroundLayerSchema = z.object({
-	/** `sky` → centered plate; other ids are designer markup (far / mid / …). */
+	/**
+	 * `sky` → centered plate (same as `parallax: 0`); other ids are designer markup (far / mid / …).
+	 * Runtime (`ParallaxLayer`): center layers stay at native size while the plate covers the
+	 * iframe; only scale up when letterbox would otherwise show past ~24:9 / 9:24.
+	 */
 	id: z.string().optional(),
 	texture: z.string(),
 	/** Parallax factor for both X and Y camera axes (0 = fixed to viewport, 1 = world-locked). */

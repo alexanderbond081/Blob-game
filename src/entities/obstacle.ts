@@ -1,6 +1,7 @@
 import { Bodies, Body } from 'matter-js';
 import { Container, Graphics } from 'pixi.js';
 
+import { bakeStaticGraphics } from '../components/bake-static-graphics';
 import { LevelBranchObstacle, LevelStoneObstacle } from '../levels/level-schema';
 import { OBSTACLE_BODY_LABEL } from '../physics/ground-contact';
 import { PhysicsBody } from '../physics/physics-body';
@@ -65,6 +66,7 @@ export class StoneObstacle extends Obstacle {
 			.stroke({ color: STONE_OUTLINE, width: OUTLINE_WIDTH, alpha: 1 });
 
 		container.addChild(graphics);
+		bakeStaticGraphics(graphics);
 		return container;
 	}
 }
@@ -105,6 +107,7 @@ export class BranchObstacle extends Obstacle {
 			.stroke({ color: BRANCH_OUTLINE, width: OUTLINE_WIDTH, alpha: 1 });
 
 		container.addChild(graphics);
+		bakeStaticGraphics(graphics);
 		return container;
 	}
 }

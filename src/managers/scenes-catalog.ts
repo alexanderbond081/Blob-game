@@ -92,6 +92,14 @@ export const gameSceneCatalog: GameSceneCatalogEntry[] = [
 		locationTitle: 'Meadow',
 		createScene: () => new PlatformLevelScene('meadow-09'),
 	},
+	/*{
+		id: 'meadow-13',
+		title: 'Meadow',
+		assetBundle: 'meadow-scene',
+		locationIcon: 'meadow',
+		locationTitle: 'Meadow',
+		createScene: () => new PlatformLevelScene('meadow-13'),
+	},*/
 	{
 		id: 'bonus-level',
 		title: 'Bonus Level',
@@ -100,6 +108,14 @@ export const gameSceneCatalog: GameSceneCatalogEntry[] = [
 		locationTitle: 'Bonus Level',
 		createScene: () => new PlatformLevelScene('bonus-level'),
 	},
+	/*{
+		id: 'testlevel',
+		title: 'Test Level',
+		assetBundle: 'test-scene',
+		locationIcon: 'highrass',
+		locationTitle: 'Test Level',
+		createScene: () => new PlatformLevelScene('testlevel'),
+	},*/
 ];
 
 export const findGameScene = (sceneId: string): GameSceneCatalogEntry | undefined => {
