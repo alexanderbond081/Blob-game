@@ -2,7 +2,7 @@
 
 Casual HTML5 platformer: a glowing blob jumps across leaves and collects fireflies. Short Poki-style levels, landscape **960×540** / portrait **540×960**.
 
-**Status:** playable vertical slice / portfolio prototype — main menu with level carousel, **10 playable levels** (`meadow-01`–`09` + `bonus-level`), sticky walls, hazards/death, crouch/hide + crouch jump, fireflies that fill the portal, pause → Home / Resume / Restart. Not yet submitted to portals.
+**Status:** playable demo — main menu with level carousel, **10 playable levels** (`meadow-01`–`09` + `bonus-level`), sticky walls, hazards/death, crouch/hide + crouch jump, fireflies that fill the portal, pause → Home / Resume / Restart. Submitted to **Poki**; waiting for publishing approval.
 
 Built with **Pixi.js v8**, **Matter.js**, **TypeScript**, **Webpack 5**.
 
@@ -73,7 +73,7 @@ Supported in this build (runtime: [`src/world/game-view.ts`](src/world/game-view
 - Prefer **2×** art with `"data": { "resolution": 2 }` in [`src/assets/manifest.json`](src/assets/manifest.json) (logical sizes in Pixi — do not also `scale = 0.5`).
 - World collision art is ship look: translucent rounded Graphics plates (`ground` / `leaf` / `wall` / `sticky`), the spike saw, and opaque Graphics stones / branches. Platform **Matter** colliders are sharp rects (the roundRect is display only). They still *feel* rounded/slippery because the blob is a **circle** (r = 30) with `friction: 0` and kinematic `vx`. Optional later: tint / alpha, or round the spike inner core — not painted leaf/spike/stone textures
 
-Art remaining (not a layout gap): re-export meadow sky/far/mid plates to the bleed spec so portrait and wide iframes do not show the `#222` clear.
+Meadow sky/far/mid plates cover the bleed spec (portrait and wide iframes). Optional later: pull the portrait camera back if 540-wide is too tight.
 
 ## Scripts
 
@@ -115,35 +115,32 @@ Production builds write `dist/BUILD.txt` (version, channel, git meta). Upload th
 | A2 — Portal chain + GameProgress + catalog | Save / flow | Done |
 | C — Level-clear modal (stats + Continue) | UI shell | Done |
 | D — Progress / Customize modals + selected skin in-level | UI shell | Done |
-| **E — Playable demo** (portal gate, enemies, 10 levels, touch rework, hints, demo outro) | Ship to itch + submit to Poki | **Next** |
-| F — Content & feature depth (bg bleed plates, rewarded help, more mechanics / skins / audio, asset optimization) | Post-approval | Later |
+| **E — Playable demo** (portal gate, enemies, 10 levels, touch rework, hints, demo outro) | Ship to itch + submit to Poki | **Done** — submitted to Poki, waiting for approval |
+| F — Content & feature depth (rewarded help, more mechanics / skins / audio, asset optimization) | Post-approval | Later |
 | G — Final polish before portal tests (`movePill`, safe areas, etc.) | Pre-release | Later |
 
 ### Stage E — demo checklist
 
-Goal: a build good enough to publish on itch.io and send to Poki for publishing approval.
+Goal: a build good enough to publish on itch.io and send to Poki for publishing approval. **Submitted to Poki.**
 
 | # | Task | Notes |
 |---|------|-------|
 | 1 | Portal unlock by fireflies + door art | **Done.** Locked until `exit.slots` fireflies dock on the rim; door opens to a spinning vortex |
 | 2 | Portal entry animation + SFX before the result modal | Enter SFX is in; **blob fly-in animation deferred**. Result modal still fires on overlap |
 | 3 | Enemies: moving hazards (caterpillar / spider / mosquito) on fixed paths | **Done (runtime + demo placement).** Same `hazards[]` + death path; `from` / `to` body centres + `speed`. Art + spider look-out cycle in. Demo set: caterpillar `meadow-04`, spider `meadow-09`, mosquito `bonus-level`. More rails as layouts need them |
-| 4 | 10 levels with a progressive difficulty curve | **Done (catalog).** `meadow-01`–`09` + `bonus-level`. Curve can still be tuned in playtest |
-| 5 | Touch controls rework | **Done (playable).** Gesture layer: settle + flick-on-up, jump/crouch swipes, analog axes from angle, tap / 0.5 s / key cancel. Horizontal swipe deferred until dash. Remaining event-order polish in [`plans/poki.md`](./plans/poki.md) → Touch follow-ups |
-| 6 | Hints for the mechanics that already exist | **Playback done**; posters on `meadow-01`–`03`, `05`, `06`, `08`, `09` (move / jump / crouch-jump). Remaining: `crouch` hide-only if a low gap needs it; cling via `jump-*` on sticky layouts (`meadow-07`). Plan: [`plans/e6-level-hints.md`](./plans/e6-level-hints.md) |
+| 4 | 10 levels with a progressive difficulty curve | **Done (catalog + playtest).** `meadow-01`–`09` + `bonus-level` |
+| 5 | Touch controls rework | **Done.** Gesture layer: settle + flick-on-up, jump/crouch swipes, analog axes from angle, tap / 0.5 s / key cancel. Horizontal swipe deferred until dash. Event-order polish in [`plans/poki.md`](./plans/poki.md) → Touch follow-ups |
+| 6 | Hints for the mechanics that already exist | **Done (engine + posters on most demo levels).** Posters on `meadow-01`–`03`, `05`, `06`, `08`, `09` (move / jump / crouch-jump). Extra `crouch` hide-only / cling `jump-*` posters when a layout needs them. Plan: [`plans/e6-level-hints.md`](./plans/e6-level-hints.md) |
 | 7 | Demo outro screen after the last level | **Done (UI).** Result modal `demoComplete` when no next level. Celebratory SFX/VFX deferred |
-| 8 | Poki submission prerequisites | Requirements checklist, first-download size, 60 FPS on mid-range mobile, no-`localStorage` (incognito) path |
+| 8 | Poki submission prerequisites | **Done.** Requirements checklist, first-download size, 60 FPS on mid-range mobile, no-`localStorage` (incognito) path. Application submitted |
 
 ## Known gaps (not blockers for a first push)
 
 - Demo-complete celebration polish: music/SFX + VFX (sparks, glowing pollen, happy blob, fairies — TBD) on the last-level result modal
-- Touch follow-ups (not blockers): `pointerup` capture race vs Pixi up position; `touchend` identifier vs `pointerId`; `pointercancel` vs `touchcancel`; flick that pauses before lift; pause/blur leaving a committed jump; failed takeoff leaving a ground run — see [`plans/poki.md`](./plans/poki.md)
 - Portal entry (blob suck-in) animation before the result modal — deferred
 - More player kit still queued (double jump / flight, dash, glide) — see mechanics backlog
 - Platform plates and the spike saw are the ship look (optional later: tint / alpha; round the spike inner core). Spike killbox inset 6 px vs the drawn box. Stones / branches are opaque Graphics. Death droplets follow the selected skin (`blob-droplet-*`)
 - Blob vs stones/branches: kinematic `setVelocity` (game feel) vs Matter mass is an open compromise. Side-probe ½-speed is the current stand-in; force-based player deferred (see mechanics backlog)
-- Bundle is heavier than an ideal Poki first download (`bundle.js` ~1.4 MB + music) — optimize before portal submit
-- Meadow sky/far/mid plates still need re-export to the bleed spec so portrait and wide iframes fully cover the pad ([`plans/poki.md`](plans/poki.md) → Viewport)
 - Pause modal stops the scene ticker but not `gsap.globalTimeline` (portal + hint loops keep playing) and not Pixi `Ticker.shared` (spider climb / mosquito wing loops keep playing). Platform ads do pause GSAP. Freeze these later only if that contrast becomes a problem.
 
 ## License
@@ -157,7 +154,7 @@ You may view the source for portfolio / learning; reuse of code or assets needs 
 |------|----------|
 | [`plans/poki-2d-platformer-concept.md`](./plans/poki-2d-platformer-concept.md) | Game concept, scope, stack |
 | [`plans/player-mechanics-backlog.md`](./plans/player-mechanics-backlog.md) | Player mechanics backlog (cling / death / crouch + obstacles runtime; double jump, dash, glide queued) |
-| [`plans/e6-level-hints.md`](./plans/e6-level-hints.md) | Stage E6: in-level control hints (authoring + playback) |
+| [`plans/e6-level-hints.md`](./plans/e6-level-hints.md) | Stage E6: in-level control hints (engine done; extra posters on demand) |
 | [`plans/poki.md`](./plans/poki.md) | Poki / CrazyGames technical notes |
 
 ## Author

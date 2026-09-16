@@ -193,7 +193,7 @@ Old “Arcade timer on the same casual run” folds into **Speedrun** as the pos
 
 Parallax = **offset layers by camera × factor** (manual in [`ParallaxLayer`](../src/world/parallax-layer.ts)).
 
-**Art / orientation policy (supported):** live rotate between 16:9 and 9:16; contain-scale into any iframe. Paint **bleed** around the core so letterbox is not `#222` (spec in [`plans/poki.md`](./poki.md) → Viewport). Mid/far tufts stay expensive — extend sky/soil in the pad, **lower `p`** rather than painting full parallax travel. Platforms/colliders remain the source of truth for layout.
+**Art / orientation policy (supported):** live rotate between 16:9 and 9:16; contain-scale into any iframe. Meadow bleed plates cover the letterbox (spec in [`plans/poki.md`](./poki.md) → Viewport). Mid/far tufts stay expensive — extend sky/soil in the pad, **lower `p`** rather than painting full parallax travel. Platforms/colliders remain the source of truth for layout.
 
 ---
 
@@ -291,7 +291,7 @@ Collision shapes and entity spawns come from Ogmo **entity layers**, not from gu
 
 ## Prototype status (vertical slice)
 
-Shipped in-repo (not full MVP): **10 playable catalog levels** (`meadow-01`–`09` + `bonus-level`) authored in Ogmo, Matter player (cling, crouch/hide + crouch jump, spikes + death droplets), moving insects (`caterpillar` / `spider` / `mosquito` on `hazards[]` rails — on the demo set: `meadow-04` / `meadow-09` / `bonus-level`), fireflies that fill portal rim slots and open the door/vortex, dual parallax, keyboard + touch, **landscape/portrait rotate + odd iframe sizes**, hub UI (scrollable Progress tiles + Customize / pause / clear), portal SDK adapters. **Not yet:** blob fly-in into the open portal (deferred), episode gating (start as walk-only), pollen relics, gold fireflies, crowns, NG+, origin/ending beats. Runtime stays Zod-validated JSON; Ogmo is the layout editor. Meadow bleed plates still need re-export.
+Shipped in-repo (not full MVP): **10 playable catalog levels** (`meadow-01`–`09` + `bonus-level`) authored in Ogmo, Matter player (cling, crouch/hide + crouch jump, spikes + death droplets), moving insects (`caterpillar` / `spider` / `mosquito` on `hazards[]` rails — on the demo set: `meadow-04` / `meadow-09` / `bonus-level`), fireflies that fill portal rim slots and open the door/vortex, dual parallax, keyboard + touch, **landscape/portrait rotate + odd iframe sizes**, meadow bleed plates, hub UI (scrollable Progress tiles + Customize / pause / clear), portal SDK adapters. Demo submitted to Poki. **Not yet:** blob fly-in into the open portal (deferred), episode gating (start as walk-only), pollen relics, gold fireflies, crowns, NG+, origin/ending beats. Runtime stays Zod-validated JSON; Ogmo is the layout editor.
 
 ---
 
@@ -304,13 +304,13 @@ A smaller milestone than the MVP above: a build worth publishing on itch.io and 
 - [x] Portal opens on a firefly threshold, with door / vortex art  
 - [ ] Portal entry animation before the result modal (**deferred**)  
 - [x] Moving enemies exist (caterpillar / spider / mosquito on fixed paths) and share the death pipeline. Demo placement: `meadow-04` / `meadow-09` / `bonus-level`  
-- [x] 10 playable catalog levels (`meadow-01`–`09` + `bonus-level`); difficulty curve can still be tuned in playtest  
-- [x] Touch controls are genuinely playable on a phone (gesture-first, no on-screen buttons). Event-order polish still open — [`poki.md`](./poki.md) Touch follow-ups  
-- [ ] Hints teach the mechanics that ship in the demo — posters on most meadow levels; leftovers in [`e6-level-hints.md`](./e6-level-hints.md)  
+- [x] 10 playable catalog levels (`meadow-01`–`09` + `bonus-level`); playtested  
+- [x] Touch controls are genuinely playable on a phone (gesture-first, no on-screen buttons). Event-order polish done — [`poki.md`](./poki.md) Touch follow-ups  
+- [x] Hints teach the mechanics that ship in the demo — posters on most meadow levels; extra posters when a layout needs them — [`e6-level-hints.md`](./e6-level-hints.md)  
 - [x] Outro screen after the last level points at the full version — result modal `demoComplete` (Home / Restart). Celebratory SFX/VFX deferred  
-- [ ] Poki submission prerequisites pass (see [`poki.md`](./poki.md))  
+- [x] Poki submission prerequisites pass (see [`poki.md`](./poki.md)); application submitted  
 
-Scope differences from the MVP: 10 levels instead of 15–20, no pollen-relic episode gating (most of the kit is available from the start; **flight** is the candidate for the single unlockable / rewarded move), no NG+, no gold fireflies or crowns, no hub meta beyond Progress / Customize. Portrait / rotate / iframe sizes **ship**. Remaining stage F: meadow bleed plates, rewarded help, wider content pass.
+Scope differences from the MVP: 10 levels instead of 15–20, no pollen-relic episode gating (most of the kit is available from the start; **flight** is the candidate for the single unlockable / rewarded move), no NG+, no gold fireflies or crowns, no hub meta beyond Progress / Customize. Portrait / rotate / iframe sizes and meadow bleed plates **ship**. Remaining stage F: rewarded help, wider content pass.
 
 ---
 
@@ -325,12 +325,12 @@ Scope differences from the MVP: 10 levels instead of 15–20, no pollen-relic ep
 - [x] Meta progression → **episodes unlock abilities** via **inanimate pollen relics**; hub shows icons + totals  
 - [x] Replays keep earned abilities; full clear → **Play from start** with full kit (NG+); relics re-collectable  
 - [x] Level 1: wake as crawl-only → on-screen **bouncing dewdrop** → **jump**; early episodes **shorter**, stretch after 2–3 abilities  
-- [ ] Demo gating: flight as the only unlockable move (rest available from the start) vs relic-style episode gating — decide before authoring the 10 demo levels  
+- [ ] Demo gating: flight as the only unlockable move (rest available from the start) vs relic-style episode gating — still open for stage F; demo 10 levels already author without it  
 - [ ] Exact later episode order / relic → ability mapping (stem-spark, wing, …)  
 - [ ] How much of the fairy intro to ship in MVP (implied lore vs short cutscene vs full animation)  
 - [ ] Do gold fireflies count toward the portal threshold, or optional only?  
 - [ ] Portal destination: always next level vs hub with free level select  
-- [ ] Launch target first: itch / CrazyGames Basic / Poki submission  
+- [x] Launch target first → **Poki** (application submitted); itch / CrazyGames still optional  
 
 ---
 

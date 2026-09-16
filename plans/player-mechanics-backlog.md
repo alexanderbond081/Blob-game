@@ -6,7 +6,7 @@ This list will grow; append new items below, do not drop old ones without a note
 
 **Campaign note:** abilities unlock **per episode** via **pollen relics** (inanimate tokens), not live insects. Start = walk only on first playthrough; replays keep earned kit; NG+ after full clear. Lore + hub rules: [`poki-2d-platformer-concept.md`](./poki-2d-platformer-concept.md). This file stays focused on *how* each move feels when unlocked.
 
-**Demo-scope note (stage E, under review):** gating for the demo is being rebalanced. Likely shape — **flight** becomes the one unlockable / rewarded move (instead of a plain double jump), while the rest of the kit is available from the start. Not final; revisit before authoring the 10 demo levels.
+**Demo-scope note (stage E):** 10 catalog levels are authored and playtested. Gating for later content is still open — likely shape: **flight** becomes the one unlockable / rewarded move (instead of a plain double jump), while the rest of the kit is available from the start.
 
 Related: [`poki-2d-platformer-concept.md`](./poki-2d-platformer-concept.md)
 

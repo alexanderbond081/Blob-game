@@ -98,7 +98,7 @@ For a leaf-jumper-style 2D game, prefer **Defold / Construct / Pixi / Phaser** o
 
 ## Viewport / Aspect Ratio Approach
 
-**Supported.** Landscape, portrait, live rotate, and odd iframe sizes (21:9 phones, ~1:1 fold, desktop letterbox) are handled in this build. Remaining work is art: re-export meadow plates so the pad is painted, not `#222`.
+**Supported.** Landscape, portrait, live rotate, and odd iframe sizes (21:9 phones, ~1:1 fold, desktop letterbox) are handled in this build. Meadow plates are exported to the bleed spec; renderer `#222` is a fallback if a texture edge is ever visible. Optional: pull the portrait camera back if 540-wide is too tight.
 
 Runtime: [`src/world/game-view.ts`](../src/world/game-view.ts). Canvas fills the iframe; the **playfield** is contain-scaled and centered. Resize / `orientationchange` switches 16:9 ↔ 9:16 live. No stage mask — backgrounds may draw into the letterbox. HUD chrome is the same scale as the world but origin'd at the canvas corner (iframe edges).
 
@@ -111,7 +111,7 @@ To pull the portrait camera back (more world in frame), multiply both 540 and 96
 
 ### Letterbox (not CSS black bars)
 
-`scale = min(clientW / viewW, clientH / viewH)`. Empty iframe around the playfield is **logical pad** (same units as the camera). Fill it with background art, not `#222` forever. Renderer clear `#222` is only a fallback until textures cover the pad.
+`scale = min(clientW / viewW, clientH / viewH)`. Empty iframe around the playfield is **logical pad** (same units as the camera). Meadow plates cover that pad; renderer clear `#222` is only a fallback.
 
 Pad budget **`VIEW_BLEED = 240`** logical px per edge covers:
 
@@ -139,9 +139,9 @@ Level JSON `backgrounds[]` is back→front. `id: sky` selects the center anchor.
 
 ### meadow-01 background sizes (1500×1500, p_sky=0, p_far=0.1, p_mid=0.3)
 
-Current files @2 (`meadow-bg-*-blur*`): sky **960×540**, far **1015×519**, mid **1125×625** — landscape core only; portrait and iframe pads will show `#222` until re-exported.
+Shipped @2: `meadow-bg-sky-big`, `meadow-bg-far-3120`, `meadow-bg-mid-3600` — sized to the letterbox + parallax-travel spec below. Portrait and iframe pads are painted.
 
-**Letterbox plate** (must, both orientations, `VIEW_BLEED=240`):
+**Letterbox plate** (both orientations, `VIEW_BLEED=240`):
 
 A plate that covers both cores + 240 pad is **1440×1440** logical (**2880×2880** @2). Sky (`p = 0`) can be this square (or two files: landscape **1440×1020**, portrait **1020×1440**).
 
@@ -293,11 +293,11 @@ Pixi = draw yourself + pick physics package. Phaser/Defold = gameplay kit includ
 - [x] Progress / Customize HudModals (stage D; OK dismiss) + skins catalog applied in-level. Progress list: scrollable paper tiles (name, % bar, fireflies / time / deaths, status); Coming Soon placeholders for `stream` / `cave` / `house` / `forest` / `mushroom`
 - [x] Portal unlock by firefly rim slots + door / vortex art (stage E #1). Blob fly-in animation deferred
 - [x] Moving hazards (caterpillar / spider / mosquito) on fixed rails (stage E #3). Demo placement: caterpillar `meadow-04`, spider `meadow-09`, mosquito `bonus-level`
-- [x] 10 playable catalog levels (stage E #4): `meadow-01`–`09` + `bonus-level`. Difficulty curve can still be tuned in playtest
-- [x] Portrait / rotate / odd iframe sizes → **done** (540×960 camera, menu reflow, HUD on iframe, sky center + far/mid floor). Remaining: re-export meadow bg plates to the bleed spec; optional pull-back zoom if 540-wide is too tight
+- [x] 10 playable catalog levels (stage E #4): `meadow-01`–`09` + `bonus-level`. Playtested; curve tuned
+- [x] Portrait / rotate / odd iframe sizes → **done** (540×960 camera, menu reflow, HUD on iframe, sky center + far/mid floor, meadow bleed plates). Optional: pull-back zoom if 540-wide is too tight
 - [x] Rewarded help → **stage F**; shape still open (flight vs teleport to portal)
 - [x] Mobile background freeze: sync platform `hidden` on `pageshow` / `focus` / first pointer / Page Lifecycle freeze-resume, not only `visibilitychange`. Does **not** clear HUD Pause (`isPaused`)
-- [ ] Target Poki first vs CrazyGames Basic Launch first
+- [x] Target **Poki first** (application submitted; CrazyGames still optional)
 - [ ] Firefly economy beyond the portal gate (currency for skins?) — affects 100 % completion rewards
 
 ---
@@ -306,39 +306,37 @@ Pixi = draw yourself + pick physics package. Phaser/Defold = gameplay kit includ
 
 ### Stage E — playable demo (ship to itch, submit to Poki)
 
-Catalog set is in (`meadow-01`–`09` + `bonus-level`). Leftover E items: portal fly-in (deferred), hint leftovers, Poki submit prerequisites.
+Catalog set is in (`meadow-01`–`09` + `bonus-level`). Demo submitted to Poki. Leftover E juice: portal fly-in (deferred), demo-complete celebration SFX/VFX (deferred).
 
 | # | Task | Depends on / notes |
 |---|------|--------------------|
 | 1 | Portal unlock by fireflies + door art | **Done.** Locked until `exit.slots` fireflies dock on the rim; door tweens out, vortex spins. Extra flies fade into the centre |
 | 2 | Portal entry animation + SFX before the result modal | Enter SFX (`portal-enter`) is in. **Blob fly-in / suck-in animation deferred** — result modal still fires on overlap |
 | 3 | Enemies: moving hazards (caterpillar / spider / mosquito), fixed paths | **Done (runtime + demo placement).** Live in `hazards[]` (`from` / `to` centres + `speed`), not a separate `enemies[]`. Sensor kill volumes share the spike death path. Demo set: caterpillar `meadow-04`, spider `meadow-09`, mosquito `bonus-level`. More rails as layouts need them |
-| 4 | 10 levels, progressive difficulty | **Done (catalog).** Playable: `meadow-01`–`09` + `bonus-level`. Authoring is **Ogmo 3** entity layers → runtime JSON (Y flipped on load). Ogmo stone `width` → `size`; branch `rotation` is radians — see [`player-mechanics-backlog.md`](./player-mechanics-backlog.md). Curve can still be tuned in playtest |
-| 5 | Touch controls rework | **Done (playable).** Gesture-first; comfortable on phone after settle / flick-on-up / no false jump-run. Jump / crouch swipes; jump side-speed lasts until landing or cling. Horizontal swipe deferred until dash (then: on release + speed threshold, no run latch). Slow drag is live analog. Tap, 0.5 s hold, or any gameplay key cancels. Full jump height from 45° up; ~33° deadzone. Top HUD band (~72 px) **intentionally** ends the stroke (chrome / pause). Flick vs slow-swipe distances tuned. Remaining polish: [Touch follow-ups](#touch-follow-ups) |
-| 6 | Hints for existing mechanics only | **Playback done.** Posters on `meadow-01`–`03`, `05`, `06`, `08`, `09`. Remaining: `crouch` hide-only if a low gap needs it; cling via `jump-*` on sticky layouts (`meadow-07`). Plan: [`e6-level-hints.md`](./e6-level-hints.md) |
+| 4 | 10 levels, progressive difficulty | **Done (catalog + playtest).** Playable: `meadow-01`–`09` + `bonus-level`. Authoring is **Ogmo 3** entity layers → runtime JSON (Y flipped on load). Ogmo stone `width` → `size`; branch `rotation` is radians — see [`player-mechanics-backlog.md`](./player-mechanics-backlog.md) |
+| 5 | Touch controls rework | **Done.** Gesture-first; comfortable on phone after settle / flick-on-up / no false jump-run. Jump / crouch swipes; jump side-speed lasts until landing or cling. Horizontal swipe deferred until dash (then: on release + speed threshold, no run latch). Slow drag is live analog. Tap, 0.5 s hold, or any gameplay key cancels. Full jump height from 45° up; ~33° deadzone. Top HUD band (~72 px) **intentionally** ends the stroke (chrome / pause). Event-order polish: [Touch follow-ups](#touch-follow-ups) |
+| 6 | Hints for existing mechanics only | **Done (engine + posters on most demo levels).** Posters on `meadow-01`–`03`, `05`, `06`, `08`, `09`. Extra `crouch` hide-only / cling `jump-*` posters when a layout needs them. Plan: [`e6-level-hints.md`](./e6-level-hints.md) |
 | 7 | Demo outro screen after the last level | **Done (UI).** Same result modal in `demoComplete` mode: title "Demo complete!" + "Thanks for playing!", last-run stats, Home + Restart (no Play). **Todo later:** celebratory music/SFX + VFX (sparks, glowing pollen, happy blob, fairies — TBD) |
-| 8 | Poki submission prerequisites | `gameLoadingFinished`, no external links, incognito / no-`localStorage` path, first-download size, 60 FPS on mid-range mobile |
+| 8 | Poki submission prerequisites | **Done.** `gameLoadingFinished`, no external links, incognito / no-`localStorage` path, first-download size, 60 FPS on mid-range mobile. Application submitted; waiting for publishing approval |
 
-### Touch follow-ups (E5 polish, not blockers)
+### Touch follow-ups (E5 polish)
 
-Playable as-is; leftover event / edge-case holes:
+**Done.** Event-order / edge-case holes that shipped with the gesture layer:
 
-1. **`pointerup` capture race.** Window `pointerup` (capture) runs before Pixi, so `finishStroke` often never sees the up position. A down→up flick with no `pointermove` can still drop. Make the window listener bubble-only fallback, or drop it.
-2. **`touchend` id mismatch.** `Touch.identifier` is compared to `pointerId`; on some Android they differ, so this backup path is dead.
-3. **`pointercancel` vs `touchcancel`.** Pointer cancel may commit the swipe; touch cancel aborts. Align them.
-4. **End-pause flick.** A flick that sits still ~40 ms before lift can be classified as a fat-finger tap.
-5. **Pause / blur.** The layer stays live; a jump already committed can fire after returning to the tab. Clear or freeze gestures on pause and `visibilitychange` / `blur`.
-6. **Failed takeoff.** If a committed jump never leaves the ground (ceiling), `jumpCommitted` can leave a ground run. Clear the latch if still grounded after wind-up.
+1. **`pointerup` capture race.** Window `pointerup` (capture) ran before Pixi, so `finishStroke` often never saw the up position.
+2. **`touchend` id mismatch.** `Touch.identifier` was compared to `pointerId`; on some Android this backup path was dead.
+3. **`pointercancel` vs `touchcancel`.** Pointer cancel could commit the swipe while touch cancel aborted.
+4. **End-pause flick.** A flick that sat still ~40 ms before lift could be classified as a fat-finger tap.
+5. **Pause / blur.** The layer stayed live; a jump already committed could fire after returning to the tab.
+6. **Failed takeoff.** If a committed jump never left the ground (ceiling), `jumpCommitted` could leave a ground run.
 
-Second finger is ignored on purpose (one-gesture control). Dead `isPrimary` branch in `onPointerDown` can go when #1/#2 are cleaned up.
+Second finger is ignored on purpose (one-gesture control).
 
 Balancing note: gating design is still open. Flight may replace a plain double jump as the unlockable move, with the remaining mechanics available from the start.
 
-Suggested support work for balancing 10 levels: lightweight local telemetry (per-level time, deaths, fireflies collected) — tuning ten levels by feel alone is guesswork.
-
 ### Stage F — content & feature depth (after publishing approval)
 
-- Re-export meadow sky/far/mid to the bleed spec (see Viewport; orientation/layout already ships); optional portrait camera pull-back
+- Optional portrait camera pull-back if 540-wide is too tight (bleed plates already ship)
 - Finish player mechanics — mainly animations and VFX for them
 - Finish locations and levels, including enemy art and level design
 - Rewarded help: flight or teleport to the portal

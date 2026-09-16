@@ -1,6 +1,6 @@
 # Stage E6 — In-level control hints
 
-**Status:** playback done for shipped kit including crouch (2026-08-20); posters placed on most demo levels (2026-09). Remaining: hide-only `crouch` and cling teaching on sticky layouts.  
+**Status:** playback done for shipped kit including crouch (2026-08-20); posters placed on most demo levels (2026-09). Extra posters (`crouch` hide-only, cling on sticky layouts) when a layout needs them — not a demo blocker.  
 **Owner:** separate implementation pass. Do not mix with touch follow-ups, PWA/iOS chrome, or E3 enemies.  
 Related: [`poki.md`](./poki.md) stage E #6, [`player-mechanics-backlog.md`](./player-mechanics-backlog.md).
 
@@ -119,10 +119,9 @@ No `width` / `height` / `id` in v1. Size comes from `kind`. JSON is authored by 
 - [x] meadow-01 readable on phone landscape and desktop 960×540.
 - [x] Pause modal: hints keep looping (same as portal); ads freeze them.
 
-## Remaining (this stage)
+## Remaining (on demand)
 
-Engine for the shipped kit is in. Left:
+Engine for the shipped kit is in. Demo E6 is closed. Place extra posters when a layout needs them:
 
-1. **Authoring leftovers:** hide-only `crouch` if a low gap needs it; cling via `jump-*` on sticky `meadow-07` (and any later cling rooms). `meadow-04` / `meadow-07` currently have no posters.
-2. **Optional:** straight `jump` up only if a layout cannot be taught by jump-left/right.
-3. **Mark E6 done** in [`poki.md`](./poki.md) / README when those leftovers are placed or explicitly skipped.
+1. Hide-only `crouch` if a low gap needs it; cling via `jump-*` on sticky `meadow-07` (and any later cling rooms). `meadow-04` / `meadow-07` currently have no posters.
+2. Optional: straight `jump` up only if a layout cannot be taught by jump-left/right.
