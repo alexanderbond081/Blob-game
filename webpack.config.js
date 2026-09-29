@@ -78,6 +78,10 @@ module.exports = (_env, argv) => ({
 			},
 		],
 		hot: true, // Enables Hot Module Replacement (HMR) on code changes
+		// Without this, Cloudflare caches .js and images for 4 hours.
+		headers: {
+			'Cache-Control': 'no-store',
+		},
 		host: '0.0.0.0',
 		port: 3000,
 		allowedHosts: 'all',

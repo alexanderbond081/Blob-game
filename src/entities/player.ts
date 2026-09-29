@@ -7,12 +7,15 @@ import {
 	getWallContactSide,
 	isStickyWallBody,
 	isWalkableContact,
+	isWalkableSurfaceBody,
 	OBSTACLE_BODY_LABEL,
 	PhysicsCollisionInfo,
 	WallSide,
 } from '../physics/ground-contact';
+import { isHazardBody } from './hazard';
 import { PhysicsBody } from '../physics/physics-body';
 import { PhysicsWorld } from '../physics/physics-world';
+import { PortalSuck } from '../fx/portal-suck';
 import { PlayerJelly } from './player-jelly';
 import { PlayerState, resolvePlayerState } from './player-state';
 import { SoundManager } from '../managers/sound-manager';
@@ -29,6 +32,17 @@ const SIDE_PROBE_FOOT_INSET = 4;
 const SIDE_PROBE_HEAD_INSET = 8;
 /** How far past the collider AABB to look for a side obstacle. */
 const SIDE_PROBE_REACH = 0;
+/**
+ * Timed-flick slowdown only. The floor probe's leading edge sits this far
+ * ahead of the center, so a missing floor stops the blob with about a third
+ * of the body already past the lip.
+ */
+const COAST_HANG_X = PLAYER_RADIUS / 3;
+const COAST_FLOOR_PROBE_WIDTH = 2;
+/** Shallow, so a thin sloped branch under the sole still overlaps. */
+const COAST_FLOOR_PROBE_DEPTH = 4;
+/** Past the skin, about one frame of run, so a hazard stops the coast before overlap. */
+const COAST_HAZARD_PROBE_AHEAD = 6;
 /** Walk speed while uncrouching. Stand-up only — dash must not use this. */
 const CROUCH_MOVE_SPEED_X = 3;
 const LANDING_VELOCITY_THRESHOLD = 2;
@@ -119,6 +133,14 @@ export class Player extends PhysicsBody {
 	private dying = false;
 	private deathComplete = false;
 	private deathPauseSecondsLeft = 0;
+	/** Hidden at spawn until the scene finishes the pollen ring. */
+	private spawning = false;
+	/** Portal suck is playing; physics and the normal pose stay off until it finishes. */
+	private portalExiting = false;
+	private portalExitDone = false;
+	private portalSuck: PortalSuck | null = null;
+	private spawnHoldX = 0;
+	private spawnHoldY = 0;
 	private baseScale = 1;
 	private spritesheet: Spritesheet | null = null;
 	private currentVisual: string | null = null;
@@ -166,7 +188,10 @@ export class Player extends PhysicsBody {
 	private readonly onBeforeUpdate = (): void => {
 		// Capture velocity before Matter resolves contacts — after the step, landing velocity is ~0.
 		this.preStepVelocityY = this.body.velocity.y;
-		if (this.dying) {
+		if (this.dying || this.spawning || this.portalExiting) {
+			if (this.spawning) {
+				Body.setPosition(this.body, { x: this.spawnHoldX, y: this.spawnHoldY });
+			}
 			Body.setVelocity(this.body, { x: 0, y: 0 });
 			return;
 		}
@@ -174,6 +199,15 @@ export class Player extends PhysicsBody {
 	};
 
 	private readonly onAfterUpdate = (): void => {
+		if (this.spawning) {
+			Body.setPosition(this.body, { x: this.spawnHoldX, y: this.spawnHoldY });
+			this.renderPrevX = this.spawnHoldX;
+			this.renderPrevY = this.spawnHoldY;
+			this.renderX = this.spawnHoldX;
+			this.renderY = this.spawnHoldY;
+			return;
+		}
+
 		this.renderPrevX = this.renderX;
 		this.renderPrevY = this.renderY;
 		this.renderX = this.body.position.x;
@@ -238,8 +272,18 @@ export class Player extends PhysicsBody {
 	}
 
 	public update(deltaTime: number): void {
+		if (this.portalExiting) {
+			return;
+		}
+
 		Body.setAngularVelocity(this.body, 0);
 		Body.setAngle(this.body, 0);
+		if (this.spawning) {
+			this.sprite.visible = false;
+			this.syncRenderPosition();
+			return;
+		}
+
 		this.updateDeathPause(deltaTime);
 		if (!this.dying) {
 			this.updateCrouchBlend(deltaTime);
@@ -263,12 +307,125 @@ export class Player extends PhysicsBody {
 		return this.dying;
 	}
 
+	public get isSpawning(): boolean {
+		return this.spawning;
+	}
+
+	public get isExitingPortal(): boolean {
+		return this.portalExiting;
+	}
+
+	/** Drawn diameter in world pixels. Shrinks with the portal suck. */
+	public get drawnDiameter(): number {
+		const span = PLAYER_RADIUS * 2;
+		if (this.baseScale <= 0) {
+			return span;
+		}
+
+		return span * (this.sprite.scale.x / this.baseScale);
+	}
+
+	/**
+	 * Freeze the body on the trigger overlap and capture the suck.
+	 * The scene steps it each frame, then hides the blob when the pose is done.
+	 */
+	public beginPortalExit(centerX: number, centerY: number): void {
+		if (this.portalExiting || this.dying || this.spawning) {
+			return;
+		}
+
+		this.portalExiting = true;
+		this.portalExitDone = false;
+		this.clinging = false;
+		this.clingSide = null;
+		this.jumpWindupActive = false;
+		this.jumpWindupLocked = false;
+		this.jumpCrouchFramesLeft = 0;
+		this.jumpBufferFrames = 0;
+		this.wallJumpFramesLeft = 0;
+		Body.setVelocity(this.body, { x: 0, y: 0 });
+		Body.setAngularVelocity(this.body, 0);
+		Body.setAngle(this.body, 0);
+		this.body.isSensor = true;
+		Body.setStatic(this.body, true);
+		this.sprite.stop();
+		this.sprite.skew.set(0, 0);
+		this.portalSuck = PortalSuck.fromWorldPosition(
+			this.body.position.x,
+			this.body.position.y,
+			centerX,
+			centerY,
+			this.baseScale,
+			this.sprite.alpha,
+		);
+	}
+
+	/** Applies one suck step. True once the blob has been hidden at the centre. */
+	public advancePortalExit(dtSec: number, centerX: number, centerY: number): boolean {
+		if (!this.portalExiting || !this.portalSuck) {
+			return false;
+		}
+
+		if (this.portalExitDone) {
+			return true;
+		}
+
+		const pose = this.portalSuck.step(dtSec, centerX, centerY);
+		this.renderPrevX = pose.x;
+		this.renderPrevY = pose.y;
+		this.renderX = pose.x;
+		this.renderY = pose.y;
+		this.display.position.set(pose.x, pose.y);
+		this.display.rotation = 0;
+		this.sprite.skew.set(0, 0);
+		this.sprite.scale.set(pose.scale);
+		this.sprite.alpha = pose.alpha;
+		this.sprite.visible = true;
+
+		if (!pose.done) {
+			return false;
+		}
+
+		this.sprite.visible = false;
+		this.sprite.alpha = 0;
+		this.portalExitDone = true;
+		return true;
+	}
+
+	/** Hide and freeze at the current pose until `revealFromSpawn`. */
+	public holdAtSpawn(): void {
+		this.spawning = true;
+		this.spawnHoldX = this.body.position.x;
+		this.spawnHoldY = this.body.position.y;
+		Body.setStatic(this.body, true);
+		this.sprite.visible = false;
+	}
+
+	/** Show the blob and restore collisions after the spawn pollen ring. */
+	public revealFromSpawn(): void {
+		if (!this.spawning) {
+			return;
+		}
+
+		this.spawning = false;
+		Body.setStatic(this.body, false);
+		Body.setPosition(this.body, { x: this.spawnHoldX, y: this.spawnHoldY });
+		Body.setVelocity(this.body, { x: 0, y: 0 });
+		this.renderPrevX = this.spawnHoldX;
+		this.renderPrevY = this.spawnHoldY;
+		this.renderX = this.spawnHoldX;
+		this.renderY = this.spawnHoldY;
+		this.sprite.visible = true;
+		this.sprite.alpha = 1;
+		this.syncRenderPosition();
+	}
+
 	/**
 	 * Start burst death. Ignored if already dying.
 	 * Call `finishDeathIfReady` each frame to respawn after burst + pause.
 	 */
 	public beginDeath(): void {
-		if (this.dying) {
+		if (this.dying || this.spawning) {
 			return;
 		}
 
@@ -477,6 +634,7 @@ export class Player extends PhysicsBody {
 			this.facingRight = moveDirection > 0;
 		}
 
+		const wallJumpLocked = this.wallJumpFramesLeft > 0;
 		const speedX = this.resolveHorizontalSpeed(moveX);
 		this.airVelocityX = speedX;
 
@@ -564,8 +722,20 @@ export class Player extends PhysicsBody {
 			return;
 		}
 
+		let velocityX = speedX + this.getGroundCarryVelocityX();
+		const keyboardSteers = keyLeft || keyRight;
+		if (
+			onGround
+			&& this.touchControls.runLatchCoasting
+			&& !keyboardSteers
+			&& !wallJumpLocked
+			&& this.shouldStopRunCoast(moveX)
+		) {
+			velocityX = this.getGroundCarryVelocityX();
+		}
+
 		Body.setVelocity(this.body, {
-			x: speedX + this.getGroundCarryVelocityX(),
+			x: velocityX,
 			y: this.body.velocity.y,
 		});
 	}
@@ -1004,6 +1174,75 @@ export class Player extends PhysicsBody {
 		return false;
 	}
 
+	/**
+	 * Coast tail only. Stop on a hazard just ahead of the skin, or when the
+	 * floor no longer reaches the hang point (about one third of the body off
+	 * the lip). Slopes and steps can shorten this tail; the full-speed part
+	 * of the flick never calls this.
+	 */
+	private shouldStopRunCoast(moveX: number): boolean {
+		if (!this.boundEngine || moveX === 0 || this.dying) {
+			return false;
+		}
+
+		const sign = moveX > 0 ? 1 : -1;
+		if (this.coastProbeHits(this.coastHazardProbe(sign), isHazardBody)) {
+			return true;
+		}
+
+		return !this.coastProbeHits(this.coastFloorProbe(sign), isWalkableSurfaceBody);
+	}
+
+	private coastFloorProbe(sign: number): { x: number; y: number; width: number; height: number } {
+		const hangX = this.body.position.x + sign * COAST_HANG_X;
+		const soleY = this.body.bounds.max.y;
+		return {
+			x: hangX - sign * (COAST_FLOOR_PROBE_WIDTH * 0.5),
+			y: soleY + COAST_FLOOR_PROBE_DEPTH * 0.5,
+			width: COAST_FLOOR_PROBE_WIDTH,
+			height: COAST_FLOOR_PROBE_DEPTH,
+		};
+	}
+
+	private coastHazardProbe(sign: number): { x: number; y: number; width: number; height: number } {
+		const leading = sign > 0 ? this.body.bounds.max.x : this.body.bounds.min.x;
+		const top = this.body.bounds.min.y;
+		const bottom = this.body.bounds.max.y;
+		return {
+			x: leading + sign * (COAST_HAZARD_PROBE_AHEAD * 0.5),
+			y: (top + bottom) * 0.5,
+			width: COAST_HAZARD_PROBE_AHEAD,
+			height: Math.max(bottom - top, 1),
+		};
+	}
+
+	private coastProbeHits(
+		probeRect: { x: number; y: number; width: number; height: number },
+		match: (body: Body) => boolean,
+	): boolean {
+		if (!this.boundEngine) {
+			return false;
+		}
+
+		const probe = Bodies.rectangle(probeRect.x, probeRect.y, probeRect.width, probeRect.height, {
+			isSensor: true,
+		});
+		const hits = Query.collides(probe, Composite.allBodies(this.boundEngine.world));
+		for (const hit of hits) {
+			const other = hit.bodyA.id === probe.id ? hit.bodyB : hit.bodyA;
+			if (other.id === this.body.id || other.parent === this.body) {
+				continue;
+			}
+
+			const parent = other.parent ?? other;
+			if (match(other) || match(parent)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	/** True during the uncrouch windup/hop window (held crouch still stands still). */
 	private isStandingFromCrouch(): boolean {
 		return this.crouchStandWindupFramesLeft > 0
@@ -1142,6 +1381,9 @@ export class Player extends PhysicsBody {
 	}
 
 	private handleGroundCollision(collision: PhysicsCollisionInfo, isContact: boolean): void {
+		if (this.spawning) {
+			return;
+		}
 		const { bodyA, bodyB, normal, contactX } = collision;
 		const platformBody = getPlatformBody(this.body, bodyA, bodyB);
 

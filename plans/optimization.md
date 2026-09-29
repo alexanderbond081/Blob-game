@@ -25,7 +25,7 @@ Measure **production** (`npm run build` / itch zip), not `npm start`. Webpack `i
 
 ### 1. Bake static `Graphics` to textures / sprites (main item)
 
-**Done (2026-09-15):** platforms, spikes, stones, branches via `cacheAsTexture`. Branches are baked as an axis-aligned round-rect (angle 0); Matter rotation lives on the display container only.
+**Done (2026-09-15):** platforms, spikes, stones, branches via `cacheAsTexture`. Branches are baked as an axis-aligned round-rect (angle 0); Matter rotation lives on the display container only. Bake uses `antialias: true` (MSAA once into the texture) — not renderer `antialias` (2026-09-17).
 
 Platforms, spikes, stones and branches are live Pixi `Graphics` (`fill` + `stroke`, often translucent). They are **not** rebuilt every frame (retained mode), but each one is still a tessellated fill+stroke mesh submitted every draw. A cached texture is two triangles and batches.
 

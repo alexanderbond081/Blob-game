@@ -16,6 +16,27 @@ import { LevelRoot } from '../world/level-root';
 import { ParallaxLayer } from '../world/parallax-layer';
 import { Scene } from './scene';
 
+const SPAWN_DUST_COUNT = 12;
+const SPAWN_DUST_RADIUS = 40;
+const SPAWN_DUST_STEP_SEC = 0.02;
+/** After the last pollen spawn request, wait this long before showing the blob. */
+const SPAWN_BLOB_DELAY_SEC = 0.15;
+const SPAWN_DUST_SIZE = 35;
+const SPAWN_DUST_SIZE_JITTER = 0.3;
+const SPAWN_DUST_POS_JITTER = 3;
+const SPAWN_DUST_RADIUS_JITTER = 4;
+/** Seconds between trail motes while the blob is sucked in. */
+const PORTAL_DUST_STEP_SEC = 0.05;
+/** Random offset around the blob centre, world pixels, ± this value. */
+const PORTAL_DUST_POS_JITTER = 0;//8;
+/** Dust diameter as a fraction of the blob's current drawn diameter. */
+const PORTAL_DUST_SCALE = 0.55;
+/** Fractional size jitter, ± this value. */
+const PORTAL_DUST_SCALE_JITTER = 0;//0.2;
+/** Seconds after the blob disappears before the result modal. */
+const PORTAL_EXIT_HOLD_SEC = 0.8;
+const FRAME_HZ = 60;
+
 export type LevelExitEvent = {
 	levelId: string;
 	collected: number;
@@ -40,6 +61,14 @@ export class PlatformLevelScene extends Scene {
 	private runTimeSec = 0;
 	private runDeaths = 0;
 	private hasExited = false;
+	private exitAnnounced = false;
+	private spawnIntroElapsedSec = 0;
+	private spawnIntroNextIndex = 0;
+	private spawnIntroAngle0 = 0;
+	private portalDustElapsedSec = 0;
+	private portalDustNextSec = 0;
+	/** Negative until the suck finishes, then counts down to the result modal. */
+	private portalExitHoldLeft = -1;
 
 	public constructor(levelId: string) {
 		super();
@@ -55,6 +84,10 @@ export class PlatformLevelScene extends Scene {
 		this.runDeaths = 0;
 		this.collected = 0;
 		this.hasExited = false;
+		this.exitAnnounced = false;
+		this.portalDustElapsedSec = 0;
+		this.portalDustNextSec = 0;
+		this.portalExitHoldLeft = -1;
 		// Kill plane slightly below the level bottom so edge platforms still work.
 		this.fallLimitY = levelData.size.height + 80;
 
@@ -85,6 +118,7 @@ export class PlatformLevelScene extends Scene {
 
 		this.levelRoot = new LevelRoot(levelData, this.physicsWorld);
 		this.worldRoot.addChild(this.levelRoot);
+		this.beginSpawnIntro();
 		this.centerCameraOnPlayer();
 
 		this.touchLayer = new GestureTouchLayer({
@@ -112,8 +146,10 @@ export class PlatformLevelScene extends Scene {
 	}
 
 	public update(deltaTime: number): void {
-		if (!this.hasExited) {
-			this.runTimeSec += Math.max(deltaTime, 0) / 60;
+		this.tickSpawnIntro(deltaTime);
+
+		if (!this.hasExited && !this.levelRoot.player.isSpawning) {
+			this.runTimeSec += Math.max(deltaTime, 0) / FRAME_HZ;
 		}
 
 		this.levelRoot.player.setTouchControls(this.touchLayer.getControls());
@@ -134,6 +170,8 @@ export class PlatformLevelScene extends Scene {
 			collectible.update(deltaTime);
 		}
 		this.checkPlayerDeath();
+		this.advancePortalExit(deltaTime);
+		this.levelRoot.fairyDust.update(deltaTime);
 
 		const renderPos = this.levelRoot.player.getRenderPosition();
 		this.camera.update(renderPos.x, renderPos.y, deltaTime);
@@ -179,15 +217,13 @@ export class PlatformLevelScene extends Scene {
 	}
 
 	/**
-	 * Places the camera on the player before the first frame so the level opens
-	 * at the spawn point instead of scrolling in from the level origin.
+	 * Places the camera on the spawn point before the first frame so the level
+	 * opens there instead of scrolling in from the origin. The blob is still
+	 * hidden; pollen then the player appear after this snap.
 	 * Runs before the scene is on stage, so the stage scale is not known yet —
 	 * the first update() re-applies scroll with the real render scale.
 	 */
 	private centerCameraOnPlayer(): void {
-		const renderPos = this.levelRoot.player.getRenderPosition();
-		this.camera.snapTo(renderPos.x, renderPos.y);
-
 		const cameraX = this.camera.getRenderX();
 		const cameraY = this.camera.getRenderY();
 		this.camera.applyToContainer(this.worldRoot);
@@ -196,10 +232,60 @@ export class PlatformLevelScene extends Scene {
 		}
 	}
 
+	/** Hide the blob, snap the camera, and restart the pollen-ring timer. */
+	private beginSpawnIntro(): void {
+		this.spawnIntroElapsedSec = 0;
+		this.spawnIntroNextIndex = 0;
+		this.spawnIntroAngle0 = Math.random() * Math.PI * 2;
+		this.levelRoot.player.holdAtSpawn();
+		this.camera.snapTo(this.spawnX, this.spawnY);
+	}
+
+	private tickSpawnIntro(deltaTime: number): void {
+		if (!this.levelRoot.player.isSpawning) {
+			return;
+		}
+
+		this.spawnIntroElapsedSec += Math.max(deltaTime, 0) / FRAME_HZ;
+
+		while (this.spawnIntroNextIndex < SPAWN_DUST_COUNT) {
+			const dueSec = this.spawnIntroNextIndex * SPAWN_DUST_STEP_SEC;
+			if (this.spawnIntroElapsedSec < dueSec) {
+				break;
+			}
+
+			this.spawnIntroDust(this.spawnIntroNextIndex);
+			this.spawnIntroNextIndex += 1;
+		}
+
+		if (this.spawnIntroNextIndex < SPAWN_DUST_COUNT) {
+			return;
+		}
+
+		const revealAtSec = (SPAWN_DUST_COUNT - 1) * SPAWN_DUST_STEP_SEC + SPAWN_BLOB_DELAY_SEC;
+		if (this.spawnIntroElapsedSec >= revealAtSec) {
+			this.levelRoot.player.revealFromSpawn();
+		}
+	}
+
+	private spawnIntroDust(index: number): void {
+		const angle = this.spawnIntroAngle0 + (index / SPAWN_DUST_COUNT) * Math.PI * 2;
+		const radius = SPAWN_DUST_RADIUS + (Math.random() * 2 - 1) * SPAWN_DUST_RADIUS_JITTER;
+		const x = this.spawnX + Math.cos(angle) * radius + (Math.random() * 2 - 1) * SPAWN_DUST_POS_JITTER;
+		const y = this.spawnY + Math.sin(angle) * radius + (Math.random() * 2 - 1) * SPAWN_DUST_POS_JITTER;
+		const size = SPAWN_DUST_SIZE * (1 + (Math.random() * 2 - 1) * SPAWN_DUST_SIZE_JITTER);
+		this.levelRoot.fairyDust.spawn(x, y, size);
+	}
+
 	private checkPlayerDeath(): void {
 		const player = this.levelRoot.player;
+		if (player.isSpawning || player.isExitingPortal) {
+			return;
+		}
 
 		if (player.finishDeathIfReady(this.spawnX, this.spawnY)) {
+			this.beginSpawnIntro();
+			this.tickSpawnIntro(0);
 			return;
 		}
 
@@ -214,7 +300,7 @@ export class PlatformLevelScene extends Scene {
 	}
 
 	private handleLevelExitCollision(collision: PhysicsCollisionInfo): void {
-		if (this.hasExited || this.levelRoot.player.isDying) {
+		if (this.hasExited || this.levelRoot.player.isDying || this.levelRoot.player.isSpawning) {
 			return;
 		}
 
@@ -233,7 +319,58 @@ export class PlatformLevelScene extends Scene {
 
 		this.hasExited = true;
 		portal.setState('entered');
-		SoundManager.playSound('portal-enter');
+		SoundManager.playSound('portal-suck-in', 3);
+		this.portalDustElapsedSec = 0;
+		this.portalDustNextSec = 0;
+		this.portalExitHoldLeft = -1;
+		const center = portal.getCenterWorldPosition();
+		this.levelRoot.player.beginPortalExit(center.x, center.y);
+	}
+
+	private emitPortalDust(dtSec: number): void {
+		this.portalDustElapsedSec += dtSec;
+		while (this.portalDustElapsedSec >= this.portalDustNextSec) {
+			this.spawnPortalDust();
+			this.portalDustNextSec += PORTAL_DUST_STEP_SEC;
+		}
+	}
+
+	private spawnPortalDust(): void {
+		const player = this.levelRoot.player;
+		const pos = player.getRenderPosition();
+		const x = pos.x + (Math.random() * 2 - 1) * PORTAL_DUST_POS_JITTER;
+		const y = pos.y + (Math.random() * 2 - 1) * PORTAL_DUST_POS_JITTER;
+		const jitter = 1 + (Math.random() * 2 - 1) * PORTAL_DUST_SCALE_JITTER;
+		const size = Math.max(0, player.drawnDiameter * PORTAL_DUST_SCALE * jitter);
+		this.levelRoot.fairyDust.spawn(x, y, size);
+	}
+
+	/** Result modal waits for the suck and a short hold, so the ticker keeps running. */
+	private advancePortalExit(deltaTime: number): void {
+		if (!this.hasExited || this.exitAnnounced) {
+			return;
+		}
+
+		const center = this.levelRoot.portal.getCenterWorldPosition();
+		const dtSec = Math.max(deltaTime, 0) / FRAME_HZ;
+		const done = this.levelRoot.player.advancePortalExit(dtSec, center.x, center.y);
+		if (this.levelRoot.player.isExitingPortal && !done) {
+			this.emitPortalDust(dtSec);
+		}
+		if (!done) {
+			return;
+		}
+
+		if (this.portalExitHoldLeft < 0) {
+			this.portalExitHoldLeft = PORTAL_EXIT_HOLD_SEC;
+		} else {
+			this.portalExitHoldLeft -= dtSec;
+		}
+		if (this.portalExitHoldLeft > 0) {
+			return;
+		}
+
+		this.exitAnnounced = true;
 		const payload: LevelExitEvent = {
 			levelId: this.levelId,
 			collected: this.collected,
@@ -246,7 +383,7 @@ export class PlatformLevelScene extends Scene {
 
 	private handleHazardCollision(collision: PhysicsCollisionInfo): void {
 		const player = this.levelRoot.player;
-		if (player.isDying) {
+		if (player.isDying || player.isSpawning || player.isExitingPortal) {
 			return;
 		}
 
@@ -269,7 +406,7 @@ export class PlatformLevelScene extends Scene {
 	}
 
 	private handleCollectibleCollision(collision: PhysicsCollisionInfo): void {
-		if (this.levelRoot.player.isDying) {
+		if (this.levelRoot.player.isDying || this.levelRoot.player.isSpawning || this.levelRoot.player.isExitingPortal) {
 			return;
 		}
 

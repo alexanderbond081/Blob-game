@@ -1,11 +1,13 @@
 import { Assets, Container, DestroyOptions, Graphics, Sprite, Spritesheet, Text, Texture, TextStyle } from 'pixi.js';
+import { gsap } from 'gsap';
 
 import { bindDebouncedTap } from '../../components/debounced-tap';
 import { HighlightDecoration } from '../../components/highlight-decoration';
 import { IdleBounceAnimator } from '../../components/idle-bounce-animator';
 import { UIButton } from '../../components/ui-button';
+import { FairyDustPool } from '../../fx/fairy-dust-pool';
 import { SoundManager } from '../../managers/sound-manager';
-import { loadModalDecorTextures, ModalDecorLayer } from './modal-decor';
+import { loadModalDecorTextures, modalDecorPoint, ModalDecorLayer, ModalDecorSpec } from './modal-decor';
 import { createModalTitle, formatRunTime } from './modal-title';
 
 const SIDE_BUTTON_SIZE = 75;
@@ -27,24 +29,41 @@ const STAT_CLUSTER_GAP = 16;
 const STAT_DIVIDER_HEIGHT = 34;
 /** Matches `CONTENT_PADDING` in `hud-modal.ts` — content origin is the panel centre. */
 const PANEL_EDGE_PAD = 28;
+/** Shared slots; each spawn picks `star1-decor` or `star2-decor`. */
+const RESULT_STAR_POOL_SIZE = 8;
+const RESULT_STAR_TEXTURES = ['star1-decor', 'star2-decor'] as const;
+/** Pixi frame units. The result modal ticks from GSAP while the level loop is paused. */
+const FRAME_HZ = 60;
+/** Seconds between successive star spawns. The list then repeats. */
+const STAR_SPAWN_STEP_SEC = 0.2;
+/** ± pixels around the layout point. */
+const STAR_POS_JITTER = 6;
+/** ± fraction of the layout height. */
+const STAR_SIZE_JITTER = 0.15;
 /** Static panel decor. `offsetX` / `offsetY` are from the named panel corner. `height` is logical. */
 const RESULT_DECOR_LAYOUT = [
-	{ texture: 'star1-decor', anchor: 'topLeft', offsetX: 70, offsetY: 52, height: 50, scaleX: 1, scaleY: 1, alpha: 0.8 },
-	{ texture: 'star1-decor', anchor: 'topRight', offsetX: -48, offsetY: 36, height: 36, scaleX: 1, scaleY: 1, alpha: 0.9 },
-	{ texture: 'star1-decor', anchor: 'topRight', offsetX: -80, offsetY: 86, height: 25, scaleX: 1, scaleY: 1, alpha: 0.7 },
 	{ texture: 'grass-decor', anchor: 'bottomLeft', offsetX: 39, offsetY: -52, height: 80, scaleX: 1, scaleY: 1, alpha: 1.0 },
 	{ texture: 'grass-decor', anchor: 'bottomRight', offsetX: -39, offsetY: -52, height: 80, scaleX: -1, scaleY: 1, alpha: 1.0 },
 ] as const;
 
 const COMPLETE_DECOR_LAYOUT = [
 	{ texture: 'star2-decor', anchor: 'topLeft', offsetX: 42, offsetY: 42, height: 52, scaleX: 1, scaleY: 1, alpha: 0.9 },
-	{ texture: 'star1-decor', anchor: 'topLeft', offsetX: 65, offsetY: 125, height: 48, scaleX: 1, scaleY: 1, alpha: 0.6 },
-	{ texture: 'star1-decor', anchor: 'topRight', offsetX: -42, offsetY: 37, height: 36, scaleX: 1, scaleY: 1, alpha: 0.9 },
-	{ texture: 'star1-decor', anchor: 'topRight', offsetX: -108, offsetY: 102, height: 25, scaleX: 1, scaleY: 1, alpha: 0.7 },
 	{ texture: 'star2-decor', anchor: 'topRight', offsetX: -75, offsetY: 127, height: 35, scaleX: 1, scaleY: 1, alpha: 0.8 },
 	{ texture: 'grass-decor', anchor: 'bottomLeft', offsetX: 39, offsetY: -52, height: 80, scaleX: 1, scaleY: 1, alpha: 1.0 },
 	{ texture: 'grass-decor', anchor: 'bottomRight', offsetX: -39, offsetY: -52, height: 80, scaleX: -1, scaleY: 1, alpha: 1.0 },
 ] as const;
+
+const RESULT_STAR_LAYOUT = [
+	{ texture: 'star1-decor', anchor: 'topLeft', offsetX: 70, offsetY: 52, height: 50, scaleX: 1, scaleY: 1, alpha: 0.8 },
+	{ texture: 'star1-decor', anchor: 'topRight', offsetX: -48, offsetY: 36, height: 36, scaleX: 1, scaleY: 1, alpha: 0.9 },
+	{ texture: 'star1-decor', anchor: 'topRight', offsetX: -80, offsetY: 86, height: 25, scaleX: 1, scaleY: 1, alpha: 0.7 },
+] as const satisfies readonly ModalDecorSpec[];
+
+const COMPLETE_STAR_LAYOUT = [
+	{ texture: 'star1-decor', anchor: 'topLeft', offsetX: 65, offsetY: 125, height: 48, scaleX: 1, scaleY: 1, alpha: 0.6 },
+	{ texture: 'star1-decor', anchor: 'topRight', offsetX: -42, offsetY: 37, height: 36, scaleX: 1, scaleY: 1, alpha: 0.9 },
+	{ texture: 'star1-decor', anchor: 'topRight', offsetX: -108, offsetY: 102, height: 25, scaleX: 1, scaleY: 1, alpha: 0.7 },
+] as const satisfies readonly ModalDecorSpec[];
 
 export type LevelResultStats = {
 	collected: number;
@@ -147,9 +166,18 @@ export class ResultModalContent extends Container {
 	private continueButton!: UIButton;
 	private restartButton!: UIButton;
 	private readonly playBounce = new IdleBounceAnimator(5, 22, 0.05);
+	private starDust!: FairyDustPool;
+	private starDustTicking = false;
+	private starSpawnElapsedSec = 0;
+	private starSpawnNextIndex = 0;
 	private demoComplete = false;
 	private panelWidth = 420;
 	private panelHeight = 320;
+	private readonly onStarDustTick = (_time: number, deltaMs: number): void => {
+		const deltaSec = Math.max(deltaMs, 0) / 1000;
+		this.starDust.update(deltaSec * FRAME_HZ);
+		this.tickStarSpawns(deltaSec);
+	};
 
 	private constructor() {
 		super();
@@ -199,14 +227,16 @@ export class ResultModalContent extends Container {
 	public startPlayIdle(): void {
 		if (this.demoComplete) {
 			this.playBounce.stop();
-			return;
+		} else {
+			this.playBounce.start();
 		}
 
-		this.playBounce.start();
+		this.startStarDust();
 	}
 
 	public stopPlayIdle(): void {
 		this.playBounce.stop();
+		this.stopStarDust();
 	}
 
 	public reflow(contentWidth: number, panelHeight?: number): void {
@@ -219,6 +249,7 @@ export class ResultModalContent extends Container {
 	}
 
 	public override destroy(options?: DestroyOptions): void {
+		this.stopStarDust();
 		this.playBounce.destroy();
 		super.destroy(options);
 	}
@@ -230,7 +261,12 @@ export class ResultModalContent extends Container {
 		const watchIcon = await Assets.load<Texture>('watch-icon');
 		const scullIcon = await Assets.load<Texture>('scull-icon');
 		const statStyle = createStatStyle();
-		const decorTextures = await loadModalDecorTextures([RESULT_DECOR_LAYOUT, COMPLETE_DECOR_LAYOUT]);
+		const decorTextures = await loadModalDecorTextures([
+			RESULT_DECOR_LAYOUT,
+			COMPLETE_DECOR_LAYOUT,
+			RESULT_STAR_LAYOUT,
+			COMPLETE_STAR_LAYOUT,
+		]);
 		this.resultDecor = ModalDecorLayer.create(this, RESULT_DECOR_LAYOUT, decorTextures);
 		this.completeDecor = ModalDecorLayer.create(this, COMPLETE_DECOR_LAYOUT, decorTextures);
 		this.resultDecor.setVisible(true);
@@ -288,6 +324,11 @@ export class ResultModalContent extends Container {
 		this.continueButtonRoot.addChild(this.continueButton);
 		this.addChild(this.continueButtonRoot);
 		this.addChild(this.restartButton);
+		this.starDust = new FairyDustPool({
+			poolSize: RESULT_STAR_POOL_SIZE,
+			textureAliases: RESULT_STAR_TEXTURES,
+		});
+		this.addChild(this.starDust);
 		this.playBounce.attach(this.continueButton);
 		this.layout();
 
@@ -351,6 +392,57 @@ export class ResultModalContent extends Container {
 
 		this.deathsCell.root.x = x;
 		this.deathsCell.root.y = statsY;
+	}
+
+	private startStarDust(): void {
+		if (this.starDustTicking) {
+			return;
+		}
+
+		this.starSpawnElapsedSec = 0;
+		this.starSpawnNextIndex = 0;
+		this.starDustTicking = true;
+		gsap.ticker.add(this.onStarDustTick);
+		this.tickStarSpawns(0);
+	}
+
+	private tickStarSpawns(deltaSec: number): void {
+		const layout = this.demoComplete ? COMPLETE_STAR_LAYOUT : RESULT_STAR_LAYOUT;
+		this.starSpawnElapsedSec += deltaSec;
+		const dueIndex = Math.floor(this.starSpawnElapsedSec / STAR_SPAWN_STEP_SEC);
+		if (dueIndex < this.starSpawnNextIndex) {
+			return;
+		}
+
+		this.starSpawnNextIndex = dueIndex + 1;
+		this.spawnLayoutStar(layout[dueIndex % layout.length]);
+	}
+
+	private spawnLayoutStar(spec: ModalDecorSpec): void {
+		const point = modalDecorPoint(spec, this.panelWidth, this.panelHeight);
+		const jitter = (span: number): number => (Math.random() * 2 - 1) * span;
+		const texture = Assets.get<Texture>(spec.texture);
+		const aspect = texture && texture.height > 0 ? texture.width / texture.height : 1;
+		const size = spec.height * Math.max(aspect, 1) * (1 + jitter(STAR_SIZE_JITTER));
+		this.starDust.spawn(
+			point.x + jitter(STAR_POS_JITTER),
+			point.y + jitter(STAR_POS_JITTER),
+			size,
+			0,
+			0,
+			0,
+			spec.texture,
+		);
+	}
+
+	private stopStarDust(): void {
+		if (!this.starDustTicking) {
+			return;
+		}
+
+		this.starDustTicking = false;
+		gsap.ticker.remove(this.onStarDustTick);
+		this.starDust.sleepAll();
 	}
 
 	private bindAction(button: UIButton, eventName: 'home' | 'continue' | 'restart'): void {

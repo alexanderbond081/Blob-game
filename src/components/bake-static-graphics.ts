@@ -11,6 +11,6 @@ const BAKE_RESOLUTION = 2;
 export const bakeStaticGraphics = (graphics: Graphics): void => {
 	graphics.cacheAsTexture({
 		resolution: BAKE_RESOLUTION,
-		antialias: false,
+		antialias: true,
 	});
 };

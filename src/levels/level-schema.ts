@@ -128,6 +128,7 @@ export const hintKindSchema = z.enum([
 	'jump-left',
 	'jump',
 	'crouch',
+	'slide-down',
 	'crouchJump-right',
 	'crouchJump-left',
 	'cling-right',

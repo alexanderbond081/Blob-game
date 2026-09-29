@@ -70,6 +70,10 @@
 					"src": "assets/sounds/suck-in.ogg"
 				},
 				{
+					"alias": "portal-suck-in",
+					"src": "assets/sounds/suck-in-long.ogg"
+				},
+				{
 					"alias": "firefly-all-done",
 					"src": "assets/sounds/all-done-lowending.ogg"
 				},
@@ -510,6 +514,15 @@
 				{
 					"alias": "hint-key-unpressed",
 					"src": "assets/images/key-unpressed-white.webp",
+					"data": {
+						"resolution": 2,
+						"autoGenerateMipmaps": true,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "fairy-dust-particle",
+					"src": "assets/images/fairy-dust-particle.webp",
 					"data": {
 						"resolution": 2,
 						"autoGenerateMipmaps": true,

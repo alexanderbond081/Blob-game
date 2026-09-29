@@ -5,6 +5,7 @@ import { JumpHint } from './jump-hint';
 import { LevelHint } from './level-hint';
 import { MoveHint } from './move-hint';
 import { RunHint } from './run-hint';
+import { SlideDownHint } from './slide-down-hint';
 
 export const createLevelHint = (data: LevelHintData): LevelHint | null => {
 	switch (data.kind) {
@@ -26,6 +27,8 @@ export const createLevelHint = (data: LevelHintData): LevelHint | null => {
 			return new CrouchJumpHint(data.x, data.y, -1);
 		case 'crouch':
 			return new CrouchHint(data.x, data.y);
+		case 'slide-down':
+			return new SlideDownHint(data.x, data.y);
 		default:
 			return null;
 	}

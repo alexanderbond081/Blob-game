@@ -145,7 +145,12 @@ const TAP_MAX_DISTANCE_PX = 28;
 const TAP_MAX_DURATION_MS = 280;
 const HOLD_CANCEL_MS = 500;
 /** Stand-in for dash: keep full run after a fast horizontal flick. */
-const RUN_LATCH_MS = 550;
+const RUN_LATCH_MS = 650;
+/**
+ * Last fraction of that latch eases to a stop. Jump-run is not timed, so it
+ * never coasts. The player reads the flag and may stop short of a lip or hazard.
+ */
+const RUN_LATCH_COAST_RATIO = 0.65;
 /**
  * After jump-run first touches the floor, keep pushing this long so a corner
  * or pedestal lip can still suck the blob on. Game time (ticker deltaTime /
@@ -203,8 +208,9 @@ const GAMEPLAY_KEY_CODES = new Set([
  * Swipe up jumps (moveX from the angle lasts until a surface or a live drag).
  * Slow left/right drag is live analog moveX; slow down drag is live analog
  * moveY. Both die when the finger is still or lifts — down analog does not
- * latch. A fast horizontal flick latches run for 0.5 s until dash exists;
- * a down flick latches crouch on lift (same threshold, not a mid-drag kill).
+ * latch. A fast horizontal flick latches run for 0.5 s (full speed, then a
+ * short ease) until dash exists; a down flick latches crouch on lift (same
+ * threshold, not a mid-drag kill).
  * The first live analog sample clears jump-run so a still finger does not snap
  * back to the swipe course. Tap, a still press
  * (≥ 0.5 s), or any gameplay key clears latches when that contact is alone.
@@ -302,7 +308,9 @@ export class GestureTouchLayer extends Container {
 			}
 		}
 
-		this.controls.moveX = liveMoveX !== 0 ? liveMoveX : this.latchedMoveX;
+		const latched = this.readRunLatch();
+		this.controls.moveX = liveMoveX !== 0 ? liveMoveX : latched.moveX;
+		this.controls.runLatchCoasting = liveMoveX === 0 && latched.coasting;
 		this.controls.moveY = liveMoveY;
 		this.controls.jump = this.jumpCharge;
 		this.controls.crouch = this.latchedCrouch;
@@ -804,6 +812,27 @@ export class GestureTouchLayer extends Container {
 		if (performance.now() >= this.runLatchUntil) {
 			this.clearLatchedMoveX();
 		}
+	}
+
+	/**
+	 * Timed flick only. Full axis until the coast window, then a smoothstep
+	 * down to zero so the stop is not one frame. Jump-run keeps runLatchUntil
+	 * at 0 and passes through unchanged.
+	 */
+	private readRunLatch(): { moveX: number; coasting: boolean } {
+		if (this.latchedMoveX === 0 || this.runLatchUntil <= 0) {
+			return { moveX: this.latchedMoveX, coasting: false };
+		}
+
+		const remaining = this.runLatchUntil - performance.now();
+		const coastMs = RUN_LATCH_MS * RUN_LATCH_COAST_RATIO;
+		if (remaining >= coastMs) {
+			return { moveX: this.latchedMoveX, coasting: false };
+		}
+
+		const t = Math.max(remaining, 0) / coastMs;
+		const eased = t; //t * t * (3 - 2 * t);
+		return { moveX: this.latchedMoveX * eased, coasting: true };
 	}
 
 	/**

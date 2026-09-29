@@ -14,6 +14,15 @@ export type ModalDecorSpec = {
 	readonly alpha: number;
 };
 
+export const modalDecorPoint = (
+	spec: Pick<ModalDecorSpec, 'anchor' | 'offsetX' | 'offsetY'>,
+	panelWidth: number,
+	panelHeight: number,
+): { x: number; y: number } => {
+	const origin = cornerOrigin(spec.anchor, panelWidth, panelHeight);
+	return { x: origin.x + spec.offsetX, y: origin.y + spec.offsetY };
+};
+
 const cornerOrigin = (
 	anchor: DecorCornerAnchor,
 	panelWidth: number,
@@ -107,9 +116,9 @@ export class ModalDecorLayer {
 				continue;
 			}
 
-			const origin = cornerOrigin(spec.anchor, panelWidth, panelHeight);
-			sprite.x = origin.x + spec.offsetX;
-			sprite.y = origin.y + spec.offsetY;
+			const point = modalDecorPoint(spec, panelWidth, panelHeight);
+			sprite.x = point.x;
+			sprite.y = point.y;
 			sprite.alpha = spec.alpha;
 		}
 	}

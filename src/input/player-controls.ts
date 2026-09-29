@@ -14,6 +14,12 @@ export type PlayerControls = {
 	 * Keyboard taps must not set this — a short Space still has to jump.
 	 */
 	cancelJumpOnRelease: boolean;
+	/**
+	 * Timed horizontal flick is in its slow-down tail.
+	 * The player may stop short of a lip or hazard. Live drag, jump-run, and
+	 * keyboard never set this.
+	 */
+	runLatchCoasting: boolean;
 };
 
 /** Ignore tiny analog values when testing digital intents (cling / peel / facing). */
@@ -26,6 +32,7 @@ export const createEmptyPlayerControls = (): PlayerControls => ({
 	crouch: false,
 	jumpCommitted: false,
 	cancelJumpOnRelease: false,
+	runLatchCoasting: false,
 });
 
 export const clampAxis = (value: number): number => {

@@ -1,11 +1,12 @@
 import { Assets, ParticleContainer, Texture } from 'pixi.js';
 
 import { AnotherFly } from '../components/particle-fly';
+import { PortalSuck } from '../fx/portal-suck';
 import { LevelCollectible } from '../levels/level-schema';
 import { SoundManager } from '../managers/sound-manager';
 import { PhysicsWorld } from '../physics/physics-world';
 import { Collectible, CollectibleLayers } from './collectible';
-import { LevelPortal } from './level-portal';
+import { LevelPortal, PORTAL_TRIGGER_RADIUS } from './level-portal';
 
 /** Visual half-size in world pixels (sprite is scaled to this diameter). */
 const FLY_DISPLAY_RADIUS = 25;
@@ -38,15 +39,14 @@ const SLOT_TONE_FACTORS = [
 
 /** Ease-out homing rate; ~95% of the trip in 0.67s even if the slot is bobbing. */
 const SEEK_ARRIVE_PX = 12;
-/** Extra flies fade out at the vortex; the real suck-in comes later. */
-const CENTER_FADE_SEC = 0.2;
 
-type FlyDuty = 'idle' | 'toSlot' | 'docked' | 'toCenter' | 'fading' | 'gone';
+type FlyDuty = 'idle' | 'toSlot' | 'docked' | 'toRim' | 'sucking' | 'gone';
 
 /**
  * Firefly: portal fuel. Renders as a particle in the level-wide batch instead of
  * a sprite, and flies around its level point rather than bobbing in place.
- * After pickup it homes to a rim slot (and stays there) or to the vortex centre.
+ * After pickup it homes to a rim slot (and stays there). Spare flies home until
+ * they cross the portal trigger, then follow `PortalSuck`.
  */
 export class FireflyCollectible extends Collectible {
 	private readonly fly: AnotherFly;
@@ -54,6 +54,7 @@ export class FireflyCollectible extends Collectible {
 	private duty: FlyDuty = 'idle';
 	private portal: LevelPortal | null = null;
 	private slotIndex: number | null = null;
+	private suck: PortalSuck | null = null;
 	private isLastOnMap = false;
 
 	public constructor(data: LevelCollectible) {
@@ -96,6 +97,12 @@ export class FireflyCollectible extends Collectible {
 			return;
 		}
 
+		const dtSec = Collectible.toSeconds(deltaTime);
+		if (this.duty === 'sucking') {
+			this.advanceSuck(dtSec);
+			return;
+		}
+
 		const target = this.readTarget();
 		if (target) {
 			this.fly.setOrigin(target.x, target.y);
@@ -103,7 +110,10 @@ export class FireflyCollectible extends Collectible {
 
 		this.fly.move(deltaTime);
 
-		const dtSec = Collectible.toSeconds(deltaTime);
+		if (this.duty === 'toRim' && this.fly.distanceToOrigin() <= PORTAL_TRIGGER_RADIUS * 1.5) {
+			this.beginSuck();
+			return;
+		}
 
 		if (this.fly.distanceToOrigin() > SEEK_ARRIVE_PX) {
 			return;
@@ -115,26 +125,12 @@ export class FireflyCollectible extends Collectible {
 			this.fly.setSpeed(SLOT_SPEED);
 			this.playSlotChime();
 			this.portal?.notifySlotArrived();
-			return;
-		}
-
-		if (this.duty === 'toCenter') {
-			SoundManager.playSound(this.isLastOnMap ? 'firefly-all-done' : 'firefly-suck', 3);
-			this.duty = 'fading';
-		}
-
-		if (this.duty === 'fading') {
-			this.fly.alpha -= dtSec / CENTER_FADE_SEC;
-			if (this.fly.alpha <= 0) {
-				this.fly.alpha = 0;
-				this.detachFly();
-			}
 		}
 	}
 
 	/**
-	 * Sensor is already gone (`collect`). Homes to the next rim slot, or to the
-	 * vortex centre when the portal is already full.
+	 * Sensor is already gone (`collect`). Homes to the next rim slot, or toward
+	 * the portal until it crosses the exit trigger when every slot is taken.
 	 */
 	public deliverToPortal(portal: LevelPortal, isLastOnMap = false): void {
 		if (this.duty !== 'idle') {
@@ -147,13 +143,54 @@ export class FireflyCollectible extends Collectible {
 
 		const slot = portal.reserveNextSlot();
 		if (slot === null) {
-			this.duty = 'toCenter';
+			this.duty = 'toRim';
 			this.slotIndex = null;
 			return;
 		}
 
 		this.duty = 'toSlot';
 		this.slotIndex = slot;
+	}
+
+	private beginSuck(): void {
+		const portal = this.portal;
+		if (!portal) {
+			this.detachFly();
+			return;
+		}
+
+		const center = portal.getCenterWorldPosition();
+		this.suck = PortalSuck.fromWorldPosition(
+			this.fly.x,
+			this.fly.y,
+			center.x,
+			center.y,
+			this.fly.scaleX,
+			this.fly.alpha,
+		);
+		this.duty = 'sucking';
+		SoundManager.playSound(this.isLastOnMap ? 'firefly-all-done' : 'firefly-suck', 3);
+	}
+
+	private advanceSuck(dtSec: number): void {
+		const portal = this.portal;
+		const suck = this.suck;
+		if (!portal || !suck) {
+			this.detachFly();
+			return;
+		}
+
+		const center = portal.getCenterWorldPosition();
+		const pose = suck.step(dtSec, center.x, center.y);
+		this.fly.x = pose.x;
+		this.fly.y = pose.y;
+		this.fly.scaleX = pose.scale;
+		this.fly.scaleY = pose.scale;
+		this.fly.alpha = pose.alpha;
+
+		if (pose.done) {
+			this.detachFly();
+		}
 	}
 
 	private playSlotChime(): void {
@@ -183,6 +220,7 @@ export class FireflyCollectible extends Collectible {
 
 	private detachFly(): void {
 		this.duty = 'gone';
+		this.suck = null;
 		this.layer?.removeParticle(this.fly);
 		this.layer = null;
 		this.portal = null;

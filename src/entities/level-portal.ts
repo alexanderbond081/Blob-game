@@ -10,7 +10,7 @@ import { PhysicsBody } from '../physics/physics-body';
 export const LEVEL_EXIT_BODY_LABEL = 'level-exit';
 
 /** Circular exit sensor radius in world pixels (independent of portal art size). */
-const PORTAL_TRIGGER_RADIUS = 30;
+export const PORTAL_TRIGGER_RADIUS = 30;
 
 /** Fixed oval grid capacity — fewer slots omit positions from the bottom of this set. */
 export const PORTAL_SLOT_CAPACITY = 12;

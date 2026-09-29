@@ -11,6 +11,7 @@ import { LevelPortal } from '../entities/level-portal';
 import { Obstacle } from '../entities/obstacle';
 import { Player } from '../entities/player';
 import { BlobDropletPool, DropletObstacleRect } from '../fx/blob-droplet-pool';
+import { FairyDustPool } from '../fx/fairy-dust-pool';
 import { LevelData } from '../levels/level-schema';
 import { GameProgress } from '../managers/game-progress';
 import { resolveSkin } from '../managers/skins-catalog';
@@ -26,6 +27,7 @@ export class LevelRoot extends Container {
 	public readonly obstacles: Obstacle[] = [];
 	public readonly hints: LevelHint[] = [];
 	public readonly droplets: BlobDropletPool;
+	public readonly fairyDust: FairyDustPool;
 	/** Every firefly in one batch; added above the portal so collected ones read on top. */
 	public readonly flies: ParticleContainer;
 
@@ -33,9 +35,9 @@ export class LevelRoot extends Container {
 		super();
 		this.eventMode = 'none';
 
-		// Position every frame; color is for the mild slot-shade tint (and later fades).
+		// Position, scale and alpha change when a spare firefly is sucked in.
 		this.flies = new ParticleContainer({
-			dynamicProperties: { position: true, rotation: false, vertex: false, color: true, uvs: false },
+			dynamicProperties: { position: true, rotation: false, vertex: true, color: true, uvs: false },
 		});
 
 		const hintsLayer = new Container();
@@ -69,6 +71,8 @@ export class LevelRoot extends Container {
 			this.obstacles.push(obstacle);
 		}
 
+		this.fairyDust = new FairyDustPool();
+
 		for (const hazardData of levelData.hazards) {
 			const hazard = createHazard(hazardData);
 			hazard.addToWorld(physicsWorld, this);
@@ -92,6 +96,9 @@ export class LevelRoot extends Container {
 		this.player = new Player(levelData.spawn.x, levelData.spawn.y, skin.blobSheetAlias);
 		this.player.bindPhysics(physicsWorld);
 		this.player.addToWorld(physicsWorld, this);
+
+		// Above the blob so the portal trail reads on top of the suck.
+		this.addChild(this.fairyDust);
 
 		this.droplets = new BlobDropletPool(skin.dropletAlias);
 		this.droplets.setLevelBounds(levelData.size);
@@ -121,6 +128,8 @@ export class LevelRoot extends Container {
 		this.player.setBurstFxHandler(null);
 		this.droplets.sleepAll();
 		this.droplets.destroy({ children: true });
+		this.fairyDust.sleepAll();
+		this.fairyDust.destroy({ children: true });
 
 		for (const hint of this.hints) {
 			hint.destroy({ children: true });
