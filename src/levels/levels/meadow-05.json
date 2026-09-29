@@ -12,6 +12,9 @@
 		{ "kind": "crouchJump-right", "x": 300, "y": 370 },
 		{ "kind": "crouchJump-right", "x": 980, "y": 370 }
 	],
+	"traces": [
+		{ "texture": "meadow-05-crouch-jump-right", "x": 355, "y": 295 }
+	],
 	"platforms": [
 		{ "type": "ground", "x": -110, "y": 60, "width": 1630, "height": 60 },
 		{ "type": "ground", "x": 550, "y": 240, "width": 160, "height": 180 },

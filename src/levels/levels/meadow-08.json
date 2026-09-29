@@ -9,8 +9,10 @@
 		{ "id": "mid", "texture": "meadow-bg-mid", "parallax": 0.3 }
 	],
 	"hints": [
-		{ "kind": "jump-right", "x": 640, "y": 310 },
-		{ "kind": "jump-right", "x": 640, "y": 570 }
+		{ "kind": "jump-right", "x": 640, "y": 350 }
+	],
+	"traces": [
+		{ "texture": "meadow-08-wall-jump-right", "x": 759, "y": 366 }
 	],
 	"platforms": [
 		{ "type": "wall", "x": 60, "y": 800, "width": 30, "height": 760 },

@@ -179,7 +179,7 @@ Old “Arcade timer on the same casual run” folds into **Speedrun** as the pos
 - Space: **small field** — camera may barely scroll or gently follow; not open-world.
 - Content reuse: many levels = **same mechanics, different layout + art dressing** (Poki-normal).
 - **Pacing:** early episodes **shorter**; after ~2–3 abilities, episodes lengthen and difficulty climbs easy → medium (see Progression).
-- Authoring: **[Ogmo 3](https://ogmo-editor-3.github.io/)** entity layers (AABB platforms, spawn, portal, fireflies, spikes) exported to JSON; runtime flips Y from the level bottom. Tiled is no longer the plan.
+- Authoring: **[Ogmo 3](https://ogmo-editor-3.github.io/)** entity layers (AABB platforms, spawn, portal, fireflies, spikes) exported to JSON; runtime flips Y from the level bottom. Tiled is no longer the plan. Control posters (`hints[]`) and jump-arc outlines (`traces[]`) are hand-authored in the runtime JSON — not Ogmo entities. A reconvert does not keep `traces`.
 
 ### Background layers (parallax)
 
@@ -306,7 +306,7 @@ A smaller milestone than the MVP above: a build worth publishing on itch.io and 
 - [x] Moving enemies exist (caterpillar / spider / mosquito on fixed paths) and share the death pipeline. Demo placement: `meadow-04` / `meadow-09` / `bonus-level`  
 - [x] 10 playable catalog levels (`meadow-01`–`09` + `bonus-level`); playtested  
 - [x] Touch controls are genuinely playable on a phone (gesture-first, no on-screen buttons). Event-order polish done — [`poki.md`](./poki.md) Touch follow-ups  
-- [x] Hints teach the mechanics that ship in the demo — posters on most meadow levels; extra posters when a layout needs them — [`e6-level-hints.md`](./e6-level-hints.md)  
+- [x] Hints teach the mechanics that ship in the demo — posters on most meadow levels; extra posters when a layout needs them. Jump-arc outlines are `traces[]` (hand-authored, not Ogmo) — [`e6-level-hints.md`](./e6-level-hints.md)  
 - [x] Outro screen after the last level points at the full version — result modal `demoComplete` (Home / Restart). Celebratory SFX/VFX deferred  
 - [x] Poki submission prerequisites pass (see [`poki.md`](./poki.md)); application submitted  
 

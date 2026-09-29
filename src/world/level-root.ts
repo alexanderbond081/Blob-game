@@ -7,6 +7,7 @@ import { FireflyCollectible } from '../entities/firefly-collectible';
 import { Hazard } from '../entities/hazard';
 import { createLevelHint } from '../entities/hints/create-level-hint';
 import { LevelHint } from '../entities/hints/level-hint';
+import { LevelTrace } from '../entities/hints/level-trace';
 import { LevelPortal } from '../entities/level-portal';
 import { Obstacle } from '../entities/obstacle';
 import { Player } from '../entities/player';
@@ -26,6 +27,7 @@ export class LevelRoot extends Container {
 	public readonly hazards: Hazard[] = [];
 	public readonly obstacles: Obstacle[] = [];
 	public readonly hints: LevelHint[] = [];
+	public readonly traces: LevelTrace[] = [];
 	public readonly droplets: BlobDropletPool;
 	public readonly fairyDust: FairyDustPool;
 	/** Every firefly in one batch; added above the portal so collected ones read on top. */
@@ -51,6 +53,12 @@ export class LevelRoot extends Container {
 
 			hintsLayer.addChild(hint);
 			this.hints.push(hint);
+		}
+
+		for (const traceData of levelData.traces) {
+			const trace = new LevelTrace(traceData);
+			hintsLayer.addChild(trace);
+			this.traces.push(trace);
 		}
 
 		for (const platform of levelData.platforms) {
@@ -135,6 +143,11 @@ export class LevelRoot extends Container {
 			hint.destroy({ children: true });
 		}
 		this.hints.length = 0;
+
+		for (const trace of this.traces) {
+			trace.destroy();
+		}
+		this.traces.length = 0;
 
 		for (const staticBody of this.staticBodies) {
 			staticBody.removeFromWorld(physicsWorld);

@@ -605,6 +605,30 @@
 						"resolution": 2,
 						"scaleMode": "linear"
 					}
+				},
+				{
+					"alias": "meadow-02-jump-left",
+					"src": "assets/images/meadow-02-jump-left.webp",
+					"data": {
+						"resolution": 2,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "meadow-05-crouch-jump-right",
+					"src": "assets/images/meadow-05-crouch-jump-right.webp",
+					"data": {
+						"resolution": 2,
+						"scaleMode": "linear"
+					}
+				},
+				{
+					"alias": "meadow-08-wall-jump-right",
+					"src": "assets/images/meadow-08-wall-jump-right.webp",
+					"data": {
+						"resolution": 2,
+						"scaleMode": "linear"
+					}
 				}
 			]
 		},

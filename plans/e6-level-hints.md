@@ -62,6 +62,22 @@ Default before any gameplay input: `matchMedia('(pointer: coarse)').matches` →
 
 No `width` / `height` / `id` in v1. Size comes from `kind`. JSON is authored by hand (no Ogmo entity yet).
 
+### Jump traces
+
+`traces[]` sits next to the posters: a static outline of the blob’s jump arc, same layer (behind platforms, above parallax), drawn **after** `hints` so the poster stays underneath. Missing key defaults to `[]`.
+
+```ts
+{
+  texture: string;      // manifest alias, 2× art
+  x: number;            // top-left (author space)
+  y: number;            // top-left (author space, from level bottom)
+}
+```
+
+Size comes from the texture. Sprite alpha is `0.8` so the meadow shows through white line art ([`src/entities/hints/level-trace.ts`](../src/entities/hints/level-trace.ts)).
+
+**Not an Ogmo entity.** The converter does not read or write `traces`. Place them by hand in `src/levels/levels/*.json` after an Ogmo reconvert (a reconvert drops the key). First placement: `meadow-02`, texture `meadow-02-jump-left` in the `meadow-scene` bundle.
+
 ## `kind` set
 
 | `kind` | Keyboard loop | Touch loop | Status |
@@ -79,8 +95,8 @@ No `width` / `height` / `id` in v1. Size comes from `kind`. JSON is authored by 
 
 ## Runtime wiring
 
-1. Parse `hints` (default `[]`).
-2. `LevelRoot` adds a hints layer **first** (before platforms).
+1. Parse `hints` and `traces` (each defaults to `[]`).
+2. `LevelRoot` adds a hints layer **first** (before platforms). Posters, then traces.
 3. `LevelHint` plate + touch/keyboard layers; `MoveHint` / `JumpHint` / `CrouchHint` / `CrouchJumpHint` own GSAP loops.
 4. Subscribe to input-mode; swap / restart the matching timeline.
 5. `PlatformLevelScene.update` does not tick hints — GSAP owns the loop.
@@ -91,7 +107,7 @@ No `width` / `height` / `id` in v1. Size comes from `kind`. JSON is authored by 
 - `src/levels/level-schema.ts`, `src/levels/level-loader.ts`
 - `src/levels/levels/meadow-01.json` … `meadow-09.json` (posters on 01–03, 05, 06, 08, 09)
 - `src/input/input-mode.ts`
-- `src/entities/hints/` (`level-hint.ts`, `move-hint.ts`, `jump-hint.ts`, `crouch-hint.ts`, `crouch-jump-hint.ts`, `touch-pointer.ts`, `keyboard-cluster.ts`, `hint-layout.ts`, `create-level-hint.ts`)
+- `src/entities/hints/` (`level-hint.ts`, `level-trace.ts`, `move-hint.ts`, `jump-hint.ts`, `crouch-hint.ts`, `crouch-jump-hint.ts`, `touch-pointer.ts`, `keyboard-cluster.ts`, `hint-layout.ts`, `create-level-hint.ts`)
 - `src/world/level-root.ts`
 - `src/assets/manifest.json` (`hint-touch-hand`, `hint-touch-point`, `hint-key-pressed`, `hint-key-unpressed`, `resolution: 2`)
 
@@ -105,7 +121,7 @@ No `width` / `height` / `id` in v1. Size comes from `kind`. JSON is authored by 
 - iOS PWA / hiding the fullscreen HUD button
 - Gamepad glyphs
 - Frame-by-frame swipe filmstrips, Lottie, Spine
-- Ogmo entity (JSON is authored by hand for now)
+- Ogmo entity for posters or traces (both are hand-authored in runtime JSON; a reconvert drops `traces`)
 - Dash / glide / flight posters until those moves exist
 
 ## Test plan

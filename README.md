@@ -54,7 +54,9 @@ Touch is gesture-first (no on-screen buttons). Horizontal swipes are ignored unt
 - Top icon HUD: fullscreen (non-Poki), pause (gameplay), separate music / SFX mute
 - Platform SDK bridge: `gameLoadingFinished`, `gameplayStart` / `Stop`, `commercialBreak` / rewarded hooks ([`src/platform/platform.ts`](src/platform/platform.ts))
 
-Level data: JSON + Zod ([`src/levels/`](src/levels/)) — `platforms`, `hazards`, `obstacles`, `collectibles`, spawn, size, backgrounds, exit portal. Playable catalog: **`meadow-01`–`09` + `bonus-level`**. Layouts are blocked in **[Ogmo 3](https://ogmo-editor-3.github.io/)** (`*-ogmo.json`); Y is flipped on load (`authorY` from the level bottom). **Ogmo stone `width` → runtime `size` (diameter).** **Ogmo branch `rotation` is radians**; see schema comment in [`src/levels/level-schema.ts`](src/levels/level-schema.ts).
+Level data: JSON + Zod ([`src/levels/`](src/levels/)) — `platforms`, `hazards`, `obstacles`, `collectibles`, `hints`, `traces`, spawn, size, backgrounds, exit portal. Playable catalog: **`meadow-01`–`09` + `bonus-level`**. Layouts are blocked in **[Ogmo 3](https://ogmo-editor-3.github.io/)** (`*-ogmo.json`); Y is flipped on load (`authorY` from the level bottom). **Ogmo stone `width` → runtime `size` (diameter).** **Ogmo branch `rotation` is radians**; see schema comment in [`src/levels/level-schema.ts`](src/levels/level-schema.ts).
+
+**Jump traces** (`traces[]`): static outline sprites of a blob arc, drawn with the control posters (behind platforms). Each entry is `{ texture, x, y }` — top-left in authoring space; size comes from the texture (`resolution: 2`). Missing key defaults to `[]`. These are **hand-authored in the runtime JSON**, not Ogmo entities (conversion ignores them). First one: `meadow-02` / `meadow-02-jump-left`.
 
 ## Goals
 
@@ -130,7 +132,7 @@ Goal: a build good enough to publish on itch.io and send to Poki for publishing 
 | 3 | Enemies: moving hazards (caterpillar / spider / mosquito) on fixed paths | **Done (runtime + demo placement).** Same `hazards[]` + death path; `from` / `to` body centres + `speed`. Art + spider look-out cycle in. Demo set: caterpillar `meadow-04`, spider `meadow-09`, mosquito `bonus-level`. More rails as layouts need them |
 | 4 | 10 levels with a progressive difficulty curve | **Done (catalog + playtest).** `meadow-01`–`09` + `bonus-level` |
 | 5 | Touch controls rework | **Done.** Gesture layer: settle + flick-on-up, jump/crouch swipes, analog axes from angle, tap / 0.5 s / key cancel. Horizontal swipe deferred until dash. Event-order polish in [`plans/poki.md`](./plans/poki.md) → Touch follow-ups |
-| 6 | Hints for the mechanics that already exist | **Done (engine + posters on most demo levels).** Posters on `meadow-01`–`03`, `05`, `06`, `08`, `09` (move / jump / crouch-jump). Extra `crouch` hide-only / cling `jump-*` posters when a layout needs them. Plan: [`plans/e6-level-hints.md`](./plans/e6-level-hints.md) |
+| 6 | Hints for the mechanics that already exist | **Done (engine + posters on most demo levels).** Posters on `meadow-01`–`03`, `05`, `06`, `08`, `09` (move / jump / crouch-jump). Extra `crouch` hide-only / cling `jump-*` posters when a layout needs them. Jump-arc outlines live in `traces[]` (hand-authored, not Ogmo); first one on `meadow-02`. Plan: [`plans/e6-level-hints.md`](./plans/e6-level-hints.md) |
 | 7 | Demo outro screen after the last level | **Done (UI).** Result modal `demoComplete` when no next level. Celebratory SFX/VFX deferred |
 | 8 | Poki submission prerequisites | **Done.** Requirements checklist, first-download size, 60 FPS on mid-range mobile, no-`localStorage` (incognito) path. Application submitted |
 
@@ -154,7 +156,7 @@ You may view the source for portfolio / learning; reuse of code or assets needs 
 |------|----------|
 | [`plans/poki-2d-platformer-concept.md`](./plans/poki-2d-platformer-concept.md) | Game concept, scope, stack |
 | [`plans/player-mechanics-backlog.md`](./plans/player-mechanics-backlog.md) | Player mechanics backlog (cling / death / crouch + obstacles runtime; double jump, dash, glide queued) |
-| [`plans/e6-level-hints.md`](./plans/e6-level-hints.md) | Stage E6: in-level control hints (engine done; extra posters on demand) |
+| [`plans/e6-level-hints.md`](./plans/e6-level-hints.md) | Stage E6: control posters + jump-arc `traces` (traces are hand-authored, not Ogmo) |
 | [`plans/poki.md`](./plans/poki.md) | Poki / CrazyGames technical notes |
 
 ## Author

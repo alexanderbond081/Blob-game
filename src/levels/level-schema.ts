@@ -3,7 +3,7 @@ import { z } from 'zod';
 /**
  * Level JSON uses authoring coordinates (converted to Pixi/Matter Y-down in loadLevelData):
  * - `y` = height above the bottom of the level (`size.height`).
- * - Platforms / spike hazards / hints: `x` = left edge, `y` = **top** edge
+ * - Platforms / spike hazards / hints / traces: `x` = left edge, `y` = **top** edge
  *   (ground with `y: 0` sits entirely below the playfield and is not visible).
  * - Spawn / collectibles / exit / patrol `from`/`to`: `x`, `y` = **center**.
  * - Obstacles: stone `x`,`y` = **center**; branch `x`,`y` = **center of one end**.
@@ -145,6 +145,13 @@ const hintSchema = z.object({
 	y: z.number(),
 });
 
+/** Static outline sprite. Size comes from the texture; `x`/`y` is its top-left. */
+const traceSchema = z.object({
+	texture: z.string().min(1),
+	x: z.number(),
+	y: z.number(),
+});
+
 export const levelSchema = z.object({
 	id: z.string(),
 	size: sizeSchema,
@@ -154,6 +161,8 @@ export const levelSchema = z.object({
 	backgrounds: z.array(backgroundLayerSchema).min(1),
 	/** World-space control posters. Drawn behind platforms; size comes from `kind`. */
 	hints: z.array(hintSchema).default([]),
+	/** Static outline sprites, drawn above `hints` and still behind platforms. */
+	traces: z.array(traceSchema).default([]),
 	platforms: z.array(platformSchema),
 	hazards: z.array(hazardSchema),
 	/** Dynamic stones / branches. Missing key → []. */
@@ -174,3 +183,4 @@ export type LevelStoneObstacle = z.infer<typeof stoneObstacleSchema>;
 export type LevelBranchObstacle = z.infer<typeof branchObstacleSchema>;
 export type LevelBackgroundLayer = z.infer<typeof backgroundLayerSchema>;
 export type LevelHintData = z.infer<typeof hintSchema>;
+export type LevelTraceData = z.infer<typeof traceSchema>;

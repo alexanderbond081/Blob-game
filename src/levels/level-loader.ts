@@ -53,6 +53,10 @@ const toRuntimeLevelData = (data: LevelData): LevelData => {
 			...hint,
 			y: authorYToRuntimeY(hint.y, levelHeight),
 		})),
+		traces: data.traces.map((trace) => ({
+			...trace,
+			y: authorYToRuntimeY(trace.y, levelHeight),
+		})),
 		platforms: data.platforms.map((platform) => ({
 			...platform,
 			y: authorYToRuntimeY(platform.y, levelHeight),

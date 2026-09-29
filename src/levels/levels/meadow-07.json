@@ -1,12 +1,15 @@
 {
 	"id": "meadow-07",
 	"size": { "width": 1500, "height": 1500 },
-	"spawn": { "x": 690, "y": 1070 },
+	"spawn": { "x": 690, "y": 1140 },
 	"exit": { "x": 760, "y": 160, "slots": 1 },
 	"backgrounds": [
 		{ "id": "sky", "texture": "meadow-bg-sky", "parallax": 0 },
 		{ "id": "far", "texture": "meadow-bg-far", "parallax": 0.1 },
 		{ "id": "mid", "texture": "meadow-bg-mid", "parallax": 0.3 }
+	],
+	"hints": [
+		{ "kind": "slide-down", "x": 430, "y": 1000 }
 	],
 	"platforms": [
 		{ "type": "wall", "x": 1340, "y": 1230, "width": 30, "height": 1120 },
@@ -21,8 +24,8 @@
 		{ "type": "leaf", "x": 90, "y": 240, "width": 80, "height": 30 },
 		{ "type": "leaf", "x": 90, "y": 530, "width": 120, "height": 30 },
 		{ "type": "sticky", "x": 1230, "y": 1480, "width": 250, "height": 250 },
-		{ "type": "sticky", "x": 710, "y": 1160, "width": 30, "height": 150 },
-		{ "type": "sticky", "x": 720, "y": 880, "width": 30, "height": 90 },
+		{ "type": "sticky", "x": 710, "y": 1200, "width": 30, "height": 100 },
+		{ "type": "sticky", "x": 720, "y": 1000, "width": 30, "height": 200 },
 		{ "type": "sticky", "x": 730, "y": 660, "width": 30, "height": 90 },
 		{ "type": "sticky", "x": 740, "y": 440, "width": 30, "height": 90 },
 		{ "type": "leaf", "x": 1250, "y": 250, "width": 80, "height": 30 },
@@ -37,6 +40,6 @@
 		{ "type": "firefly", "x": 750, "y": 290 },
 		{ "type": "firefly", "x": 740, "y": 500 },
 		{ "type": "firefly", "x": 730, "y": 720 },
-		{ "type": "firefly", "x": 720, "y": 940 }
+		{ "type": "firefly", "x": 720, "y": 1050 }
 	]
 }
